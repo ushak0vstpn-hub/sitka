@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Сітка 9×9</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#16222E">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Сітка 9×9">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Onest:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  --paper:#EEF2F5; --sheet:#FFFFFF; --ink:#16222E; --muted:#5E6B78; --line:#CBD4DC; --grid:#DCE3E9;
+  --done-ink:#FFFFFF; --focus:#1F5FA8;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#10171E; --sheet:#18222C; --ink:#E6ECF1; --muted:#95A3B0; --line:#2C3A47; --grid:#223040; --focus:#7FB2EE;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#10171E; --sheet:#18222C; --ink:#E6ECF1; --muted:#95A3B0; --line:#2C3A47; --grid:#223040; --focus:#7FB2EE;
+}
+*,*::before,*::after{box-sizing:inherit}
+html,body{margin:0}
+body{
+  background:var(--paper);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:22px 22px;
+  color:var(--ink);
+  font-family:"Onest",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  font-size:16px;line-height:1.5;
+}
+button,textarea,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.wrap{max-width:1040px;margin:0 auto;padding:16px 12px 48px}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;justify-content:space-between;margin-bottom:14px}
+h1{font-family:"Unbounded","Onest",system-ui,sans-serif;font-weight:700;font-size:clamp(22px,5vw,34px);line-height:1.1;margin:0;letter-spacing:-.01em}
+.sub{color:var(--muted);font-size:14px;margin-top:4px}
+.week{display:flex;align-items:center;gap:6px;background:var(--sheet);border:1px solid var(--line);border-radius:999px;padding:4px}
+.week button{border:0;background:transparent;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:18px}
+.week button:hover{background:var(--grid)}
+.week .lbl{min-width:150px;text-align:center;font-size:14px;line-height:1.2}
+.week .lbl b{display:block;font-weight:600}
+.week .today{font-size:12px;width:auto;padding:0 10px;border-radius:999px;color:var(--focus)}
+.bar{height:8px;background:var(--grid);border-radius:999px;overflow:hidden;margin:6px 0 16px}
+.bar i{display:block;height:100%;background:var(--ink);width:0;transition:width .3s}
+.meta{display:flex;justify-content:space-between;font-size:13px;color:var(--muted)}
+
+/* The mandala grid */
+.mandala{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;background:var(--ink);padding:6px;border-radius:14px}
+.block{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));min-width:0;gap:2px;background:var(--line);border-radius:8px;overflow:hidden}
+.cell{aspect-ratio:1/1;min-width:0;background:var(--sheet);border:0;padding:3px;display:flex;align-items:center;justify-content:center;text-align:center;cursor:pointer;
+  font-size:clamp(8.5px,2.35vw,13px);line-height:1.15;hyphens:auto;overflow-wrap:anywhere;position:relative;transition:background .15s,color .15s}
+.cell.act:hover{background:color-mix(in srgb,var(--c) 14%,var(--sheet))}
+.cell.act.done{background:var(--c);color:var(--done-ink)}
+.cell.act.done::after{content:"✓";position:absolute;top:1px;right:3px;font-size:.9em;opacity:.9}
+.cell.act.has-note::before{content:"";position:absolute;bottom:3px;left:50%;width:4px;height:4px;margin-left:-2px;border-radius:50%;background:var(--c)}
+.cell.act.done.has-note::before{background:var(--done-ink)}
+.cell.pillar{flex-direction:column;overflow-wrap:normal;word-break:normal;background:var(--c);color:#fff;font-family:"Unbounded","Onest",sans-serif;font-weight:500;font-size:clamp(8px,2.2vw,13px)}
+.cell.pillar small{display:block;font-family:"Onest",sans-serif;font-weight:400;opacity:.85;font-size:.85em;margin-top:2px}
+.cell.pillar.inner{background:color-mix(in srgb,var(--c) 22%,var(--sheet));color:var(--ink)}
+.cell.goal{background:var(--ink);color:var(--sheet);font-family:"Unbounded","Onest",sans-serif;font-weight:700;font-size:clamp(8px,2.2vw,13px);cursor:pointer}
+.hint{font-size:13px;color:var(--muted);margin:10px 2px 0}
+
+section.card{background:var(--sheet);border:1px solid var(--line);border-radius:14px;padding:16px;margin-top:18px}
+h2{font-family:"Unbounded","Onest",sans-serif;font-weight:500;font-size:18px;margin:0 0 10px}
+label.f{display:block;font-size:14px;font-weight:600;margin:12px 0 4px}
+textarea{width:100%;min-height:72px;resize:vertical;border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--paper);line-height:1.45}
+.hist{display:flex;gap:6px;align-items:flex-end;height:90px;overflow-x:auto;padding-bottom:4px}
+.hist button{flex:1 0 34px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;border:0;background:transparent;cursor:pointer;gap:4px;font-size:11px;color:var(--muted)}
+.hist span.b{width:100%;background:var(--ink);border-radius:4px 4px 0 0;min-height:2px}
+.hist button.cur span.b{background:var(--focus)}
+.hist button.cur{color:var(--ink);font-weight:600}
+
+/* Pillar sheet */
+.sheet{position:fixed;inset:0;background:var(--paper);overflow-y:auto;z-index:10;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);display:none}
+.sheet.open{display:block}
+.sheet .top{position:sticky;top:0;background:var(--c);color:#fff;padding:12px 12px 14px;z-index:1}
+.sheet .top .row{max-width:760px;margin:0 auto;display:flex;align-items:center;gap:10px}
+.sheet .back{border:0;background:rgba(255,255,255,.18);color:#fff;border-radius:999px;height:36px;padding:0 14px;cursor:pointer}
+.sheet h3{font-family:"Unbounded","Onest",sans-serif;font-weight:700;font-size:20px;margin:0;flex:1}
+.sheet .count{font-size:14px;opacity:.9}
+.sheet .body{max-width:760px;margin:0 auto;padding:14px 12px 40px}
+.act-row{background:var(--sheet);border:1px solid var(--line);border-left:4px solid var(--c);border-radius:12px;padding:12px;margin-bottom:10px}
+.act-head{display:flex;gap:12px;align-items:flex-start}
+.chk{flex:0 0 30px;height:30px;border-radius:8px;border:2px solid var(--c);background:transparent;cursor:pointer;font-size:16px;color:#fff;display:flex;align-items:center;justify-content:center}
+.chk.on{background:var(--c)}
+.act-text{flex:1;min-width:0}
+.act-text .t{font-weight:500}
+.act-text input{width:100%;border:1px solid var(--line);border-radius:8px;padding:6px 8px;background:var(--paper)}
+.streak{display:flex;gap:3px;margin-top:6px;align-items:center;font-size:12px;color:var(--muted)}
+.streak i{width:10px;height:10px;border-radius:3px;background:var(--grid);display:inline-block}
+.streak i.on{background:var(--c)}
+.tools{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.tools button{border:1px solid var(--line);background:transparent;border-radius:999px;padding:4px 12px;font-size:13px;cursor:pointer}
+.tools button:hover{border-color:var(--c)}
+.act-row textarea{margin-top:8px;min-height:64px}
+.status{position:fixed;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--sheet);font-size:12px;padding:6px 12px;border-radius:999px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:20}
+.status.show{opacity:.92}
+.foot{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;margin-top:18px;font-size:13px;color:var(--muted)}
+.foot button{border:1px solid var(--line);background:var(--sheet);border-radius:999px;padding:6px 14px;cursor:pointer;font-size:13px}
+.proj{padding:12px 0;border-top:1px solid var(--line)}
+.proj:first-of-type{border-top:0;padding-top:4px}
+.proj .ph{display:flex;justify-content:space-between;gap:10px;align-items:baseline;flex-wrap:wrap}
+.proj .pn{font-weight:600}
+.proj .pv{font-family:"Unbounded","Onest",sans-serif;font-weight:500;font-size:15px;white-space:nowrap}
+.proj .pbar{height:10px;background:var(--grid);border-radius:999px;overflow:hidden;margin:8px 0}
+.proj .pbar i{display:block;height:100%;background:#2F8A78;border-radius:999px}
+.proj .pc{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.proj .pc button{border:1px solid var(--line);background:transparent;border-radius:999px;padding:4px 12px;font-size:13px;cursor:pointer;min-height:32px}
+.proj .pc input{width:96px;border:1px solid var(--line);border-radius:8px;padding:5px 8px;background:var(--paper)}
+.proj .pm{font-size:13px;color:var(--muted);margin-top:6px}
+.proj .pm b{color:var(--ink);font-weight:600}
+.tabs{display:flex;gap:4px;background:var(--sheet);border:1px solid var(--line);border-radius:999px;padding:4px;margin-bottom:14px;width:fit-content}
+.tabs button{border:0;background:transparent;border-radius:999px;padding:8px 18px;cursor:pointer;font-weight:500}
+.tabs button[aria-selected="true"]{background:var(--ink);color:var(--sheet)}
+.tabs .badge{display:inline-block;min-width:20px;padding:0 6px;margin-left:6px;border-radius:999px;background:#C0413A;color:#fff;font-size:12px;line-height:20px}
+.next{display:flex;gap:12px;align-items:center;background:var(--ink);color:var(--sheet);border-radius:14px;padding:14px 16px;margin-bottom:14px;cursor:pointer;border:0;width:100%;text-align:left}
+.next .nl{font-size:13px;opacity:.75}
+.next .nt{font-family:"Unbounded","Onest",sans-serif;font-weight:500;font-size:16px;line-height:1.3}
+.next .nd{font-size:13px;opacity:.8;margin-top:2px}
+.add{display:grid;gap:8px}
+.add input[type=text]{width:100%;border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--paper);font-size:16px}
+.add .r{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.add select,.add input[type=date]{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--paper);min-height:40px}
+.seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{border:0;background:var(--paper);padding:8px 12px;cursor:pointer;font-size:14px;min-height:40px}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--sheet)}
+.addbtn{border:0;background:var(--ink);color:var(--sheet);border-radius:10px;padding:10px 18px;cursor:pointer;font-weight:600;min-height:40px;margin-left:auto}
+.grp h3{font-size:15px;font-weight:600;margin:18px 0 2px}
+.grp p.gd{margin:0 0 8px;font-size:13px;color:var(--muted)}
+.task{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--line)}
+.task .tc{flex:0 0 26px;height:26px;border-radius:7px;border:2px solid var(--c);background:transparent;cursor:pointer;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;margin-top:1px}
+.task.done .tc{background:var(--c)}
+.task .tb{flex:1;min-width:0}
+.task .tt{font-weight:500;cursor:text;overflow-wrap:anywhere}
+.task.done .tt{text-decoration:line-through;color:var(--muted)}
+.task .tm{font-size:13px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;margin-top:2px}
+.task .tm .cat{color:var(--c);font-weight:600}
+.task .tm .late{color:#C0413A;font-weight:600}
+.task .tx{border:0;background:transparent;cursor:pointer;color:var(--muted);font-size:18px;width:32px;height:32px;border-radius:50%}
+.task .tx:hover{background:var(--grid)}
+.empty{color:var(--muted);font-size:14px;padding:8px 0}
+details summary{cursor:pointer;font-weight:600;margin-top:12px}
+.xbtn{border:1px solid var(--line);background:var(--paper);border-radius:999px;padding:8px 14px;cursor:pointer;font-size:14px}
+.xbtn:hover{border-color:var(--ink)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media (min-width:900px){.wrap{padding-top:28px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Сітка 9×9</h1>
+      <div class="sub" id="goalSub"></div>
+    </div>
+    <div class="week" role="group" aria-label="Вибір тижня">
+      <button id="prevW" aria-label="Попередній тиждень">‹</button>
+      <div class="lbl" id="weekLbl"></div>
+      <button id="nextW" aria-label="Наступний тиждень">›</button>
+      <button class="today" id="todayW">Цей</button>
+    </div>
+  </header>
+
+  <div class="tabs" role="tablist">
+    <button role="tab" id="tabGrid" aria-selected="true">Сітка</button>
+    <button role="tab" id="tabTasks" aria-selected="false">Задачі<span class="badge" id="taskBadge" hidden></span></button>
+  </div>
+
+  <button class="next" id="nextCard" hidden><div><div class="nl">Почни з цього</div><div class="nt" id="nextT"></div><div class="nd" id="nextD"></div></div></button>
+
+  <div id="viewGrid">
+  <div class="meta"><span id="progTxt"></span><span id="noteTxt"></span></div>
+  <div class="bar"><i id="progBar"></i></div>
+
+  <div class="mandala" id="mandala" aria-label="Сітка цілей"></div>
+  <p class="hint">Торкнись дії, щоб відмітити її виконаною цього тижня. Торкнись назви опори, щоб відкрити нотатки та деталі. Крапка під дією означає, що там є нотатка.</p>
+
+  <section class="card">
+    <h2>Робочі проєкти</h2>
+    <div id="projMain"></div>
+  </section>
+
+  <section class="card">
+    <h2>Нотатки тижня</h2>
+    <label class="f" for="wGood">Що спрацювало</label>
+    <textarea id="wGood" placeholder="Напр.: 3 тренування без пропусків, модель DCF за вечір"></textarea>
+    <label class="f" for="wBad">Що заважало</label>
+    <textarea id="wBad" placeholder="Напр.: дедлайн на роботі з'їв середу"></textarea>
+    <label class="f" for="wFocus">Фокус наступного тижня</label>
+    <textarea id="wFocus" placeholder="1–3 дії, на які ставлю пріоритет"></textarea>
+  </section>
+
+  <section class="card">
+    <h2>Останні 10 тижнів</h2>
+    <div class="hist" id="hist"></div>
+  </section>
+
+  </div><!-- /viewGrid -->
+
+  <div id="viewTasks" hidden>
+    <section class="card" style="margin-top:0">
+      <h2>Нова задача</h2>
+      <div class="add">
+        <input type="text" id="tTitle" placeholder="Що треба зробити?" aria-label="Назва задачі" enterkeyhint="done">
+        <div class="r">
+          <select id="tCat" aria-label="Категорія"></select>
+          <input type="date" id="tDue" aria-label="Дедлайн (необов'язково)">
+          <div class="seg" role="group" aria-label="Важливість" id="tImp">
+            <button data-v="3" aria-pressed="false">Важливо</button>
+            <button data-v="2" aria-pressed="true">Звичайно</button>
+            <button data-v="1" aria-pressed="false">Дрібниця</button>
+          </div>
+          <button class="addbtn" id="tAdd">Додати</button>
+        </div>
+      </div>
+    </section>
+    <section class="card">
+      <h2>Мої пріоритети</h2>
+      <div id="taskGroups"></div>
+      <details id="doneBox"><summary id="doneSum">Виконані</summary><div id="doneList"></div></details>
+    </section>
+  </div>
+
+  <section class="card" id="xferCard">
+    <h2>Перенесення даних</h2>
+    <p class="hint" style="margin-top:0">Щоб перенести відмітки, нотатки й задачі в іншу версію сітки (наприклад, у застосунок на телефоні): тут натисни «Скопіювати мої дані», там натисни «Вставити дані» і встав текст.</p>
+    <div class="r" style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="xbtn" id="xCopy">Скопіювати мої дані</button>
+      <button class="xbtn" id="xPasteOpen">Вставити дані</button>
+      <button class="xbtn" id="xFile">Завантажити резервну копію</button>
+      <label class="xbtn" style="display:inline-block">Відновити з файлу<input type="file" id="xFileIn" accept="application/json,.json" hidden></label>
+    </div>
+    <textarea id="xText" hidden style="margin-top:10px;min-height:110px;font-size:12px" aria-label="Дані для перенесення"></textarea>
+    <button class="xbtn" id="xImport" hidden style="margin-top:8px">Імпортувати вставлені дані</button>
+  </section>
+
+  <div class="foot">
+    <span id="storeTxt">Завантаження…</span>
+    <button id="resetBtn">Очистити відмітки цього тижня</button>
+  </div>
+</div>
+
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+  <div class="top"><div class="row">
+    <button class="back" id="sheetBack">‹ Сітка</button>
+    <h3 id="sheetTitle"></h3>
+    <span class="count" id="sheetCount"></span>
+  </div></div>
+  <div class="body">
+    <section class="card" id="sheetProjCard" style="margin:0 0 14px;display:none"><h2>Робочі проєкти</h2><div id="sheetProj"></div></section>
+    <div id="sheetActs"></div>
+    <section class="card" style="margin-top:8px">
+      <h2>Нотатки опори</h2>
+      <textarea id="pillarNote" placeholder="Ресурси, посилання, ідеї, що куди і як"></textarea>
+    </section>
+  </div>
+</div>
+
+<div class="status" id="status"></div>
+
+<script>
+(function(){
+const PILLARS=[
+ {id:"fin",name:"Фінанси",s:"Фінанси",c:"#2F6FB0",a:[
+  ["3×30 хв теми місяця: TVM → звітність → DCF → облігації → CAPM → деривативи → макро","Тема місяця"],
+  ["Щодня 10 хв новин: НБУ, Forbes Україна, FT","Новини 10 хв"],
+  ["Одна модель в Excel: NPV, DCF або облігація","Модель в Excel"],
+  ["Відстежити ставку НБУ, інфляцію, курс","Макро: 3 цифри"],
+  ["Розібрати річний звіт однієї компанії","Звіт компанії"],
+  ["20 карток з термінами в Anki","Anki ×20"],
+  ["Одна лекція чи подкаст (Damodaran, Odd Lots)","Лекція"],
+  ["Неділя: пояснити тему тижня за 5 хв (метод Фейнмана)","Фейнман"]]},
+ {id:"uni",name:"Університет",s:"Універ",c:"#7556B3",a:[
+  ["Неділя: огляд усіх дедлайнів тижня","Дедлайни"],
+  ["2 блоки глибокої роботи по 90 хв","2×90 хв"],
+  ["10 хв нотаток одразу після пари","Нотатки"],
+  ["Великі завдання ділю на кроки по 25 хв","Кроки 25 хв"],
+  ["Застряг на 20+ хв, питаю одногрупників чи викладача","Питати"],
+  ["Повторення в дорозі: Anki, аудіо","Дорога"],
+  ["Теми робіт обираю з фінансових інтересів","Теми робіт"],
+  ["Огляд пройденого за тиждень, 45 хв","Огляд"]]},
+ {id:"work",name:"Робота",s:"Робота",c:"#2F8A78",a:[
+  ["Стабільні робочі дні та години","Графік"],
+  ["Щодня топ-3 задачі","Топ-3"],
+  ["Курс «Основи бюджетної системи»: +10% за тиждень","Бюджетна система"],
+  ["Курс Power BI: 2 сесії по 45 хв + міні-дашборд","Power BI"],
+  ["Записати досягнення тижня (для CV)","Досягнення"],
+  ["Нові задачі беру лише після перегляду плану","Фільтр задач"],
+  ["Короткий фідбек від керівника","Фідбек"],
+  ["Переклад тендерних закупівель: ~300 рядків за тиждень","Переклад тендерів"]]},
+ {id:"str",name:"Сила",s:"Сила",c:"#C0413A",a:[
+  ["3 тренування по 60 хв, внесені в календар","3 тренування"],
+  ["База: присід, жим лежачи, станова, тяга, жим стоячи","База"],
+  ["Прогрес: +2,5 кг або +1 повтор","Прогрес"],
+  ["Журнал: вага, повтори, самопочуття","Журнал"],
+  ["10 хв розминки перед кожним тренуванням","Розминка"],
+  ["Кожен 5-й тиждень — розвантажувальний","Розвантаж."],
+  ["План Б на завал: 30 хв, 2 базові вправи","План Б"],
+  ["Раз на 4 тижні тест робочих ваг","Тест ваг"]]},
+ {id:"rec",name:"Відновлення",s:"Віднов­лення",c:"#B9831C",a:[
+  ["Сон 7–8 год, підйом в один час","Сон"],
+  ["1,6–2 г білка на кг ваги щодня","Білок"],
+  ["Неділя: готую їжу на 3 дні","Мілпреп"],
+  ["2+ л води на день","Вода"],
+  ["Кава лише до 14:00","Кава до 14"],
+  ["20 хв прогулянки без телефону","Прогулянка"],
+  ["30 хв до сну без екранів","Без екранів"],
+  ["Один вечір на тиждень без справ","Вільний вечір"]]},
+ {id:"ph",name:"Телефон",s:"Телефон",c:"#56646F",a:[
+  ["Ліміт на соцмережі: 30 хв на день","Ліміт 30 хв"],
+  ["Затягуючі застосунки прибрані з головного екрана","Головний екран"],
+  ["Телефон ночує поза спальнею","Поза спальнею"],
+  ["Чорно-білий режим екрана","Ч/Б режим"],
+  ["Сповіщення лише від людей","Сповіщення"],
+  ["Соцмережі у 2 вікна: 13:00 і 20:00","2 вікна"],
+  ["Заміна під рукою: Anki, книга, подкаст","Заміна"],
+  ["Неділя: статистика екрана, ліміт −10%","Ліміт −10%"]]},
+ {id:"trk",name:"Фінтрекер",s:"Трекер",c:"#A9487A",a:[
+  ["Описати MVP: доходи, витрати, категорії, план","MVP"],
+  ["Логіка розподілу: подушка → цілі → інвестиції (ОВДП, депозити, ETF)","Логіка"],
+  ["Прототип у Google Sheets","Sheets"],
+  ["Веду в трекері власні фінанси","Тест на собі"],
+  ["Дашборд із графіками: куди йде кожна гривня","Дашборд"],
+  ["Перенесення в застосунок (Python + Streamlit)","Застосунок"],
+  ["Цілі з прогресом і нагадування про внесок","Цілі"],
+  ["Показати 2–3 друзям, зібрати фідбек","Фідбек"]]},
+ {id:"time",name:"Система часу",s:"Час",c:"#7A6440",a:[
+  ["Неділя: 30 хв планування тижня","План тижня"],
+  ["Тайм-блокінг під кожну опору","Блоки часу"],
+  ["Усі задачі в одному місці (Notion, Todoist)","Одне місце"],
+  ["Групую однотипні задачі","Групування"],
+  ["20% часу залишаю як буфер","Буфер 20%"],
+  ["Правило 2 хвилин","2 хвилини"],
+  ["Прив'язую звички до наявних","Зв'язки звичок"],
+  ["П'ятниця: огляд тижня","Огляд"]]}
+];
+const DEFAULT_GOAL="Фінансист, який встигає";
+const BLOCK_POS=[0,1,2,3,5,6,7,8]; // blocks around the center
+const $=id=>document.getElementById(id);
+
+/* ---------- weeks ---------- */
+function isoWeek(d){
+  const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));
+  const day=t.getUTCDay()||7; t.setUTCDate(t.getUTCDate()+4-day);
+  const y=t.getUTCFullYear(); const y0=new Date(Date.UTC(y,0,1));
+  const w=Math.ceil(((t-y0)/864e5+1)/7);
+  return y+"-W"+String(w).padStart(2,"0");
+}
+function mondayOf(d){const m=new Date(d);m.setHours(0,0,0,0);const day=m.getDay()||7;m.setDate(m.getDate()-day+1);return m}
+let weekStart=mondayOf(new Date());
+const fmt=d=>d.toLocaleDateString("uk-UA",{day:"numeric",month:"short"});
+const wk=()=>isoWeek(weekStart);
+
+/* ---------- state ---------- */
+let state={v:1,goal:DEFAULT_GOAL,texts:{},checks:{},notes:{},pillarNotes:{},weekNotes:{},proj:{},projHist:{},tasks:null};
+const LS="sitka9x9-state";
+let db=null, docRef=null, saveTimer=null, lastLocalWrite=0, pending=false;
+
+function merge(s){ if(s&&typeof s==="object"){ s=JSON.parse(JSON.stringify(s)); state=Object.assign({v:1,goal:DEFAULT_GOAL,texts:{},checks:{},notes:{},pillarNotes:{},weekNotes:{},proj:{},projHist:{},tasks:null},s);state.proj=state.proj||{};state.projHist=state.projHist||{};} }
+try{ const raw=localStorage.getItem(LS); if(raw) merge(JSON.parse(raw)); }catch(e){}
+
+function showStatus(t){const s=$("status");s.textContent=t;s.classList.add("show");clearTimeout(showStatus.t);showStatus.t=setTimeout(()=>s.classList.remove("show"),1400)}
+function save(){
+  try{localStorage.setItem(LS,JSON.stringify(state))}catch(e){}
+  clearTimeout(saveTimer);
+  pending=true;
+  saveTimer=setTimeout(async()=>{
+    if(docRef){
+      try{ lastLocalWrite=Date.now(); await docRef.set(JSON.parse(JSON.stringify(state))); lastLocalWrite=Date.now(); showStatus("Збережено"); }
+      catch(e){ showStatus("Збережено на цьому пристрої"); }
+      finally{ pending=false; }
+    } else { pending=false; showStatus("Збережено на цьому пристрої"); }
+  },700);
+}
+
+const key=(p,i)=>p+"."+i;
+const text=(p,i)=>state.texts[key(PILLARS[p].id,i)]||PILLARS[p].a[i][0];
+const short=(p,i)=>state.texts[key(PILLARS[p].id,i)+"s"]||PILLARS[p].a[i][1];
+const isDone=(p,i,w=wk())=>!!(state.checks[w]&&state.checks[w][key(PILLARS[p].id,i)]);
+function setDone(p,i,v){const w=wk();state.checks[w]=state.checks[w]||{};if(v)state.checks[w][key(PILLARS[p].id,i)]=true;else delete state.checks[w][key(PILLARS[p].id,i)];save();}
+const pillarCount=(p,w)=>PILLARS[p].a.reduce((n,_,i)=>n+(isDone(p,i,w)?1:0),0);
+const weekTotal=w=>state.checks[w]?Object.keys(state.checks[w]).length:0;
+
+/* ---------- work projects ---------- */
+const PROJECTS=[
+ {id:"budget",name:"Курс «Основи бюджетної системи»",unit:"%",total:100,start:20,step:5,plan:10},
+ {id:"pbi",name:"Курс Power BI",unit:"%",total:100,start:0,step:5,plan:10},
+ {id:"tr",name:"Переклад тендерних закупівель, укр → англ",unit:"рядків",total:2900,start:0,step:50,plan:300}
+];
+const wIdx=w=>{const [y,n]=w.split("-W").map(Number);return y*53+n};
+const pVal=P=>state.proj[P.id]!=null?state.proj[P.id]:P.start;
+function pBefore(P,w){ // value at the end of the last recorded week before w
+  const h=state.projHist[P.id]||{}; let best=null;
+  Object.keys(h).forEach(k=>{if(wIdx(k)<wIdx(w)&&(best===null||wIdx(k)>wIdx(best)))best=k;});
+  return best?h[best]:P.start;
+}
+function pAt(P,w){const h=state.projHist[P.id]||{};return h[w]!=null?h[w]:pBefore(P,w);}
+function setProj(P,v){
+  v=Math.max(0,Math.min(P.total,Math.round(Number(v)||0)));
+  state.proj[P.id]=v; state.projHist[P.id]=state.projHist[P.id]||{}; state.projHist[P.id][isoWeek(new Date())]=v;
+  save(); renderProjects();
+}
+function renderProjects(){
+  ["projMain","sheetProj"].forEach(cid=>{
+    const box=$(cid); if(!box) return; box.innerHTML="";
+    PROJECTS.forEach(P=>{
+      const v=pVal(P), pct=v/P.total*100, left=P.total-v;
+      const w=wk(), gained=pAt(P,w)-pBefore(P,w);
+      const weeksLeft=left>0?Math.ceil(left/P.plan):0;
+      const d=document.createElement("div"); d.className="proj";
+      d.innerHTML='<div class="ph"><span class="pn"></span><span class="pv"></span></div>'+
+        '<div class="pbar"><i style="width:'+pct+'%"></i></div>'+
+        '<div class="pc"><button data-d="-1" aria-label="Зменшити">−'+P.step+'</button><button data-d="1" aria-label="Збільшити">+'+P.step+'</button>'+
+        '<input type="number" inputmode="numeric" min="0" max="'+P.total+'" aria-label="Поточний прогрес"><span style="font-size:13px;color:var(--muted)">'+(P.unit==="%"?"%":"з "+P.total)+'</span></div>'+
+        '<div class="pm"></div>';
+      d.querySelector(".pn").textContent=P.name;
+      d.querySelector(".pv").textContent=P.unit==="%"?v+"%":v+" / "+P.total;
+      const inp=d.querySelector("input"); inp.value=v;
+      inp.onchange=()=>setProj(P,inp.value);
+      d.querySelectorAll("button").forEach(b=>b.onclick=()=>setProj(P,pVal(P)+Number(b.dataset.d)*P.step));
+      const unit=P.unit==="%"?"%":" рядків";
+      d.querySelector(".pm").innerHTML=left<=0?"<b>Готово</b>":
+        'Тиждень '+w.split("-W")[1]+': <b>+'+Math.max(0,gained)+unit+'</b> з плану '+P.plan+unit+
+        '. Залишилось '+left+unit+', це ~'+weeksLeft+' тиж. у такому темпі.';
+      box.appendChild(d);
+    });
+  });
+}
+
+/* ---------- tasks ---------- */
+const CATS=PILLARS.map(P=>({id:P.id,name:P.name,c:P.c})).concat([{id:"other",name:"Інше",c:"#6B7785"}]);
+const catOf=id=>CATS.find(c=>c.id===id)||CATS[CATS.length-1];
+const todayStr=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
+const addDays=n=>{const d=new Date();d.setDate(d.getDate()+n);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
+function daysTo(due){if(!due)return null;const [y,m,d]=due.split("-").map(Number);const a=new Date(y,m-1,d),t=new Date();t.setHours(0,0,0,0);return Math.round((a-t)/864e5);}
+function seedTasks(){
+  let n=0; const mk=(t,cat,imp,due)=>({id:"s"+(n++)+Date.now().toString(36),t,cat,imp,due,done:false});
+  return [
+    mk("Скласти глосарій термінів для перекладу тендерів","work",3,addDays(2)),
+    mk("Перекласти перші 100 рядків тендерів","work",3,addDays(5)),
+    mk("Пройти наступний модуль курсу бюджетної системи","work",2,addDays(6)),
+    mk("Вписати поточний прогрес Power BI у сітку","work",1,addDays(0)),
+    mk("Поставити ліміт 30 хв на соцмережі","ph",2,addDays(0)),
+    mk("Внести 3 тренування цього тижня в календар","str",2,addDays(1))
+  ];
+}
+if(!Array.isArray(state.tasks)) state.tasks=seedTasks();
+function urgencyPts(d){if(d===null)return 0;if(d<0)return 40;if(d===0)return 34;if(d<=2)return 26;if(d<=7)return 14;if(d<=14)return 6;return 2;}
+const score=t=>t.imp*15+urgencyPts(daysTo(t.due));
+function quadrant(t){const d=daysTo(t.due),urgent=d!==null&&d<=2;
+  if(t.imp>=2&&urgent)return 0; if(t.imp>=2)return 1; if(urgent)return 2; return 3;}
+const QUADS=[
+  ["Зробити сьогодні","Важливе з дедлайном до 2 днів або вже прострочене."],
+  ["Запланувати","Важливе, але є час. Постав собі блок у календарі."],
+  ["Швидко закрити","Дрібниці, що горять. Роби пачкою за 15–20 хв."],
+  ["Коли буде час","Не термінове і не критичне. Можна відкласти або видалити."]
+];
+function dueLabel(t){const d=daysTo(t.due);if(d===null)return "";
+  if(d<0)return '<span class="late">прострочено '+(-d)+' дн.</span>';
+  if(d===0)return '<span class="late">сьогодні</span>'; if(d===1)return "завтра";
+  const [y,m,dd]=t.due.split("-").map(Number);return "до "+fmt(new Date(y,m-1,dd))+" (через "+d+" дн.)";}
+function sortedOpen(){return state.tasks.filter(t=>!t.done).sort((a,b)=>score(b)-score(a)||(a.due||"9").localeCompare(b.due||"9"));}
+function taskRow(t){
+  const c=catOf(t.cat); const r=document.createElement("div"); r.className="task"+(t.done?" done":""); r.style.setProperty("--c",c.c);
+  r.innerHTML='<button class="tc" aria-pressed="'+t.done+'" aria-label="Виконано">'+(t.done?"✓":"")+'</button>'+
+    '<div class="tb"><div class="tt" title="Торкнись, щоб змінити"></div><div class="tm"><span class="cat"></span>'+
+    (t.imp===3?"<span>важливо</span>":t.imp===1?"<span>дрібниця</span>":"")+'<span>'+dueLabel(t)+'</span></div></div>'+
+    '<button class="tx" aria-label="Видалити">×</button>';
+  r.querySelector(".tt").textContent=t.t; r.querySelector(".cat").textContent=c.name;
+  r.querySelector(".tc").onclick=()=>{t.done=!t.done;t.doneAt=t.done?Date.now():null;save();renderTasks();};
+  r.querySelector(".tt").onclick=()=>{
+    const v=prompt("Задача:",t.t); if(v===null)return; if(v.trim())t.t=v.trim();
+    const d=prompt("Дедлайн (РРРР-ММ-ДД), порожньо — без дедлайну:",t.due||""); if(d!==null)t.due=/^\d{4}-\d{2}-\d{2}$/.test(d.trim())?d.trim():null;
+    save();renderTasks();};
+  r.querySelector(".tx").onclick=()=>{if(confirm("Видалити задачу?")){state.tasks=state.tasks.filter(x=>x!==t);save();renderTasks();}};
+  return r;
+}
+function renderTasks(){
+  const open=sortedOpen();
+  const g=$("taskGroups"); g.innerHTML="";
+  if(!open.length) g.innerHTML='<div class="empty">Задач немає. Додай першу вище.</div>';
+  QUADS.forEach((q,qi)=>{
+    const list=open.filter(t=>quadrant(t)===qi); if(!list.length)return;
+    const sec=document.createElement("div"); sec.className="grp";
+    sec.innerHTML='<h3>'+q[0]+' · '+list.length+'</h3><p class="gd">'+q[1]+'</p>';
+    list.forEach(t=>sec.appendChild(taskRow(t))); g.appendChild(sec);
+  });
+  const done=state.tasks.filter(t=>t.done).sort((a,b)=>(b.doneAt||0)-(a.doneAt||0));
+  $("doneSum").textContent="Виконані · "+done.length; $("doneBox").hidden=!done.length;
+  const dl=$("doneList"); dl.innerHTML=""; done.slice(0,30).forEach(t=>dl.appendChild(taskRow(t)));
+  const urgentN=open.filter(t=>quadrant(t)===0).length;
+  $("taskBadge").hidden=!urgentN; $("taskBadge").textContent=urgentN;
+  const top=open[0];
+  if(top){$("nextCard").hidden=false;$("nextT").textContent=top.t;$("nextD").innerHTML=catOf(top.cat).name+(top.due?" · "+dueLabel(top):"");}
+  else $("nextCard").hidden=true;
+}
+(function initTaskForm(){
+  const sel=$("tCat"); CATS.forEach(c=>{const o=document.createElement("option");o.value=c.id;o.textContent=c.name;sel.appendChild(o);});
+  let imp=2;
+  $("tImp").querySelectorAll("button").forEach(b=>b.onclick=()=>{imp=Number(b.dataset.v);$("tImp").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));});
+  const add=()=>{const t=$("tTitle").value.trim(); if(!t){$("tTitle").focus();return;}
+    state.tasks.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),t,cat:sel.value,imp,due:$("tDue").value||null,done:false});
+    $("tTitle").value="";$("tDue").value="";save();renderTasks();showStatus("Додано");$("tTitle").focus();};
+  $("tAdd").onclick=add; $("tTitle").onkeydown=e=>{if(e.key==="Enter")add();};
+})();
+function showView(v){
+  $("viewGrid").hidden=v!=="grid"; $("viewTasks").hidden=v!=="tasks";
+  $("tabGrid").setAttribute("aria-selected",v==="grid"); $("tabTasks").setAttribute("aria-selected",v==="tasks");
+  try{localStorage.setItem("sitka9x9-view",v)}catch(e){}
+}
+$("tabGrid").onclick=()=>showView("grid"); $("tabTasks").onclick=()=>showView("tasks");
+$("nextCard").onclick=()=>showView("tasks");
+try{if(localStorage.getItem("sitka9x9-view")==="tasks")showView("tasks")}catch(e){}
+
+/* ---------- render grid ---------- */
+function render(){
+  const ws=weekStart, we=new Date(ws);we.setDate(we.getDate()+6);
+  $("weekLbl").innerHTML="<b>Тиждень "+wk().split("-W")[1]+"</b>"+fmt(ws)+" – "+fmt(we);
+  $("goalSub").textContent=state.goal;
+  const tot=weekTotal(wk());
+  $("progTxt").textContent="Виконано "+tot+" з 64";
+  $("progBar").style.width=(tot/64*100)+"%";
+  const nNotes=Object.values(state.notes).filter(Boolean).length;
+  $("noteTxt").textContent=nNotes?("Нотаток: "+nNotes):"";
+
+  const m=$("mandala"); m.innerHTML="";
+  for(let b=0;b<9;b++){
+    const blk=document.createElement("div"); blk.className="block";
+    if(b===4){
+      for(let c=0;c<9;c++){
+        const el=document.createElement("button"); el.type="button";
+        if(c===4){el.className="cell goal";el.textContent=state.goal;el.title="Змінити центральну ціль";el.onclick=editGoal;}
+        else{const p=BLOCK_POS.indexOf(c);el.className="cell pillar inner";el.style.setProperty("--c",PILLARS[p].c);
+          el.innerHTML=PILLARS[p].s+"<small>"+pillarCount(p,wk())+"/8</small>";el.onclick=()=>openPillar(p);}
+        blk.appendChild(el);
+      }
+    } else {
+      const p=BLOCK_POS.indexOf(b); let ai=0;
+      for(let c=0;c<9;c++){
+        const el=document.createElement("button"); el.type="button"; el.style.setProperty("--c",PILLARS[p].c);
+        if(c===4){el.className="cell pillar";el.innerHTML=PILLARS[p].s+"<small>"+pillarCount(p,wk())+"/8</small>";el.onclick=()=>openPillar(p);el.setAttribute("aria-label","Відкрити опору "+PILLARS[p].name);}
+        else{
+          const i=ai++; const done=isDone(p,i);
+          el.className="cell act"+(done?" done":"")+(state.notes[key(PILLARS[p].id,i)]?" has-note":"");
+          el.textContent=short(p,i); el.title=text(p,i);
+          el.setAttribute("aria-pressed",done); el.setAttribute("aria-label",text(p,i));
+          el.onclick=()=>{setDone(p,i,!isDone(p,i));render();};
+        }
+        blk.appendChild(el);
+      }
+    }
+    m.appendChild(blk);
+  }
+  const wn=state.weekNotes[wk()]||{};
+  $("wGood").value=wn.good||""; $("wBad").value=wn.bad||""; $("wFocus").value=wn.focus||"";
+  renderHist();
+  renderProjects();
+  renderTasks();
+  if(openP!==null) renderSheet();
+}
+function renderHist(){
+  const h=$("hist"); h.innerHTML="";
+  for(let k=9;k>=0;k--){
+    const d=new Date(weekStart); d.setDate(d.getDate()-7*k);
+    const w=isoWeek(d), n=weekTotal(w);
+    const b=document.createElement("button"); b.type="button"; if(k===0)b.className="cur";
+    b.innerHTML='<span>'+n+'</span><span class="b" style="height:'+Math.max(2,n/64*60)+'px"></span><span>т'+w.split("-W")[1]+'</span>';
+    b.title="Тиждень "+w.split("-W")[1]+": "+n+" з 64";
+    b.onclick=()=>{weekStart=mondayOf(d);render();};
+    h.appendChild(b);
+  }
+}
+function editGoal(){
+  const v=prompt("Центральна ціль:",state.goal);
+  if(v!==null&&v.trim()){state.goal=v.trim();save();render();}
+}
+
+/* ---------- pillar sheet ---------- */
+let openP=null;
+function openPillar(p){openP=p;renderSheet();$("sheet").classList.add("open");document.body.style.overflow="hidden";$("sheet").scrollTop=0;$("sheetBack").focus();}
+function closePillar(){openP=null;$("sheet").classList.remove("open");document.body.style.overflow="";render();}
+function renderSheet(){
+  const p=openP, P=PILLARS[p]; const sh=$("sheet"); sh.style.setProperty("--c",P.c);
+  $("sheetTitle").textContent=P.name;
+  $("sheetProjCard").style.display=P.id==="work"?"block":"none";
+  $("sheetCount").textContent=pillarCount(p,wk())+"/8 · т"+wk().split("-W")[1];
+  const box=$("sheetActs"); box.innerHTML="";
+  P.a.forEach((_,i)=>{
+    const k=key(P.id,i); const row=document.createElement("div"); row.className="act-row";
+    const done=isDone(p,i);
+    let streak=""; for(let s=5;s>=0;s--){const d=new Date(weekStart);d.setDate(d.getDate()-7*s);streak+='<i class="'+(isDone(p,i,isoWeek(d))?"on":"")+'"></i>';}
+    row.innerHTML=
+      '<div class="act-head"><button class="chk'+(done?" on":"")+'" aria-pressed="'+done+'" aria-label="Виконано цього тижня">'+(done?"✓":"")+'</button>'+
+      '<div class="act-text"><div class="t"></div><div class="streak">'+streak+'<span>&nbsp;6 тижнів</span></div></div></div>'+
+      '<div class="tools"><button data-a="note">'+(state.notes[k]?"Нотатка ✎":"Додати нотатку")+'</button><button data-a="edit">Змінити дію</button></div>';
+    row.querySelector(".t").textContent=text(p,i);
+    row.querySelector(".chk").onclick=()=>{setDone(p,i,!isDone(p,i));renderSheet();};
+    const tools=row.querySelector(".tools");
+    let ta=null;
+    const openNote=()=>{
+      if(ta){ta.focus();return;}
+      ta=document.createElement("textarea"); ta.placeholder="Що, де і як: посилання, цифри, деталі"; ta.value=state.notes[k]||"";
+      ta.oninput=()=>{state.notes[k]=ta.value;if(!ta.value)delete state.notes[k];save();};
+      row.appendChild(ta); ta.focus();
+    };
+    if(state.notes[k]) openNote();
+    tools.querySelector('[data-a="note"]').onclick=openNote;
+    tools.querySelector('[data-a="edit"]').onclick=()=>{
+      const t=row.querySelector(".t"); if(t.querySelector("input"))return;
+      t.innerHTML='<input aria-label="Текст дії"><input aria-label="Коротка назва в сітці" style="margin-top:6px" placeholder="Коротка назва для сітки">';
+      const [a,b]=t.querySelectorAll("input"); a.value=text(p,i); b.value=short(p,i); a.focus();
+      const commit=()=>{
+        if(a.value.trim()&&a.value.trim()!==P.a[i][0])state.texts[k]=a.value.trim();else delete state.texts[k];
+        if(b.value.trim()&&b.value.trim()!==P.a[i][1])state.texts[k+"s"]=b.value.trim();else delete state.texts[k+"s"];
+        save();
+      };
+      a.oninput=commit;b.oninput=commit;
+    };
+    box.appendChild(row);
+  });
+  const pn=$("pillarNote"); pn.value=state.pillarNotes[P.id]||"";
+}
+$("pillarNote").oninput=e=>{if(openP===null)return;state.pillarNotes[PILLARS[openP].id]=e.target.value;save();};
+$("sheetBack").onclick=closePillar;
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&openP!==null)closePillar();});
+
+/* ---------- week notes & nav ---------- */
+function bindWN(id,f){$(id).oninput=e=>{const w=wk();state.weekNotes[w]=state.weekNotes[w]||{};state.weekNotes[w][f]=e.target.value;save();};}
+bindWN("wGood","good");bindWN("wBad","bad");bindWN("wFocus","focus");
+$("prevW").onclick=()=>{weekStart.setDate(weekStart.getDate()-7);render();};
+$("nextW").onclick=()=>{weekStart.setDate(weekStart.getDate()+7);render();};
+$("todayW").onclick=()=>{weekStart=mondayOf(new Date());render();};
+$("resetBtn").onclick=()=>{if(confirm("Зняти всі відмітки цього тижня? Нотатки залишаться.")){delete state.checks[wk()];save();render();}};
+
+/* ---------- data transfer ---------- */
+function importData(raw){
+  let obj; try{obj=JSON.parse(raw)}catch(e){alert("Не вдалося прочитати дані. Перевір, що скопіював текст повністю.");return false;}
+  if(!obj||typeof obj!=="object"||!("checks" in obj)){alert("Це не схоже на дані сітки.");return false;}
+  if(!confirm("Замінити поточні дані на імпортовані?"))return false;
+  merge(obj); if(!Array.isArray(state.tasks))state.tasks=seedTasks(); save(); render(); showStatus("Дані імпортовано"); return true;
+}
+$("xCopy").onclick=async()=>{
+  const txt=JSON.stringify(state); const ta=$("xText"); ta.hidden=false; ta.readOnly=true; ta.value=txt; $("xImport").hidden=true;
+  let ok=false; try{await navigator.clipboard.writeText(txt);ok=true}catch(e){}
+  if(!ok){ta.focus();ta.select();try{ok=document.execCommand("copy")}catch(e){}}
+  showStatus(ok?"Скопійовано":"Виділи текст нижче і скопіюй вручну");
+};
+$("xPasteOpen").onclick=()=>{const ta=$("xText");ta.hidden=false;ta.readOnly=false;ta.value="";ta.placeholder="Встав сюди скопійовані дані";$("xImport").hidden=false;ta.focus();};
+$("xImport").onclick=()=>{if(importData($("xText").value)){$("xText").hidden=true;$("xImport").hidden=true;}};
+
+render();
+$("storeTxt").textContent="Дані зберігаються лише на цьому телефоні. Раз на тиждень роби резервну копію.";
+
+$("xFile").onclick=()=>{
+  const blob=new Blob([JSON.stringify(state,null,1)],{type:"application/json"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="sitka-backup-"+todayStr()+".json";
+  document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);
+};
+$("xFileIn").onchange=e=>{const f=e.target.files[0]; if(!f)return; const r=new FileReader(); r.onload=()=>importData(r.result); r.readAsText(f); e.target.value="";};
+
+/* ---------- offline app ---------- */
+if("serviceWorker" in navigator){window.addEventListener("load",()=>{navigator.serviceWorker.register("sw.js").catch(()=>{});});}
+})();
+</script>
+</body>
+</html>
