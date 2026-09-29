@@ -157,9 +157,27 @@ textarea{width:100%;min-height:72px;resize:vertical;border:1px solid var(--line)
 details summary{cursor:pointer;font-weight:600;margin-top:12px}
 .xbtn{border:1px solid var(--line);background:var(--paper);border-radius:999px;padding:8px 14px;cursor:pointer;font-size:14px}
 .xbtn:hover{border-color:var(--ink)}
+.auth{position:fixed;inset:0;z-index:30;background:var(--paper);display:none;overflow-y:auto;padding:calc(24px + env(safe-area-inset-top,0px)) 16px calc(24px + env(safe-area-inset-bottom,0px))}
+.auth.open{display:block}
+.auth .box{max-width:420px;margin:6vh auto 0;background:var(--sheet);border:1px solid var(--line);border-radius:16px;padding:22px}
+.auth h2{font-size:22px;margin-bottom:6px}
+.auth p{color:var(--muted);font-size:14px;margin:0 0 14px}
+.auth input{width:100%;border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--paper);font-size:16px;margin-bottom:10px}
+.auth .row2{display:flex;gap:8px;flex-wrap:wrap}
+.auth .primary{flex:1;border:0;background:var(--ink);color:var(--sheet);border-radius:10px;padding:12px;font-weight:600;cursor:pointer;min-height:44px}
+.auth .secondary{flex:1;border:1px solid var(--line);background:transparent;border-radius:10px;padding:12px;cursor:pointer;min-height:44px}
+.auth .msg{font-size:14px;margin-top:12px;min-height:20px}
+.auth .msg.err{color:#C0413A}
+.auth .skip{display:block;margin:16px auto 0;border:0;background:transparent;color:var(--muted);text-decoration:underline;cursor:pointer;font-size:14px}
+.sync-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:var(--muted);vertical-align:middle}
+.sync-dot.ok{background:#2F8A78}.sync-dot.off{background:#B9831C}
+.report-actions{display:flex;gap:8px;flex-wrap:wrap}
+.xbtn.dark{background:var(--ink);color:var(--sheet);border-color:var(--ink);font-weight:600}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 @media (min-width:900px){.wrap{padding-top:28px}}
 </style>
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -230,11 +248,29 @@ details summary{cursor:pointer;font-weight:600;margin-top:12px}
       </div>
     </section>
     <section class="card">
+      <details>
+        <summary>Додати кілька задач одразу (наприклад, від Claude)</summary>
+        <p class="hint">Кожна задача з нового рядка у форматі:<br><code>[Робота] Перекласти 300 рядків · до 04.10 · важливо</code><br>Категорія, дата і важливість необов'язкові. Важливість: «важливо» або «дрібниця».</p>
+        <textarea id="bulkText" placeholder="[Фінанси] Модель NPV та IRR · до 05.10 · важливо"></textarea>
+        <button class="xbtn dark" id="bulkAdd" style="margin-top:8px">Додати задачі</button>
+      </details>
+    </section>
+
+    <section class="card">
       <h2>Мої пріоритети</h2>
       <div id="taskGroups"></div>
       <details id="doneBox"><summary id="doneSum">Виконані</summary><div id="doneList"></div></details>
     </section>
   </div>
+
+  <section class="card" id="claudeCard">
+    <h2>Аналіз з Claude</h2>
+    <p class="hint" style="margin-top:0">Натисни кнопку, встав звіт у чат з Claude і попроси проаналізувати тиждень. У звіті: відмітки по опорах, нотатки, проєкти, задачі та динаміка.</p>
+    <div class="report-actions">
+      <button class="xbtn dark" id="repCopy">Скопіювати звіт для Claude</button>
+    </div>
+    <textarea id="repText" hidden readonly style="margin-top:10px;min-height:140px;font-size:12px" aria-label="Звіт для Claude"></textarea>
+  </section>
 
   <section class="card" id="xferCard">
     <h2>Перенесення даних</h2>
@@ -250,8 +286,24 @@ details summary{cursor:pointer;font-weight:600;margin-top:12px}
   </section>
 
   <div class="foot">
-    <span id="storeTxt">Завантаження…</span>
+    <span><span class="sync-dot" id="syncDot"></span><span id="storeTxt">Завантаження…</span></span>
+    <button id="acctBtn" hidden>Увійти</button>
     <button id="resetBtn">Очистити відмітки цього тижня</button>
+  </div>
+</div>
+
+<div class="auth" id="auth" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+  <div class="box">
+    <h2 id="authTitle">Вхід у Сітку 9×9</h2>
+    <p>Увійди з однаковою поштою на MacBook та iPhone, і дані синхронізуються між ними.</p>
+    <input type="email" id="authEmail" placeholder="Пошта" autocomplete="email" inputmode="email">
+    <input type="password" id="authPass" placeholder="Пароль (мінімум 6 символів)" autocomplete="current-password">
+    <div class="row2">
+      <button class="primary" id="authIn">Увійти</button>
+      <button class="secondary" id="authUp">Створити акаунт</button>
+    </div>
+    <div class="msg" id="authMsg" role="status"></div>
+    <button class="skip" id="authSkip">Поки що без входу (дані лише на цьому пристрої)</button>
   </div>
 </div>
 
@@ -377,15 +429,11 @@ try{ const raw=localStorage.getItem(LS); if(raw) merge(JSON.parse(raw)); }catch(
 function showStatus(t){const s=$("status");s.textContent=t;s.classList.add("show");clearTimeout(showStatus.t);showStatus.t=setTimeout(()=>s.classList.remove("show"),1400)}
 function save(){
   try{localStorage.setItem(LS,JSON.stringify(state))}catch(e){}
-  clearTimeout(saveTimer);
-  pending=true;
-  saveTimer=setTimeout(async()=>{
-    if(docRef){
-      try{ lastLocalWrite=Date.now(); await docRef.set(JSON.parse(JSON.stringify(state))); lastLocalWrite=Date.now(); showStatus("Збережено"); }
-      catch(e){ showStatus("Збережено на цьому пристрої"); }
-      finally{ pending=false; }
-    } else { pending=false; showStatus("Збережено на цьому пристрої"); }
-  },700);
+  if(sb&&session){
+    markDirty(); pending=true; clearTimeout(saveTimer); saveTimer=setTimeout(push,800);
+  } else {
+    clearTimeout(saveTimer); saveTimer=setTimeout(()=>showStatus("Збережено на цьому пристрої"),500);
+  }
 }
 
 const key=(p,i)=>p+"."+i;
@@ -664,7 +712,7 @@ $("xPasteOpen").onclick=()=>{const ta=$("xText");ta.hidden=false;ta.readOnly=fal
 $("xImport").onclick=()=>{if(importData($("xText").value)){$("xText").hidden=true;$("xImport").hidden=true;}};
 
 render();
-$("storeTxt").textContent="Дані зберігаються лише на цьому телефоні. Раз на тиждень роби резервну копію.";
+
 
 $("xFile").onclick=()=>{
   const blob=new Blob([JSON.stringify(state,null,1)],{type:"application/json"});
@@ -672,6 +720,176 @@ $("xFile").onclick=()=>{
   document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);
 };
 $("xFileIn").onchange=e=>{const f=e.target.files[0]; if(!f)return; const r=new FileReader(); r.onload=()=>importData(r.result); r.readAsText(f); e.target.value="";};
+
+/* ---------- report for Claude ---------- */
+function buildReport(){
+  const w=wk(), ws=weekStart, we=new Date(ws); we.setDate(we.getDate()+6);
+  const L=[];
+  L.push("# Сітка 9×9: звіт за тиждень "+w.split("-W")[1]+" ("+fmt(ws)+" – "+fmt(we)+" "+we.getFullYear()+")");
+  L.push("Ціль: "+state.goal);
+  L.push("Виконано дій цього тижня: "+weekTotal(w)+" з 64");
+  L.push(""); L.push("## Опори");
+  PILLARS.forEach((P,p)=>{
+    L.push("### "+P.name+": "+pillarCount(p,w)+"/8");
+    P.a.forEach((_,i)=>{
+      L.push((isDone(p,i,w)?"- [x] ":"- [ ] ")+text(p,i));
+      const n=state.notes[key(P.id,i)]; if(n) L.push("  Нотатка: "+n.replace(/\n+/g," / "));
+    });
+    const pn=state.pillarNotes[P.id]; if(pn) L.push("Нотатки опори: "+pn.replace(/\n+/g," / "));
+  });
+  L.push(""); L.push("## Робочі проєкти");
+  PROJECTS.forEach(P=>{const v=pVal(P);const g=pAt(P,w)-pBefore(P,w);
+    L.push("- "+P.name+": "+(P.unit==="%"?v+"%":v+" з "+P.total+" рядків")+" (цього тижня +"+Math.max(0,g)+", план "+P.plan+(P.unit==="%"?"%":" рядків")+"/тиж.)");});
+  L.push(""); L.push("## Відкриті задачі (за пріоритетом)");
+  const open=sortedOpen(); if(!open.length) L.push("- немає");
+  open.forEach((t,i)=>{const d=daysTo(t.due);
+    L.push((i+1)+". ["+catOf(t.cat).name+"] "+t.t+(t.due?" · дедлайн "+t.due+(d<0?" (прострочено)":""):"")+" · "+(t.imp===3?"важливо":t.imp===1?"дрібниця":"звичайно")+" · група: "+QUADS[quadrant(t)][0]);});
+  const from=Date.parse(ws), to=from+7*864e5;
+  const doneW=state.tasks.filter(t=>t.done&&t.doneAt>=from&&t.doneAt<to);
+  L.push(""); L.push("## Виконані задачі цього тижня");
+  if(!doneW.length) L.push("- немає"); doneW.forEach(t=>L.push("- ["+catOf(t.cat).name+"] "+t.t));
+  const wn=state.weekNotes[w]||{};
+  L.push(""); L.push("## Нотатки тижня");
+  L.push("Що спрацювало: "+(wn.good||"—")); L.push("Що заважало: "+(wn.bad||"—")); L.push("Фокус наступного тижня: "+(wn.focus||"—"));
+  L.push(""); L.push("## Динаміка (виконано дій з 64)");
+  const hist=[]; for(let k=5;k>=0;k--){const d=new Date(weekStart);d.setDate(d.getDate()-7*k);const x=isoWeek(d);hist.push("т"+x.split("-W")[1]+": "+weekTotal(x));}
+  L.push(hist.join(", "));
+  L.push(""); L.push("Проаналізуй мій тиждень: що йде добре, де я відстаю, і дай 3–5 конкретних кроків на наступний тиждень. Нові задачі запиши у форматі «[Категорія] Назва · до ДД.ММ · важливо», щоб я міг вставити їх у сітку.");
+  return L.join("\n");
+}
+$("repCopy").onclick=async()=>{
+  const txt=buildReport(); const ta=$("repText"); ta.hidden=false; ta.value=txt;
+  let ok=false; try{await navigator.clipboard.writeText(txt);ok=true}catch(e){}
+  if(!ok){ta.focus();ta.select();try{ok=document.execCommand("copy")}catch(e){}}
+  showStatus(ok?"Звіт скопійовано: встав його в чат з Claude":"Виділи текст і скопіюй вручну");
+};
+
+/* ---------- bulk add ---------- */
+function parseDue(seg){
+  let m=seg.match(/(\d{4})-(\d{2})-(\d{2})/); if(m) return m[0];
+  m=seg.match(/(\d{1,2})[.\/](\d{1,2})(?:[.\/](\d{2,4}))?/); if(!m) return null;
+  const now=new Date(); let y=m[3]?Number(m[3].length===2?"20"+m[3]:m[3]):now.getFullYear();
+  const d=new Date(y,Number(m[2])-1,Number(m[1]));
+  if(!m[3]&&(now-d)>60*864e5) d.setFullYear(y+1);
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+function findCat(name){
+  const n=name.trim().toLowerCase(); if(!n) return "other";
+  const c=CATS.find(c=>c.name.toLowerCase()===n||c.id===n)||CATS.find(c=>c.name.toLowerCase().startsWith(n)||n.startsWith(c.name.toLowerCase().slice(0,4)));
+  return c?c.id:"other";
+}
+$("bulkAdd").onclick=()=>{
+  const lines=$("bulkText").value.split(/\n/).map(l=>l.replace(/^\s*(?:[-•*]|\d+[.)])\s*/,"").trim()).filter(Boolean);
+  let n=0;
+  lines.forEach(line=>{
+    const parts=line.split(/\s[·|]\s|\s—\s/); let first=parts.shift(); let cat="other", due=null, imp=2;
+    const cm=first.match(/^\[([^\]]+)\]\s*/); if(cm){cat=findCat(cm[1]);first=first.slice(cm[0].length);}
+    parts.forEach(seg=>{const l=seg.toLowerCase(); if(/важлив/.test(l))imp=3; else if(/дрібн/.test(l))imp=1; const d=parseDue(seg); if(d)due=d;});
+    if(!first.trim())return;
+    state.tasks.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),t:first.trim(),cat,imp,due,done:false}); n++;
+  });
+  if(n){$("bulkText").value="";save();renderTasks();showStatus("Додано задач: "+n);} else showStatus("Не знайшов задач у тексті");
+};
+
+/* ---------- cloud sync (Supabase) ---------- */
+const CFG=window.SITKA_CONFIG||{};
+let sb=null, session=null, lastRemoteTs=0, pushing=false;
+const DIRTY="sitka9x9-dirty";
+const markDirty=()=>{try{localStorage.setItem(DIRTY,"1")}catch(e){}};
+const isDirty=()=>{try{return localStorage.getItem(DIRTY)==="1"}catch(e){return false}};
+const clearDirty=()=>{try{localStorage.removeItem(DIRTY)}catch(e){}};
+function setSync(kind){
+  const dot=$("syncDot"), t=$("storeTxt"), b=$("acctBtn");
+  dot.className="sync-dot"+(kind==="ok"?" ok":kind==="offline"?" off":"");
+  if(kind==="ok"){t.textContent="Синхронізовано · "+(session&&session.user.email||"");b.hidden=false;b.textContent="Вийти";}
+  else if(kind==="offline"){t.textContent="Немає зв'язку. Зміни збережено тут і синхронізуються пізніше";b.hidden=true;}
+  else if(kind==="signedout"){t.textContent="Ти не увійшов: дані лише на цьому пристрої";b.hidden=false;b.textContent="Увійти";}
+  else {t.textContent="Синхронізацію не налаштовано: дані лише на цьому пристрої. Раз на тиждень роби резервну копію.";b.hidden=true;}
+}
+async function push(){
+  if(!sb||!session){pending=false;return;}
+  if(pushing){clearTimeout(saveTimer);saveTimer=setTimeout(push,600);return;}
+  pushing=true; const ts=new Date().toISOString();
+  let error=null;
+  try{ ({error}=await sb.from("planner").upsert({user_id:session.user.id,data:JSON.parse(JSON.stringify(state)),updated_at:ts})); }catch(e){error=e;}
+  pushing=false; pending=false;
+  if(error){setSync("offline");return;}
+  lastRemoteTs=Date.parse(ts); clearDirty(); setSync("ok"); showStatus("Синхронізовано");
+}
+async function pull(force){
+  if(!sb||!session||pending||pushing) return;
+  let res; try{ res=await sb.from("planner").select("data,updated_at").eq("user_id",session.user.id).maybeSingle(); }catch(e){res={error:e};}
+  if(res.error){setSync("offline");return;}
+  if(!res.data){ await push(); return; }
+  if(isDirty()){ await push(); return; }
+  const rts=Date.parse(res.data.updated_at);
+  if(force||rts>lastRemoteTs){
+    const a=document.activeElement;
+    if(!force&&a&&(a.tagName==="TEXTAREA"||(a.tagName==="INPUT"&&a.type!=="checkbox"))){setSync("ok");return;}
+    lastRemoteTs=rts; merge(res.data.data); if(!Array.isArray(state.tasks))state.tasks=seedTasks();
+    try{localStorage.setItem(LS,JSON.stringify(state))}catch(e){}
+    render();
+  }
+  setSync("ok");
+}
+function showAuth(){ $("auth").classList.add("open"); $("authMsg").textContent=""; }
+function hideAuth(){ $("auth").classList.remove("open"); }
+function authMsg(t,err){const m=$("authMsg");m.textContent=t;m.className="msg"+(err?" err":"");}
+function authError(e){
+  const m=(e&&e.message||"").toLowerCase();
+  if(m.includes("invalid login"))return "Невірна пошта або пароль.";
+  if(m.includes("not confirmed"))return "Пошту ще не підтверджено. Відкрий лист від Supabase і натисни посилання, потім увійди тут.";
+  if(m.includes("already registered"))return "Такий акаунт уже є. Натисни «Увійти».";
+  if(m.includes("password"))return "Пароль має містити щонайменше 6 символів.";
+  if(m.includes("signups not allowed")||m.includes("signup is disabled"))return "Реєстрацію вимкнено. Увійди в наявний акаунт.";
+  if(m.includes("fetch")||m.includes("network"))return "Немає інтернету. Спробуй ще раз.";
+  return "Помилка: "+(e&&e.message||"невідома");
+}
+async function afterSignIn(){
+  hideAuth(); try{localStorage.removeItem("sitka9x9-skipauth")}catch(e){}
+  lastRemoteTs=0; await pull(true);
+}
+async function initSync(){
+  if(!CFG.SUPABASE_URL||!CFG.SUPABASE_KEY||!window.supabase){ setSync("local"); return; }
+  try{ sb=window.supabase.createClient(CFG.SUPABASE_URL,CFG.SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}}); }
+  catch(e){ setSync("local"); return; }
+  const {data}=await sb.auth.getSession(); session=data.session;
+  sb.auth.onAuthStateChange((ev,s)=>{ session=s; if(ev==="SIGNED_OUT") setSync("signedout"); });
+  $("authIn").onclick=async()=>{
+    const email=$("authEmail").value.trim(), password=$("authPass").value;
+    if(!email||!password){authMsg("Введи пошту і пароль.",true);return;}
+    authMsg("Входжу…");
+    const {data,error}=await sb.auth.signInWithPassword({email,password});
+    if(error){authMsg(authError(error),true);return;}
+    session=data.session; await afterSignIn();
+  };
+  $("authUp").onclick=async()=>{
+    const email=$("authEmail").value.trim(), password=$("authPass").value;
+    if(!email||password.length<6){authMsg("Введи пошту і пароль від 6 символів.",true);return;}
+    authMsg("Створюю акаунт…");
+    const {data,error}=await sb.auth.signUp({email,password,options:{emailRedirectTo:location.origin+location.pathname}});
+    if(error){authMsg(authError(error),true);return;}
+    if(data.session){session=data.session;await afterSignIn();}
+    else authMsg("Акаунт створено. Відкрий лист від Supabase, підтверди пошту і повернись сюди, щоб увійти.");
+  };
+  $("authPass").onkeydown=e=>{if(e.key==="Enter")$("authIn").click();};
+  $("authSkip").onclick=()=>{try{localStorage.setItem("sitka9x9-skipauth","1")}catch(e){} hideAuth(); setSync("signedout");};
+  $("acctBtn").onclick=async()=>{
+    if(session){ if(!confirm("Вийти з акаунта? Дані на цьому пристрої залишаться."))return; clearTimeout(saveTimer); if(isDirty())await push(); await sb.auth.signOut(); session=null; setSync("signedout"); }
+    else showAuth();
+  };
+  document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")pull();});
+  window.addEventListener("focus",()=>pull());
+  window.addEventListener("online",()=>{isDirty()?push():pull();});
+  setInterval(()=>{if(document.visibilityState==="visible")pull();},20000);
+  if(!session){
+    let skip=false; try{skip=localStorage.getItem("sitka9x9-skipauth")==="1"}catch(e){}
+    if(!skip) showAuth(); setSync("signedout"); return;
+  }
+  await pull(true);
+}
+setSync("local");
+initSync().catch(()=>setSync(session?"offline":"local"));
 
 /* ---------- offline app ---------- */
 if("serviceWorker" in navigator){window.addEventListener("load",()=>{navigator.serviceWorker.register("sw.js").catch(()=>{});});}

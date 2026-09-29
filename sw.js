@@ -1,6 +1,6 @@
 // Офлайн-режим. Після змін у файлах збільш номер версії, щоб телефон підтягнув оновлення.
-const VERSION = "sitka-v1";
-const SHELL = ["./", "./index.html", "./manifest.webmanifest",
+const VERSION = "sitka-v2";
+const SHELL = ["./", "./index.html", "./config.js", "./manifest.webmanifest",
   "./icons/icon-192.png", "./icons/icon-512.png", "./icons/apple-touch-icon.png"];
 
 self.addEventListener("install", e => {
@@ -20,8 +20,14 @@ self.addEventListener("fetch", e => {
       .catch(() => caches.match("./index.html")));
     return;
   }
+  // config.js: спершу мережа, щоб зміни ключів підхоплювались одразу
+  if (url.origin === location.origin && url.pathname.endsWith("/config.js")) {
+    e.respondWith(fetch(req).then(r => { const c = r.clone(); caches.open(VERSION).then(x => x.put(req, c)); return r; })
+      .catch(() => caches.match(req)));
+    return;
+  }
   // Шрифти та файли застосунку: з кешу, якщо є
-  if (url.origin === location.origin || url.hostname.endsWith("fonts.googleapis.com") || url.hostname.endsWith("fonts.gstatic.com")) {
+  if (url.origin === location.origin || url.hostname.endsWith("fonts.googleapis.com") || url.hostname.endsWith("fonts.gstatic.com") || url.hostname === "cdn.jsdelivr.net") {
     e.respondWith(caches.match(req).then(hit => hit || fetch(req).then(r => {
       if (r && (r.ok || r.type === "opaque")) { const copy = r.clone(); caches.open(VERSION).then(c => c.put(req, copy)); }
       return r;
