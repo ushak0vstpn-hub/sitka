@@ -173,6 +173,21 @@ details summary{cursor:pointer;font-weight:600;margin-top:12px}
 .sync-dot.ok{background:#2F8A78}.sync-dot.off{background:#B9831C}
 .report-actions{display:flex;gap:8px;flex-wrap:wrap}
 .xbtn.dark{background:var(--ink);color:var(--sheet);border-color:var(--ink);font-weight:600}
+.days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin:4px 0 12px}
+.days button{border:1px solid var(--line);background:var(--paper);border-radius:10px;padding:6px 0;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:1px;line-height:1.2;position:relative;min-height:48px}
+.days button .dn{font-size:12px;color:var(--muted)}
+.days button .dd{font-weight:600;font-size:15px}
+.days button.today{border-color:var(--focus)}
+.days button[aria-selected="true"]{background:var(--ink);border-color:var(--ink)}
+.days button[aria-selected="true"] .dn,.days button[aria-selected="true"] .dd{color:var(--sheet)}
+.days button.has::after{content:"";position:absolute;bottom:4px;width:5px;height:5px;border-radius:50%;background:#2F8A78}
+.day-title{font-size:15px;font-weight:600;margin:0 0 2px}
+.week-view summary{margin-top:14px;font-size:14px}
+.wj{padding:10px 0;border-top:1px solid var(--line);font-size:14px}
+.wj:first-child{border-top:0}
+.wj b{display:block;margin-bottom:2px}
+.wj div{color:var(--muted)}
+.wj div span{color:var(--ink)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 @media (min-width:900px){.wrap{padding-top:28px}}
 </style>
@@ -214,12 +229,17 @@ details summary{cursor:pointer;font-weight:600;margin-top:12px}
   </section>
 
   <section class="card">
-    <h2>Нотатки тижня</h2>
-    <label class="f" for="wGood">Що спрацювало</label>
-    <textarea id="wGood" placeholder="Напр.: 3 тренування без пропусків, модель DCF за вечір"></textarea>
-    <label class="f" for="wBad">Що заважало</label>
-    <textarea id="wBad" placeholder="Напр.: дедлайн на роботі з'їв середу"></textarea>
-    <label class="f" for="wFocus">Фокус наступного тижня</label>
+    <h2>Журнал тижня</h2>
+    <div class="days" id="dayChips" role="tablist" aria-label="День тижня"></div>
+    <h3 class="day-title" id="dayTitle"></h3>
+    <label class="f" for="dGood">Що спрацювало</label>
+    <textarea id="dGood" placeholder="Напр.: переклав 120 рядків з глосарієм"></textarea>
+    <label class="f" for="dBad">Що заважало</label>
+    <textarea id="dBad" placeholder="Напр.: термінова задача від керівника"></textarea>
+    <label class="f" for="dNext">Фокус на завтра</label>
+    <textarea id="dNext" placeholder="1–2 речі, з яких почну завтра"></textarea>
+    <details class="week-view"><summary>Переглянути весь тиждень</summary><div id="weekJournal"></div></details>
+    <label class="f" for="wFocus" style="margin-top:18px">Фокус наступного тижня</label>
     <textarea id="wFocus" placeholder="1–3 дії, на які ставлю пріоритет"></textarea>
   </section>
 
@@ -614,8 +634,7 @@ function render(){
     }
     m.appendChild(blk);
   }
-  const wn=state.weekNotes[wk()]||{};
-  $("wGood").value=wn.good||""; $("wBad").value=wn.bad||""; $("wFocus").value=wn.focus||"";
+  renderJournal();
   renderHist();
   renderProjects();
   renderTasks();
@@ -688,8 +707,72 @@ $("sheetBack").onclick=closePillar;
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&openP!==null)closePillar();});
 
 /* ---------- week notes & nav ---------- */
-function bindWN(id,f){$(id).oninput=e=>{const w=wk();state.weekNotes[w]=state.weekNotes[w]||{};state.weekNotes[w][f]=e.target.value;save();};}
-bindWN("wGood","good");bindWN("wBad","bad");bindWN("wFocus","focus");
+/* ---------- daily journal ---------- */
+const DAY_SHORT=["Пн","Вт","Ср","Чт","Пт","Сб","Нд"];
+const DAY_FULL=["Понеділок","Вівторок","Середа","Четвер","П'ятниця","Субота","Неділя"];
+const JF=[["good","Що спрацювало"],["bad","Що заважало"],["next","Фокус на завтра"]];
+let selDay=null, selWeek=null;
+const todayIdx=()=>{const d=new Date().getDay();return d===0?6:d-1};
+function migrateJournal(){
+  let changed=false;
+  Object.keys(state.weekNotes).forEach(w=>{
+    const wn=state.weekNotes[w]; if(!wn) return;
+    if(wn.good||wn.bad){
+      wn.days=wn.days||{};
+      const idx=(w===isoWeek(new Date()))?todayIdx():0;
+      const d=wn.days[idx]=wn.days[idx]||{};
+      if(wn.good) d.good=(d.good?d.good+"\n":"")+wn.good;
+      if(wn.bad) d.bad=(d.bad?d.bad+"\n":"")+wn.bad;
+      delete wn.good; delete wn.bad; changed=true;
+    }
+  });
+  return changed;
+}
+const dayData=(w,i)=>((state.weekNotes[w]||{}).days||{})[i]||{};
+const dayHas=(w,i)=>{const d=dayData(w,i);return !!(d.good||d.bad||d.next);};
+function renderJournal(){
+  if(migrateJournal()) save();
+  const w=wk();
+  if(selWeek!==w){ selWeek=w; selDay=(w===isoWeek(new Date()))?todayIdx():0; }
+  const chips=$("dayChips"); chips.innerHTML="";
+  const isCur=w===isoWeek(new Date());
+  for(let i=0;i<7;i++){
+    const d=new Date(weekStart); d.setDate(d.getDate()+i);
+    const b=document.createElement("button"); b.type="button"; b.setAttribute("role","tab");
+    b.setAttribute("aria-selected",i===selDay);
+    b.className=(isCur&&i===todayIdx()?"today ":"")+(dayHas(w,i)?"has":"");
+    b.innerHTML='<span class="dn">'+DAY_SHORT[i]+'</span><span class="dd">'+d.getDate()+'</span>';
+    b.onclick=()=>{selDay=i;renderJournal();};
+    chips.appendChild(b);
+  }
+  const sd=new Date(weekStart); sd.setDate(sd.getDate()+selDay);
+  $("dayTitle").textContent=DAY_FULL[selDay]+", "+sd.toLocaleDateString("uk-UA",{day:"numeric",month:"long"})+(isCur&&selDay===todayIdx()?" · сьогодні":"");
+  const dd=dayData(w,selDay);
+  $("dGood").value=dd.good||""; $("dBad").value=dd.bad||""; $("dNext").value=dd.next||"";
+  $("wFocus").value=(state.weekNotes[w]||{}).focus||"";
+  renderWeekJournal();
+}
+function renderWeekJournal(){
+  const w=wk(), box=$("weekJournal"); box.innerHTML=""; let any=false;
+  for(let i=0;i<7;i++){
+    if(!dayHas(w,i)) continue; any=true;
+    const d=new Date(weekStart); d.setDate(d.getDate()+i); const dd=dayData(w,i);
+    const el=document.createElement("div"); el.className="wj";
+    const t=document.createElement("b"); t.textContent=DAY_FULL[i]+", "+d.toLocaleDateString("uk-UA",{day:"numeric",month:"long"}); el.appendChild(t);
+    JF.forEach(([k,label])=>{ if(!dd[k])return; const r=document.createElement("div"); r.textContent=label+": "; const sp=document.createElement("span"); sp.textContent=dd[k]; r.appendChild(sp); el.appendChild(r); });
+    box.appendChild(el);
+  }
+  if(!any) box.innerHTML='<div class="empty">Цього тижня записів ще немає.</div>';
+}
+function bindDay(id,f){$(id).oninput=e=>{
+  const w=wk(); const wn=state.weekNotes[w]=state.weekNotes[w]||{}; wn.days=wn.days||{};
+  const d=wn.days[selDay]=wn.days[selDay]||{}; d[f]=e.target.value; if(!d[f]) delete d[f];
+  save();
+  const chip=$("dayChips").children[selDay]; if(chip) chip.classList.toggle("has",dayHas(w,selDay));
+  renderWeekJournal();
+};}
+bindDay("dGood","good");bindDay("dBad","bad");bindDay("dNext","next");
+$("wFocus").oninput=e=>{const w=wk();state.weekNotes[w]=state.weekNotes[w]||{};state.weekNotes[w].focus=e.target.value;save();};
 $("prevW").onclick=()=>{weekStart.setDate(weekStart.getDate()-7);render();};
 $("nextW").onclick=()=>{weekStart.setDate(weekStart.getDate()+7);render();};
 $("todayW").onclick=()=>{weekStart=mondayOf(new Date());render();};
@@ -749,8 +832,13 @@ function buildReport(){
   L.push(""); L.push("## Виконані задачі цього тижня");
   if(!doneW.length) L.push("- немає"); doneW.forEach(t=>L.push("- ["+catOf(t.cat).name+"] "+t.t));
   const wn=state.weekNotes[w]||{};
-  L.push(""); L.push("## Нотатки тижня");
-  L.push("Що спрацювало: "+(wn.good||"—")); L.push("Що заважало: "+(wn.bad||"—")); L.push("Фокус наступного тижня: "+(wn.focus||"—"));
+  L.push(""); L.push("## Журнал тижня");
+  let anyDay=false;
+  for(let i=0;i<7;i++){ if(!dayHas(w,i))continue; anyDay=true; const d=new Date(weekStart); d.setDate(d.getDate()+i); const dd=dayData(w,i);
+    L.push("### "+DAY_FULL[i]+", "+d.toLocaleDateString("uk-UA",{day:"numeric",month:"long"}));
+    JF.forEach(([k,label])=>{if(dd[k])L.push(label+": "+dd[k].replace(/\n+/g," / "));}); }
+  if(!anyDay) L.push("Щоденних записів немає.");
+  L.push("Фокус наступного тижня: "+(wn.focus||"—"));
   L.push(""); L.push("## Динаміка (виконано дій з 64)");
   const hist=[]; for(let k=5;k>=0;k--){const d=new Date(weekStart);d.setDate(d.getDate()-7*k);const x=isoWeek(d);hist.push("т"+x.split("-W")[1]+": "+weekTotal(x));}
   L.push(hist.join(", "));
