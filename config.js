@@ -1,7 +1,5 @@
-// Налаштування синхронізації. Встав сюди два значення з Supabase:
-// Project Settings → API (або Connect) → Project URL та anon public / Publishable key.
-// Цей ключ публічний за задумом: доступ до даних захищають правила безпеки (RLS) у базі.
+// Налаштування синхронізації Сітки 9×9 (Supabase)
 window.SITKA_CONFIG = {
-  SUPABASE_URL: "",
-  SUPABASE_KEY: ""
+  SUPABASE_URL: "https://jcllfzeqgvpocyaxedma.supabase.co",
+  SUPABASE_KEY: "sb_publishable_Gf0kTP4tLVFmwCtT5WzxWA_JX4BCEQK"
 };
