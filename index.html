@@ -214,6 +214,17 @@ details summary{cursor:pointer;font-weight:600;margin-top:12px}
 .rt-row input{flex:1;min-width:0;border:1px solid var(--line);border-radius:8px;padding:6px 8px;background:var(--paper)}
 .rt-row .rx{border:0;background:transparent;color:var(--muted);font-size:18px;cursor:pointer;width:32px;height:32px;border-radius:50%}
 .rt-foot{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted);margin-top:6px}
+.sg-h{display:flex;justify-content:space-between;align-items:baseline;margin:12px 0 2px;padding-top:10px;border-top:1px solid var(--line);font-size:14px;color:var(--muted)}
+.sg-h b{color:var(--ink);font-weight:600}
+.sg-row{display:flex;align-items:flex-start;gap:10px;padding:7px 0}
+.sg-row .rc{flex:0 0 24px;height:24px;border-radius:7px;border:2px solid var(--c);background:transparent;cursor:pointer;color:#fff;font-size:14px;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.sg-row.done .rc{background:var(--c)}
+.sg-row .sb{flex:1;min-width:0}
+.sg-row .sn{font-size:15px;overflow-wrap:anywhere}
+.sg-row.done .sn{color:var(--muted);text-decoration:line-through}
+.sg-row .sp{font-size:12px;color:var(--c);font-weight:600}
+.sg-row .sr{border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:16px;width:32px;height:32px;border-radius:50%;flex:0 0 32px}
+.sg-row .sr:hover{background:var(--grid)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 @media (min-width:900px){.wrap{padding-top:28px}}
 </style>
@@ -250,6 +261,8 @@ details summary{cursor:pointer;font-weight:600;margin-top:12px}
       <div class="now-h"><span>Рутина сьогодні</span><b id="rtCount"></b></div>
       <div class="rt-bar"><i id="rtBar"></i></div>
       <div id="rtList"></div>
+      <div class="sg-h"><span>З сітки на сьогодні</span><b id="sgCount"></b></div>
+      <div id="sgList"></div>
       <div class="rt-foot"><span>Скидається щоранку</span><button class="linkbtn" id="rtEdit">редагувати</button></div>
     </section>
   </div>
@@ -680,8 +693,67 @@ function renderRoutine(){
     list.appendChild(r);
   }
   $("rtEdit").textContent=rtEditing?"готово":"редагувати";
+  renderDaily();
 }
 $("rtEdit").onclick=()=>{rtEditing=!rtEditing;renderRoutine();};
+
+/* ---------- daily picks from the grid ---------- */
+function hsh(str){let h=2166136261;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619);}return h>>>0;}
+const pIdx=id=>PILLARS.findIndex(P=>P.id===id);
+function pickAction(p,k,avoid){
+  const w=isoWeek(new Date());
+  const undone=PILLARS[p].a.map((_,i)=>i).filter(i=>!isDone(p,i,w)&&!avoid.includes(i));
+  if(!undone.length) return null;
+  undone.sort((a,b)=>hsh(k+PILLARS[p].id+a)-hsh(k+PILLARS[p].id+b));
+  return undone[0];
+}
+function genDaily(k){
+  const w=isoWeek(new Date());
+  const y=new Date(); y.setDate(y.getDate()-1); const prev=(state.daily&&state.daily[dayKey(y)])||[];
+  const order=PILLARS.map((P,p)=>p).filter(p=>pillarCount(p,w)<8)
+    .sort((a,b)=>pillarCount(a,w)-pillarCount(b,w)||hsh(k+a)-hsh(k+b));
+  const out=[];
+  for(const p of order){
+    if(out.length>=3) break;
+    const avoid=prev.filter(x=>x.p===PILLARS[p].id).map(x=>x.i);
+    let i=pickAction(p,k,avoid); if(i===null) i=pickAction(p,k,[]);
+    if(i!==null) out.push({p:PILLARS[p].id,i});
+  }
+  return out;
+}
+function ensureDaily(){
+  state.daily=state.daily||{};
+  const k=todayStr();
+  if(!state.daily[k]){
+    state.daily[k]=genDaily(k);
+    const cutoff=new Date(); cutoff.setDate(cutoff.getDate()-21);
+    Object.keys(state.daily).forEach(d=>{if(d<dayKey(cutoff))delete state.daily[d];});
+    setTimeout(save,0);
+  }
+  return state.daily[k];
+}
+function setDoneCur(p,i,v){const w=isoWeek(new Date());state.checks[w]=state.checks[w]||{};const key_=key(PILLARS[p].id,i);if(v)state.checks[w][key_]=true;else delete state.checks[w][key_];save();}
+function renderDaily(){
+  const picks=ensureDaily(), w=isoWeek(new Date()), list=$("sgList"); list.innerHTML="";
+  let doneN=0;
+  picks.forEach((pk,n)=>{
+    const p=pIdx(pk.p); if(p<0) return;
+    const done=isDone(p,pk.i,w); if(done) doneN++;
+    const r=document.createElement("div"); r.className="sg-row"+(done?" done":""); r.style.setProperty("--c",PILLARS[p].c);
+    r.innerHTML='<button class="rc" aria-pressed="'+done+'" aria-label="Виконано">'+(done?"✓":"")+'</button><div class="sb"><div class="sp"></div><div class="sn"></div></div>'+(done?"":'<button class="sr" aria-label="Інша дія з цієї опори" title="Інша дія">↻</button>');
+    r.querySelector(".sp").textContent=PILLARS[p].name; r.querySelector(".sn").textContent=text(p,pk.i);
+    r.querySelector(".rc").onclick=()=>{setDoneCur(p,pk.i,!isDone(p,pk.i,w));render();showStatus(done?"Відмітку знято":"Відмічено в сітці: "+PILLARS[p].name);};
+    const sr=r.querySelector(".sr");
+    if(sr) sr.onclick=()=>{
+      const undone=PILLARS[p].a.map((_,i)=>i).filter(i=>!isDone(p,i,w));
+      if(undone.length<2){showStatus("В цій опорі інших невиконаних дій немає");return;}
+      const pos=undone.indexOf(pk.i); pk.i=undone[(pos+1)%undone.length]; save(); renderDaily();
+    };
+    list.appendChild(r);
+  });
+  if(!picks.length) list.innerHTML='<div class="empty">Усі дії сітки цього тижня виконано.</div>';
+  $("sgCount").textContent=picks.length?doneN+" / "+picks.length:"";
+}
 $("nowAll").onclick=()=>showView("tasks");
 function checkNewDay(){ if(renderedDay&&renderedDay!==todayStr()) render(); }
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")checkNewDay();});
@@ -842,7 +914,7 @@ function migrateJournal(){
 const dayData=(w,i)=>((state.weekNotes[w]||{}).days||{})[i]||{};
 const dayHas=(w,i)=>{const d=dayData(w,i);return !!(d.good||d.bad||d.next);};
 function renderJournal(){
-  if(migrateJournal()) save();
+  if(migrateJournal()) setTimeout(save,0);
   const w=wk();
   if(selWeek!==w){ selWeek=w; selDay=(w===isoWeek(new Date()))?todayIdx():0; }
   const chips=$("dayChips"); chips.innerHTML="";
@@ -955,6 +1027,8 @@ function buildReport(){
   L.push(""); L.push("## Щоденна рутина ("+(isCurW?"за "+nDays+" дн. цього тижня":"за тиждень")+")");
   state.routine.items.forEach(it=>{let c=0;for(let i=0;i<nDays;i++){const d=new Date(weekStart);d.setDate(d.getDate()+i);if(rtDone(it.id,dayKey(d)))c++;}
     L.push("- "+it.t+": "+c+"/"+nDays+(isCurW?" (серія "+rtStreak(it.id)+" дн.)":""));});
+  if(isCurW&&state.daily){let tot=0,dn=0;for(let i=0;i<nDays;i++){const d=new Date(weekStart);d.setDate(d.getDate()+i);(state.daily[dayKey(d)]||[]).forEach(pk=>{const p=pIdx(pk.p);if(p<0)return;tot++;if(isDone(p,pk.i,w))dn++;});}
+    if(tot) L.push("- Щоденні підказки з сітки: виконано "+dn+" з "+tot);}
   L.push(""); L.push("## Динаміка (виконано дій з 64)");
   const hist=[]; for(let k=5;k>=0;k--){const d=new Date(weekStart);d.setDate(d.getDate()-7*k);const x=isoWeek(d);hist.push("т"+x.split("-W")[1]+": "+weekTotal(x));}
   L.push(hist.join(", "));
