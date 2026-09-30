@@ -188,7 +188,7 @@ details summary{cursor:pointer;font-weight:600;margin-top:12px}
 .wj b{display:block;margin-bottom:2px}
 .wj div{color:var(--muted)}
 .wj div span{color:var(--ink)}
-.now{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:12px;margin-bottom:16px}
+.now{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:12px;margin-bottom:16px;align-items:start}
 .now-card{background:var(--sheet);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
 .now-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px;font-size:14px;color:var(--muted)}
 .now-h b{color:var(--ink);font-weight:600}
@@ -264,6 +264,14 @@ header{position:relative}
 .add .r{align-items:flex-end}
 .add input[type=time]{color:var(--ink);color-scheme:light dark;min-width:96px}
 .add input[type=date]{color:var(--ink);color-scheme:light dark}
+.nbtn{border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:12px;padding:2px 0;text-decoration:underline;text-underline-offset:3px}
+.nbtn:hover{color:var(--ink)}
+.npv{font-size:13px;color:var(--muted);font-style:italic;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.npv::before{content:"📝 ";font-style:normal}
+textarea.tnote{margin-top:6px;min-height:60px;font-size:14px}
+.nt-row .nm{display:flex;flex-wrap:wrap;gap:0 8px;align-items:baseline}
+.nt-row[hidden],.nmore[hidden],.npv[hidden]{display:none}
+.nmore{border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:13px;padding:10px 0 2px;text-decoration:underline;text-underline-offset:3px;display:block}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 @media (min-width:900px){.wrap{padding-top:28px}}
 </style>
@@ -662,6 +670,22 @@ function dueLabel(t){const d=daysTo(t.due);if(d===null)return "";
 function durLabel(m){if(!m)return "";if(m<60)return m+" хв";if(m>=180)return "3+ год";const h=m/60;return (Number.isInteger(h)?h:h.toFixed(1).replace(".",","))+" год";}
 const durChip=t=>t.dur?'<span class="dur'+(t.dur<=15?" quick":"")+'">'+durLabel(t.dur)+'</span>':"";
 function sortedOpen(){const dk=t=>(t.due||"9")+" "+(t.time||"99");return state.tasks.filter(t=>!t.done).sort((a,b)=>score(b)-score(a)||dk(a).localeCompare(dk(b)));}
+const openNotes=new Set();
+function noteUI(t,container,meta){
+  const btn=document.createElement("button"); btn.type="button"; btn.className="nbtn";
+  const pv=document.createElement("div"); pv.className="npv";
+  let ta=null;
+  const sync=()=>{const o=openNotes.has(t.id); btn.textContent=o?"сховати нотатку":(t.note?"нотатка":"+ нотатка"); pv.textContent=t.note?t.note.split("\n")[0]:""; pv.hidden=!t.note||o;};
+  const open=()=>{ta=document.createElement("textarea"); ta.className="tnote"; ta.placeholder="Деталі, посилання, з чого почати"; ta.value=t.note||"";
+    ta.oninput=()=>{t.note=ta.value; if(!t.note.trim()) delete t.note; save();};
+    ta.onclick=e=>e.stopPropagation(); container.appendChild(ta);};
+  btn.onclick=e=>{e.stopPropagation();
+    if(openNotes.has(t.id)){openNotes.delete(t.id); if(ta){ta.remove();ta=null;}}
+    else{openNotes.add(t.id); open(); ta.focus();}
+    sync(); if(container.closest("#nowTasks")) fitNow();};
+  meta.appendChild(btn); container.appendChild(pv);
+  if(openNotes.has(t.id)) open(); sync();
+}
 function taskRow(t){
   const c=catOf(t.cat); const r=document.createElement("div"); r.className="task"+(t.done?" done":""); r.style.setProperty("--c",c.c);
   r.innerHTML='<button class="tc" aria-pressed="'+t.done+'" aria-label="Виконано">'+(t.done?"✓":"")+'</button>'+
@@ -669,6 +693,7 @@ function taskRow(t){
     (t.imp===3?"<span>важливо</span>":t.imp===1?"<span>дрібниця</span>":"")+'<span>'+dueLabel(t)+'</span>'+durChip(t)+'</div></div>'+
     '<button class="tx" aria-label="Видалити">×</button>';
   r.querySelector(".tt").textContent=t.t; r.querySelector(".cat").textContent=c.name;
+  noteUI(t,r.querySelector(".tb"),r.querySelector(".tm"));
   r.querySelector(".tc").onclick=()=>{t.done=!t.done;t.doneAt=t.done?Date.now():null;save();renderTasks();};
   r.querySelector(".tt").onclick=()=>{
     const v=prompt("Задача:",t.t); if(v===null)return; if(v.trim())t.t=v.trim();
@@ -700,15 +725,34 @@ function renderTasks(){
 function renderNowTasks(open){
   const box=$("nowTasks"); box.innerHTML="";
   if(!open.length){box.innerHTML='<div class="empty">Відкритих задач немає.</div>';return;}
-  open.slice(0,4).forEach((t,i)=>{
+  open.slice(0,12).forEach((t,i)=>{
     const c=catOf(t.cat); const r=document.createElement("div"); r.className="nt-row"+(i===0?" top":""); r.style.setProperty("--c",c.c);
     r.innerHTML='<button class="tc" aria-label="Виконано"></button><div class="nb"><div class="nn"></div><div class="nm"><span class="cn"></span>'+(t.due?" · "+dueLabel(t):"")+'</div></div>'+durChip(t);
     r.querySelector(".nn").textContent=t.t; r.querySelector(".cn").textContent=c.name;
+    noteUI(t,r.querySelector(".nb"),r.querySelector(".nm"));
     r.querySelector(".tc").onclick=()=>{t.done=true;t.doneAt=Date.now();save();renderTasks();showStatus("Готово: "+t.t);};
     r.querySelector(".nb").onclick=()=>showView("tasks");
     box.appendChild(r);
   });
+  const more=document.createElement("button"); more.type="button"; more.className="nmore"; more.onclick=()=>showView("tasks");
+  box.appendChild(more);
+  requestAnimationFrame(fitNow);
 }
+function fitNow(){
+  const box=$("nowTasks"); if(!box) return;
+  const left=box.closest(".now-card"), right=$("rtList").closest(".now-card");
+  const rows=[...box.querySelectorAll(".nt-row")], more=box.querySelector(".nmore");
+  const total=state.tasks.filter(t=>!t.done).length;
+  rows.forEach(r=>r.hidden=false); left.style.minHeight="";
+  const upd=()=>{const vis=rows.filter(r=>!r.hidden).length, rest=total-vis; if(more){more.hidden=rest<=0; more.textContent="ще "+rest+" "+(rest%10===1&&rest%100!==11?"задача":(rest%10>=2&&rest%10<=4&&(rest%100<12||rest%100>14))?"задачі":"задач")+" →";}};
+  const side=left.offsetParent&&Math.abs(left.getBoundingClientRect().top-right.getBoundingClientRect().top)<4;
+  if(!side){ rows.forEach((r,i)=>r.hidden=i>=5); upd(); return; }
+  upd();
+  let vis=rows.length;
+  while(vis>4 && left.offsetHeight>right.offsetHeight+1){ rows[vis-1].hidden=true; vis--; upd(); }
+  left.style.minHeight=right.offsetHeight+"px";
+}
+window.addEventListener("resize",()=>requestAnimationFrame(fitNow));
 
 /* ---------- daily routine ---------- */
 const dayKey=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
@@ -751,6 +795,7 @@ function renderRoutine(){
   }
   $("rtEdit").textContent=rtEditing?"готово":"редагувати";
   renderDaily();
+  requestAnimationFrame(fitNow);
 }
 $("rtEdit").onclick=()=>{rtEditing=!rtEditing;renderRoutine();};
 
@@ -874,7 +919,7 @@ $("calPrev").onclick=()=>{calM--; if(calM<0){calM=11;calY--;} renderCal();};
 $("calNext").onclick=()=>{calM++; if(calM>11){calM=0;calY++;} renderCal();};
 document.addEventListener("click",e=>{const c=$("calPop"); if(!c.hidden&&!c.contains(e.target)&&!$("dateBtn").contains(e.target)) closeCal();});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("calPop").hidden) closeCal();});
-renderClock(); setInterval(()=>{renderClock(); if(document.visibilityState==="visible") renderNowTasks(sortedOpen());},30000);
+renderClock(); setInterval(()=>{renderClock(); if(document.visibilityState==="visible"&&!(document.activeElement&&document.activeElement.classList.contains("tnote"))) renderNowTasks(sortedOpen());},30000);
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")renderClock();});
 function checkNewDay(){ if(renderedDay&&renderedDay!==todayStr()) render(); }
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")checkNewDay();});
@@ -896,7 +941,7 @@ function showView(v){
   $("tabGrid").setAttribute("aria-selected",v==="grid"); $("tabTasks").setAttribute("aria-selected",v==="tasks");
   try{localStorage.setItem("sitka9x9-view",v)}catch(e){}
 }
-$("tabGrid").onclick=()=>showView("grid"); $("tabTasks").onclick=()=>showView("tasks");
+$("tabGrid").onclick=()=>{showView("grid");renderTasks();}; $("tabTasks").onclick=()=>{showView("tasks");renderTasks();};
 try{if(localStorage.getItem("sitka9x9-view")==="tasks")showView("tasks")}catch(e){}
 
 /* ---------- render grid ---------- */
@@ -1131,7 +1176,7 @@ function buildReport(){
   L.push(""); L.push("## Відкриті задачі (за пріоритетом)");
   const open=sortedOpen(); if(!open.length) L.push("- немає");
   open.forEach((t,i)=>{const d=daysTo(t.due);
-    L.push((i+1)+". ["+catOf(t.cat).name+"] "+t.t+(t.due?" · дедлайн "+t.due+(t.time?" "+t.time:"")+(d<0?" (прострочено)":""):"")+" · "+(t.imp===3?"важливо":t.imp===1?"дрібниця":"звичайно")+(t.dur?" · ~"+durLabel(t.dur):"")+" · група: "+QUADS[quadrant(t)][0]);});
+    L.push((i+1)+". ["+catOf(t.cat).name+"] "+t.t+(t.due?" · дедлайн "+t.due+(t.time?" "+t.time:"")+(d<0?" (прострочено)":""):"")+" · "+(t.imp===3?"важливо":t.imp===1?"дрібниця":"звичайно")+(t.dur?" · ~"+durLabel(t.dur):"")+" · група: "+QUADS[quadrant(t)][0]); if(t.note) L.push("   Нотатка: "+t.note.replace(/\n+/g," / "));});
   const from=Date.parse(ws), to=from+7*864e5;
   const doneW=state.tasks.filter(t=>t.done&&t.doneAt>=from&&t.doneAt<to);
   L.push(""); L.push("## Виконані задачі цього тижня");
