@@ -134,7 +134,7 @@ textarea{width:100%;min-height:72px;resize:vertical;border:1px solid var(--line)
 .add{display:grid;gap:8px}
 .add input[type=text]{width:100%;border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--paper);font-size:16px}
 .add .r{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.add select,.add input[type=date]{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--paper);min-height:40px}
+.add select,.add input[type=date],.add input[type=time]{color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--paper);min-height:40px}
 .seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .seg button{border:0;background:var(--paper);padding:8px 12px;cursor:pointer;font-size:14px;min-height:40px}
 .seg button+button{border-left:1px solid var(--line)}
@@ -225,6 +225,45 @@ details summary{cursor:pointer;font-weight:600;margin-top:12px}
 .sg-row .sp{font-size:12px;color:var(--c);font-weight:600}
 .sg-row .sr{border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:16px;width:32px;height:32px;border-radius:50%;flex:0 0 32px}
 .sg-row .sr:hover{background:var(--grid)}
+.clock{font-size:14px;margin-top:2px;font-variant-numeric:tabular-nums}
+.clock b{font-weight:600}
+header{position:relative}
+.hright{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.datebtn{display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--sheet);border-radius:999px;padding:0 16px;min-height:46px;cursor:pointer;font-size:14px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.datebtn b{font-weight:600}
+.datebtn .chev{color:var(--muted);font-size:12px}
+.datebtn[aria-expanded="true"]{border-color:var(--focus)}
+.cal{position:absolute;right:0;top:100%;margin-top:8px;z-index:15;width:330px;max-width:calc(100vw - 24px);background:var(--sheet);border:1px solid var(--line);border-radius:14px;padding:12px;box-shadow:0 14px 36px rgba(0,0,0,.28)}
+.cal-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.cal-h b{font-weight:600}
+.cal-nav{border:0;background:transparent;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:18px;color:var(--ink)}
+.cal-nav:hover{background:var(--grid)}
+.cal-row{display:grid;grid-template-columns:30px repeat(7,minmax(0,1fr));gap:2px;border-radius:8px;text-align:center;align-items:center}
+.cal-row.head{font-size:11px;color:var(--muted);padding-bottom:2px}
+.cal-row.cur{background:color-mix(in srgb,var(--focus) 16%,transparent)}
+.cal-wk{border:0;background:transparent;font-size:10px;color:var(--muted);cursor:pointer;height:36px}
+.cal-d{position:relative;border:0;background:transparent;height:36px;cursor:pointer;border-radius:8px;font-size:14px;color:var(--ink)}
+.cal-d:hover{background:var(--grid)}
+.cal-d.out{color:var(--muted);opacity:.55}
+.cal-d .n{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%}
+.cal-d.today .n{background:var(--focus);color:#fff;font-weight:600}
+.cal-d.today.out{opacity:1}
+.cal-d.sel{box-shadow:inset 0 0 0 2px var(--ink)}
+.cal-d .dots{position:absolute;left:0;right:0;bottom:1px;display:flex;justify-content:center;gap:3px}
+.cal i.dl,.cal i.jn{display:inline-block;width:5px;height:5px;border-radius:50%}
+.cal i.dl{background:#C0413A}.cal i.jn{background:#2F8A78}
+.cal-legend{display:flex;gap:14px;font-size:12px;color:var(--muted);margin-top:8px}
+.cal-legend i{margin-right:5px;vertical-align:1px}
+.cal-day{margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-size:14px}
+.cal-day .cdt{color:var(--muted);font-size:13px;margin-bottom:4px}
+.cal-day .ci{display:flex;gap:8px;padding:3px 0}
+.cal-day .ci .tm{flex:0 0 44px;color:var(--muted);font-variant-numeric:tabular-nums}
+.cal-day .ci.done span:last-child{text-decoration:line-through;color:var(--muted)}
+.cal-day .jl{margin-top:6px}
+.fld{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted)}
+.add .r{align-items:flex-end}
+.add input[type=time]{color:var(--ink);color-scheme:light dark;min-width:96px}
+.add input[type=date]{color:var(--ink);color-scheme:light dark}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 @media (min-width:900px){.wrap{padding-top:28px}}
 </style>
@@ -238,11 +277,20 @@ details summary{cursor:pointer;font-weight:600;margin-top:12px}
       <h1>Сітка 9×9</h1>
       <div class="sub" id="goalSub"></div>
     </div>
+    <div class="hright">
+    <button class="datebtn" id="dateBtn" aria-expanded="false" aria-controls="calPop" aria-label="Відкрити календар"><span id="nowClock"></span><span class="chev" aria-hidden="true">▾</span></button>
     <div class="week" role="group" aria-label="Вибір тижня">
       <button id="prevW" aria-label="Попередній тиждень">‹</button>
       <div class="lbl" id="weekLbl"></div>
       <button id="nextW" aria-label="Наступний тиждень">›</button>
       <button class="today" id="todayW">Цей</button>
+    </div>
+    </div>
+    <div class="cal" id="calPop" hidden role="dialog" aria-label="Календар">
+      <div class="cal-h"><button class="cal-nav" id="calPrev" aria-label="Попередній місяць">‹</button><b id="calTitle"></b><button class="cal-nav" id="calNext" aria-label="Наступний місяць">›</button></div>
+      <div id="calGrid"></div>
+      <div class="cal-legend"><span><i class="dl"></i>дедлайн</span><span><i class="jn"></i>є запис у журналі</span></div>
+      <div class="cal-day" id="calDay"></div>
     </div>
   </header>
 
@@ -306,12 +354,13 @@ details summary{cursor:pointer;font-weight:600;margin-top:12px}
       <div class="add">
         <input type="text" id="tTitle" placeholder="Що треба зробити?" aria-label="Назва задачі" enterkeyhint="done">
         <div class="r">
-          <select id="tCat" aria-label="Категорія"></select>
-          <input type="date" id="tDue" aria-label="Дедлайн (необов'язково)">
-          <select id="tDur" aria-label="Скільки часу займе">
-            <option value="">Час: ?</option><option value="5">5 хв</option><option value="15">15 хв</option><option value="30">30 хв</option>
+          <label class="fld"><span>Категорія</span><select id="tCat"></select></label>
+          <label class="fld"><span>Дедлайн: дата</span><input type="date" id="tDue"></label>
+          <label class="fld"><span>о котрій</span><input type="time" id="tTime"></label>
+          <label class="fld"><span>Тривалість</span><select id="tDur">
+            <option value="">?</option><option value="5">5 хв</option><option value="15">15 хв</option><option value="30">30 хв</option>
             <option value="60">1 год</option><option value="90">1,5 год</option><option value="120">2 год</option><option value="180">3+ год</option>
-          </select>
+          </select></label>
           <div class="seg" role="group" aria-label="Важливість" id="tImp">
             <button data-v="3" aria-pressed="false">Важливо</button>
             <button data-v="2" aria-pressed="true">Звичайно</button>
@@ -324,7 +373,7 @@ details summary{cursor:pointer;font-weight:600;margin-top:12px}
     <section class="card">
       <details>
         <summary>Додати кілька задач одразу (наприклад, від Claude)</summary>
-        <p class="hint">Кожна задача з нового рядка у форматі:<br><code>[Робота] Перекласти 300 рядків · до 04.10 · важливо · ~2 год</code><br>Категорія, дата, важливість і час необов'язкові. Важливість: «важливо» або «дрібниця».</p>
+        <p class="hint">Кожна задача з нового рядка у форматі:<br><code>[Робота] Перекласти 300 рядків · до 04.10 18:00 · важливо · ~2 год</code><br>Категорія, дата, час дедлайну, важливість і тривалість необов'язкові. Важливість: «важливо» або «дрібниця».</p>
         <textarea id="bulkText" placeholder="[Фінанси] Модель NPV та IRR · до 05.10 · важливо"></textarea>
         <button class="xbtn dark" id="bulkAdd" style="margin-top:8px">Додати задачі</button>
       </details>
@@ -509,12 +558,12 @@ try{ const raw=localStorage.getItem(LS); if(raw) merge(JSON.parse(raw)); }catch(
 ensureRoutine();
 
 function showStatus(t){const s=$("status");s.textContent=t;s.classList.add("show");clearTimeout(showStatus.t);showStatus.t=setTimeout(()=>s.classList.remove("show"),1400)}
-function save(){
+function save(silent){
   try{localStorage.setItem(LS,JSON.stringify(state))}catch(e){}
   if(sb&&session){
     markDirty(); pending=true; clearTimeout(saveTimer); saveTimer=setTimeout(push,800);
   } else {
-    clearTimeout(saveTimer); saveTimer=setTimeout(()=>showStatus("Збережено на цьому пристрої"),500);
+    clearTimeout(saveTimer); if(!silent) saveTimer=setTimeout(()=>showStatus("Збережено на цьому пристрої"),500);
   }
 }
 
@@ -590,8 +639,9 @@ function seedTasks(){
   ];
 }
 if(!Array.isArray(state.tasks)) state.tasks=seedTasks();
-function urgencyPts(d){if(d===null)return 0;if(d<0)return 40;if(d===0)return 34;if(d<=2)return 26;if(d<=7)return 14;if(d<=14)return 6;return 2;}
-const score=t=>t.imp*15+urgencyPts(daysTo(t.due));
+function minsLeft(t){if(!t.due||!t.time)return null;const [y,m,d]=t.due.split("-").map(Number);const [h,mi]=t.time.split(":").map(Number);return Math.round((new Date(y,m-1,d,h,mi)-new Date())/60000);}
+function urgencyPts(d,t){if(d===null)return 0;if(d<0)return 40;if(d===0){const ml=t?minsLeft(t):null;if(ml!==null&&ml<0)return 40;if(ml!==null&&ml<=180)return 37;return 34;}if(d<=2)return 26;if(d<=7)return 14;if(d<=14)return 6;return 2;}
+const score=t=>t.imp*15+urgencyPts(daysTo(t.due),t);
 function quadrant(t){const d=daysTo(t.due),urgent=d!==null&&d<=2;
   if(t.imp>=2&&urgent)return 0; if(t.imp>=2)return 1; if(urgent)return 2; return 3;}
 const QUADS=[
@@ -601,12 +651,17 @@ const QUADS=[
   ["Коли буде час","Не термінове і не критичне. Можна відкласти або видалити."]
 ];
 function dueLabel(t){const d=daysTo(t.due);if(d===null)return "";
+  const at=t.time?" о "+t.time:"";
   if(d<0)return '<span class="late">прострочено '+(-d)+' дн.</span>';
-  if(d===0)return '<span class="late">сьогодні</span>'; if(d===1)return "завтра";
-  const [y,m,dd]=t.due.split("-").map(Number);return "до "+fmt(new Date(y,m-1,dd))+" (через "+d+" дн.)";}
+  if(d===0){const ml=minsLeft(t);
+    if(ml!==null&&ml<0)return '<span class="late">сьогодні'+at+' · час минув</span>';
+    if(ml!==null&&ml<=180)return '<span class="late">сьогодні'+at+' · через '+(ml<60?ml+" хв":Math.floor(ml/60)+" год "+(ml%60?ml%60+" хв":""))+'</span>';
+    return '<span class="late">сьогодні'+at+'</span>';}
+  if(d===1){const ml=minsLeft(t); return "завтра"+at+(ml!==null&&ml>0?" · залишилось "+Math.round(ml/60)+" год":"");}
+  const [y,m,dd]=t.due.split("-").map(Number);return "до "+fmt(new Date(y,m-1,dd))+at+" (через "+d+" дн.)";}
 function durLabel(m){if(!m)return "";if(m<60)return m+" хв";if(m>=180)return "3+ год";const h=m/60;return (Number.isInteger(h)?h:h.toFixed(1).replace(".",","))+" год";}
 const durChip=t=>t.dur?'<span class="dur'+(t.dur<=15?" quick":"")+'">'+durLabel(t.dur)+'</span>':"";
-function sortedOpen(){return state.tasks.filter(t=>!t.done).sort((a,b)=>score(b)-score(a)||(a.due||"9").localeCompare(b.due||"9"));}
+function sortedOpen(){const dk=t=>(t.due||"9")+" "+(t.time||"99");return state.tasks.filter(t=>!t.done).sort((a,b)=>score(b)-score(a)||dk(a).localeCompare(dk(b)));}
 function taskRow(t){
   const c=catOf(t.cat); const r=document.createElement("div"); r.className="task"+(t.done?" done":""); r.style.setProperty("--c",c.c);
   r.innerHTML='<button class="tc" aria-pressed="'+t.done+'" aria-label="Виконано">'+(t.done?"✓":"")+'</button>'+
@@ -617,7 +672,9 @@ function taskRow(t){
   r.querySelector(".tc").onclick=()=>{t.done=!t.done;t.doneAt=t.done?Date.now():null;save();renderTasks();};
   r.querySelector(".tt").onclick=()=>{
     const v=prompt("Задача:",t.t); if(v===null)return; if(v.trim())t.t=v.trim();
-    const d=prompt("Дедлайн (РРРР-ММ-ДД), порожньо — без дедлайну:",t.due||""); if(d!==null)t.due=/^\d{4}-\d{2}-\d{2}$/.test(d.trim())?d.trim():null;
+    const d=prompt("Дедлайн (РРРР-ММ-ДД або РРРР-ММ-ДД ГГ:ХХ), порожньо — без дедлайну:",t.due?(t.due+(t.time?" "+t.time:"")):"");
+    if(d!==null){const mm=d.trim().match(/^(\d{4}-\d{2}-\d{2})(?:\s+(\d{1,2}):(\d{2}))?$/);
+      if(mm){t.due=mm[1];if(mm[2])t.time=String(mm[2]).padStart(2,"0")+":"+mm[3];else delete t.time;}else{t.due=null;delete t.time;}}
     const m=prompt("Скільки хвилин займе? Порожньо — без оцінки:",t.dur||""); if(m!==null){const n=parseInt(m,10);if(n>0)t.dur=n;else delete t.dur;}
     save();renderTasks();};
   r.querySelector(".tx").onclick=()=>{if(confirm("Видалити задачу?")){state.tasks=state.tasks.filter(x=>x!==t);save();renderTasks();}};
@@ -728,7 +785,7 @@ function ensureDaily(){
     state.daily[k]=genDaily(k);
     const cutoff=new Date(); cutoff.setDate(cutoff.getDate()-21);
     Object.keys(state.daily).forEach(d=>{if(d<dayKey(cutoff))delete state.daily[d];});
-    setTimeout(save,0);
+    setTimeout(()=>save(true),0);
   }
   return state.daily[k];
 }
@@ -755,6 +812,70 @@ function renderDaily(){
   $("sgCount").textContent=picks.length?doneN+" / "+picks.length:"";
 }
 $("nowAll").onclick=()=>showView("tasks");
+function renderClock(){const d=new Date();const wd=["Нд","Пн","Вт","Ср","Чт","Пт","Сб"][d.getDay()];
+  $("nowClock").innerHTML=wd+", "+d.toLocaleDateString("uk-UA",{day:"numeric",month:"long"})+" <b>"+d.toLocaleTimeString("uk-UA",{hour:"2-digit",minute:"2-digit"})+"</b>";}
+
+/* ---------- mini calendar ---------- */
+let calY=null, calM=null, calSel=null;
+const MONTHS=["Січень","Лютий","Березень","Квітень","Травень","Червень","Липень","Серпень","Вересень","Жовтень","Листопад","Грудень"];
+function openCal(){
+  const base=calSel?new Date(calSel+"T00:00"):new Date();
+  calY=base.getFullYear(); calM=base.getMonth(); if(!calSel) calSel=todayStr();
+  $("calPop").hidden=false; $("dateBtn").setAttribute("aria-expanded","true"); renderCal();
+}
+function closeCal(){ $("calPop").hidden=true; $("dateBtn").setAttribute("aria-expanded","false"); }
+function goToDate(d){
+  const idx=(d.getDay()+6)%7; weekStart=mondayOf(d); selWeek=isoWeek(d); selDay=idx; render();
+}
+function renderCal(){
+  $("calTitle").textContent=MONTHS[calM]+" "+calY;
+  const g=$("calGrid"); g.innerHTML="";
+  const head=document.createElement("div"); head.className="cal-row head";
+  head.innerHTML="<span>тиж</span>"+DAY_SHORT.map(x=>"<span>"+x+"</span>").join(""); g.appendChild(head);
+  const last=new Date(calY,calM+1,0), today=todayStr(), cur=wk();
+  const dueSet={}; state.tasks.forEach(t=>{if(t.due&&!t.done)dueSet[t.due]=true;});
+  let start=mondayOf(new Date(calY,calM,1));
+  while(start<=last){
+    const row=document.createElement("div"); const wkey=isoWeek(start);
+    row.className="cal-row"+(wkey===cur?" cur":"");
+    const wb=document.createElement("button"); wb.type="button"; wb.className="cal-wk"; wb.textContent=wkey.split("-W")[1];
+    wb.setAttribute("aria-label","Перейти на тиждень "+wkey.split("-W")[1]);
+    const ws=new Date(start); wb.onclick=()=>{weekStart=mondayOf(ws);render();renderCal();};
+    row.appendChild(wb);
+    for(let i=0;i<7;i++){
+      const d=new Date(start); d.setDate(d.getDate()+i); const k=dayKey(d);
+      const b=document.createElement("button"); b.type="button";
+      b.className="cal-d"+(d.getMonth()!==calM?" out":"")+(k===today?" today":"")+(k===calSel?" sel":"");
+      const hasDl=!!dueSet[k], hasJn=dayHas(isoWeek(d),i);
+      b.innerHTML='<span class="n">'+d.getDate()+"</span>"+((hasDl||hasJn)?'<span class="dots">'+(hasDl?'<i class="dl"></i>':"")+(hasJn?'<i class="jn"></i>':"")+"</span>":"");
+      b.setAttribute("aria-label",d.toLocaleDateString("uk-UA",{day:"numeric",month:"long"})+(hasDl?", є дедлайн":"")+(hasJn?", є запис у журналі":""));
+      b.onclick=()=>{calSel=k; if(d.getMonth()!==calM){calY=d.getFullYear();calM=d.getMonth();} goToDate(d); renderCal();};
+      row.appendChild(b);
+    }
+    g.appendChild(row); start.setDate(start.getDate()+7);
+  }
+  // selected day details
+  const box=$("calDay"); box.innerHTML="";
+  if(!calSel) return;
+  const sd=new Date(calSel+"T00:00");
+  const t=document.createElement("div"); t.className="cdt";
+  t.textContent=DAY_FULL[(sd.getDay()+6)%7]+", "+sd.toLocaleDateString("uk-UA",{day:"numeric",month:"long"}); box.appendChild(t);
+  const list=state.tasks.filter(x=>x.due===calSel).sort((a,b)=>(a.time||"99").localeCompare(b.time||"99"));
+  if(!list.length){const e=document.createElement("div");e.className="empty";e.style.padding="2px 0";e.textContent="Дедлайнів на цей день немає.";box.appendChild(e);}
+  list.forEach(x=>{const r=document.createElement("div");r.className="ci"+(x.done?" done":"");
+    r.innerHTML='<span class="tm">'+(x.time||"—")+'</span><span></span>'; r.lastChild.textContent=x.t; box.appendChild(r);});
+  const jl=document.createElement("button"); jl.type="button"; jl.className="linkbtn jl"; jl.textContent="Журнал цього дня ↓";
+  jl.onclick=()=>{closeCal(); showView("grid"); const el=$("dayChips"); if(el) el.scrollIntoView({behavior:"smooth",block:"center"});};
+  box.appendChild(jl);
+}
+$("calPop").addEventListener("click",e=>e.stopPropagation());
+$("dateBtn").onclick=e=>{e.stopPropagation(); $("calPop").hidden?openCal():closeCal();};
+$("calPrev").onclick=()=>{calM--; if(calM<0){calM=11;calY--;} renderCal();};
+$("calNext").onclick=()=>{calM++; if(calM>11){calM=0;calY++;} renderCal();};
+document.addEventListener("click",e=>{const c=$("calPop"); if(!c.hidden&&!c.contains(e.target)&&!$("dateBtn").contains(e.target)) closeCal();});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("calPop").hidden) closeCal();});
+renderClock(); setInterval(()=>{renderClock(); if(document.visibilityState==="visible") renderNowTasks(sortedOpen());},30000);
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")renderClock();});
 function checkNewDay(){ if(renderedDay&&renderedDay!==todayStr()) render(); }
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")checkNewDay();});
 setInterval(checkNewDay,60000);
@@ -765,8 +886,9 @@ setInterval(checkNewDay,60000);
   const add=()=>{const t=$("tTitle").value.trim(); if(!t){$("tTitle").focus();return;}
     const task={id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),t,cat:sel.value,imp,due:$("tDue").value||null,done:false};
     const dm=parseInt($("tDur").value,10); if(dm>0) task.dur=dm;
+    if($("tTime").value){ if(!task.due) task.due=todayStr(); task.time=$("tTime").value; }
     state.tasks.push(task);
-    $("tTitle").value="";$("tDue").value="";$("tDur").value="";save();renderTasks();showStatus("Додано");$("tTitle").focus();};
+    $("tTitle").value="";$("tDue").value="";$("tTime").value="";$("tDur").value="";save();renderTasks();showStatus("Додано");$("tTitle").focus();};
   $("tAdd").onclick=add; $("tTitle").onkeydown=e=>{if(e.key==="Enter")add();};
 })();
 function showView(v){
@@ -914,7 +1036,7 @@ function migrateJournal(){
 const dayData=(w,i)=>((state.weekNotes[w]||{}).days||{})[i]||{};
 const dayHas=(w,i)=>{const d=dayData(w,i);return !!(d.good||d.bad||d.next);};
 function renderJournal(){
-  if(migrateJournal()) setTimeout(save,0);
+  if(migrateJournal()) setTimeout(()=>save(true),0);
   const w=wk();
   if(selWeek!==w){ selWeek=w; selDay=(w===isoWeek(new Date()))?todayIdx():0; }
   const chips=$("dayChips"); chips.innerHTML="";
@@ -1009,7 +1131,7 @@ function buildReport(){
   L.push(""); L.push("## Відкриті задачі (за пріоритетом)");
   const open=sortedOpen(); if(!open.length) L.push("- немає");
   open.forEach((t,i)=>{const d=daysTo(t.due);
-    L.push((i+1)+". ["+catOf(t.cat).name+"] "+t.t+(t.due?" · дедлайн "+t.due+(d<0?" (прострочено)":""):"")+" · "+(t.imp===3?"важливо":t.imp===1?"дрібниця":"звичайно")+(t.dur?" · ~"+durLabel(t.dur):"")+" · група: "+QUADS[quadrant(t)][0]);});
+    L.push((i+1)+". ["+catOf(t.cat).name+"] "+t.t+(t.due?" · дедлайн "+t.due+(t.time?" "+t.time:"")+(d<0?" (прострочено)":""):"")+" · "+(t.imp===3?"важливо":t.imp===1?"дрібниця":"звичайно")+(t.dur?" · ~"+durLabel(t.dur):"")+" · група: "+QUADS[quadrant(t)][0]);});
   const from=Date.parse(ws), to=from+7*864e5;
   const doneW=state.tasks.filter(t=>t.done&&t.doneAt>=from&&t.doneAt<to);
   L.push(""); L.push("## Виконані задачі цього тижня");
@@ -1062,13 +1184,14 @@ $("bulkAdd").onclick=()=>{
   lines.forEach(line=>{
     const parts=line.split(/\s[·|]\s|\s—\s/); let first=parts.shift(); let cat="other", due=null, imp=2;
     const cm=first.match(/^\[([^\]]+)\]\s*/); if(cm){cat=findCat(cm[1]);first=first.slice(cm[0].length);}
-    let dur=null;
+    let dur=null, time=null;
     parts.forEach(seg=>{const l=seg.toLowerCase();
+      const tm=l.match(/(?:^|\s|о\s*)(\d{1,2}):(\d{2})(?!\d)/); if(tm&&Number(tm[1])<24){time=tm[1].padStart(2,"0")+":"+tm[2];}
       const dm=l.match(/(\d+(?:[.,]\d+)?)\s*(хв|год|h|min)/);
       if(dm&&!/до\s*\d/.test(l)){const n=parseFloat(dm[1].replace(",","."));dur=Math.round(/год|h/.test(dm[2])?n*60:n);return;}
       if(/важлив/.test(l))imp=3; else if(/дрібн/.test(l))imp=1; const d=parseDue(seg); if(d)due=d;});
     if(!first.trim())return;
-    const nt={id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),t:first.trim(),cat,imp,due,done:false}; if(dur>0)nt.dur=dur;
+    const nt={id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),t:first.trim(),cat,imp,due,done:false}; if(dur>0)nt.dur=dur; if(time){if(!nt.due)nt.due=todayStr(); nt.time=time;}
     state.tasks.push(nt); n++;
   });
   if(n){$("bulkText").value="";save();renderTasks();showStatus("Додано задач: "+n);} else showStatus("Не знайшов задач у тексті");
