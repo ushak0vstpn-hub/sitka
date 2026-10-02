@@ -282,6 +282,23 @@ details.backup summary{cursor:pointer;font-family:"Unbounded","Onest",sans-serif
 .ed .seg button:not([aria-pressed="true"]){background:var(--sheet)}
 .ed .acts{display:flex;gap:8px;justify-content:flex-end}
 .ed .acts .addbtn{margin-left:0}
+.hm-h{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px 12px;margin-bottom:12px}
+.hm-h span{font-size:13px;color:var(--muted)}
+.hm-h b{color:var(--ink);font-weight:600}
+.hm-wrap{overflow-x:auto;padding-bottom:4px}
+.hm{display:grid;grid-auto-flow:column;grid-template-rows:16px repeat(7,var(--cs,14px));grid-auto-columns:var(--cs,14px);gap:3px;width:max-content}
+.hm .ml{font-size:10px;color:var(--muted);white-space:nowrap;overflow:visible;line-height:16px}
+.hm .dl{font-size:10px;color:var(--muted);line-height:var(--cs,14px);width:20px;position:sticky;left:0;background:var(--sheet);z-index:1}
+.hm button{width:var(--cs,14px);height:var(--cs,14px);border-radius:3px;border:0;padding:0;cursor:pointer;display:block}
+.hm button.fut{background:transparent;box-shadow:inset 0 0 0 1px var(--line);cursor:default;opacity:.5}
+.hm button.sel{outline:2px solid var(--ink);outline-offset:1px}
+.l0{background:var(--grid);box-shadow:inset 0 0 0 1px var(--line)}
+.l1{background:#9FE1CB}.l2{background:#5DCAA5}.l3{background:#1D9E75}.l4{background:#0F6E56}
+.hm-f{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-top:10px}
+.hm-day{font-size:13px;color:var(--muted);min-height:18px}
+.hm-day b{color:var(--ink);font-weight:600}
+.hm-legend{display:flex;align-items:center;gap:3px;font-size:11px;color:var(--muted)}
+.hm-legend i{display:inline-block;width:12px;height:12px;border-radius:3px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 @media (min-width:900px){.wrap{padding-top:28px}}
 </style>
@@ -360,8 +377,10 @@ details.backup summary{cursor:pointer;font-family:"Unbounded","Onest",sans-serif
   </section>
 
   <section class="card">
-    <h2>Останні 10 тижнів</h2>
-    <div class="hist" id="hist"></div>
+    <div class="hm-h"><h2 style="margin:0">Активність</h2><span id="hmStats"></span></div>
+    <div class="hm-wrap" id="hmWrap"><div class="hm" id="hm"></div></div>
+    <div class="hm-f"><div class="hm-day" id="hmDay"></div>
+      <div class="hm-legend">менше <i class="l0"></i><i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i> більше</div></div>
   </section>
 
   </div><!-- /viewGrid -->
@@ -589,7 +608,12 @@ const key=(p,i)=>p+"."+i;
 const text=(p,i)=>state.texts[key(PILLARS[p].id,i)]||PILLARS[p].a[i][0];
 const short=(p,i)=>state.texts[key(PILLARS[p].id,i)+"s"]||PILLARS[p].a[i][1];
 const isDone=(p,i,w=wk())=>!!(state.checks[w]&&state.checks[w][key(PILLARS[p].id,i)]);
-function setDone(p,i,v){const w=wk();state.checks[w]=state.checks[w]||{};if(v)state.checks[w][key(PILLARS[p].id,i)]=true;else delete state.checks[w][key(PILLARS[p].id,i)];save();}
+function logGrid(w,k,v){
+  state.gridLog=state.gridLog||{}; const id=w+"|"+k, d=todayStr();
+  if(v){(state.gridLog[d]=state.gridLog[d]||{})[id]=true;}
+  else Object.keys(state.gridLog).forEach(x=>{if(state.gridLog[x][id]){delete state.gridLog[x][id]; if(!Object.keys(state.gridLog[x]).length) delete state.gridLog[x];}});
+}
+function setDone(p,i,v){const w=wk();state.checks[w]=state.checks[w]||{};if(v)state.checks[w][key(PILLARS[p].id,i)]=true;else delete state.checks[w][key(PILLARS[p].id,i)];logGrid(w,key(PILLARS[p].id,i),v);save();}
 const pillarCount=(p,w)=>PILLARS[p].a.reduce((n,_,i)=>n+(isDone(p,i,w)?1:0),0);
 const weekTotal=w=>state.checks[w]?Object.keys(state.checks[w]).length:0;
 
@@ -792,7 +816,7 @@ function fitNow(){
   while(vis>4 && left.offsetHeight>right.offsetHeight+1){ rows[vis-1].hidden=true; vis--; upd(); }
   left.style.minHeight=right.offsetHeight+"px";
 }
-window.addEventListener("resize",()=>requestAnimationFrame(fitNow));
+window.addEventListener("resize",()=>requestAnimationFrame(()=>{fitNow();renderHist();}));
 
 /* ---------- daily routine ---------- */
 const dayKey=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
@@ -874,7 +898,7 @@ function ensureDaily(){
   }
   return state.daily[k];
 }
-function setDoneCur(p,i,v){const w=isoWeek(new Date());state.checks[w]=state.checks[w]||{};const key_=key(PILLARS[p].id,i);if(v)state.checks[w][key_]=true;else delete state.checks[w][key_];save();}
+function setDoneCur(p,i,v){const w=isoWeek(new Date());state.checks[w]=state.checks[w]||{};const key_=key(PILLARS[p].id,i);if(v)state.checks[w][key_]=true;else delete state.checks[w][key_];logGrid(w,key_,v);save();}
 function renderDaily(){
   const picks=ensureDaily(), w=isoWeek(new Date()), list=$("sgList"); list.innerHTML="";
   let doneN=0;
@@ -1030,17 +1054,65 @@ function render(){
   renderRoutine();
   if(openP!==null) renderSheet();
 }
+/* ---------- activity heatmap ---------- */
+let hmSel=null;
+function dayActivity(d){
+  const k=dayKey(d), from=new Date(d); from.setHours(0,0,0,0); const to=from.getTime()+864e5;
+  const tasks=state.tasks.filter(t=>t.done&&t.doneAt>=from.getTime()&&t.doneAt<to).length;
+  const rt=state.routine&&state.routine.log[k]?Object.keys(state.routine.log[k]).length:0;
+  const grid=state.gridLog&&state.gridLog[k]?Object.keys(state.gridLog[k]).length:0;
+  const jn=dayHas(isoWeek(d),(d.getDay()+6)%7)?1:0;
+  return {tasks,rt,grid,jn,total:tasks+rt+grid+jn};
+}
+const hmLevel=n=>n===0?0:n<=2?1:n<=5?2:n<=8?3:4;
+function hmStreaks(){
+  const today=new Date(); today.setHours(0,0,0,0);
+  let cur=0; const d=new Date(today); if(dayActivity(d).total===0) d.setDate(d.getDate()-1);
+  while(dayActivity(d).total>0&&cur<1000){cur++;d.setDate(d.getDate()-1);}
+  let best=0,run=0; const s0=new Date(today); s0.setDate(s0.getDate()-26*7);
+  for(const x=new Date(s0);x<=today;x.setDate(x.getDate()+1)){ if(dayActivity(x).total>0){run++;best=Math.max(best,run);} else run=0; }
+  return {cur,best};
+}
+function hmDetail(d){
+  const a=dayActivity(d), parts=[];
+  if(a.tasks) parts.push(a.tasks+" "+(a.tasks===1?"задача":a.tasks<5?"задачі":"задач"));
+  if(a.rt) parts.push(a.rt+" рутина"); if(a.grid) parts.push(a.grid+" сітка"); if(a.jn) parts.push("журнал");
+  $("hmDay").innerHTML=DAY_SHORT[(d.getDay()+6)%7]+", "+d.toLocaleDateString("uk-UA",{day:"numeric",month:"long"})+": <b>"+a.total+"</b>"+(parts.length?" · "+parts.join(" · "):" · нічого не відмічено");
+}
 function renderHist(){
-  const h=$("hist"); h.innerHTML="";
-  for(let k=9;k>=0;k--){
-    const d=new Date(weekStart); d.setDate(d.getDate()-7*k);
-    const w=isoWeek(d), n=weekTotal(w);
-    const b=document.createElement("button"); b.type="button"; if(k===0)b.className="cur";
-    b.innerHTML='<span>'+n+'</span><span class="b" style="height:'+Math.max(2,n/64*60)+'px"></span><span>т'+w.split("-W")[1]+'</span>';
-    b.title="Тиждень "+w.split("-W")[1]+": "+n+" з 64";
-    b.onclick=()=>{weekStart=mondayOf(d);render();};
-    h.appendChild(b);
+  const box=$("hm"); box.innerHTML="";
+  const today=new Date(); today.setHours(0,0,0,0);
+  const wrapW=($("hmWrap").clientWidth||340)-26; const WEEKS=Math.max(26,Math.min(53,Math.floor(wrapW/19))), start=mondayOf(today); start.setDate(start.getDate()-(WEEKS-1)*7);
+  const lab=document.createElement("span"); lab.className="dl"; box.appendChild(lab);
+  ["Пн","","Ср","","Пт","","Нд"].forEach(t=>{const e=document.createElement("span");e.className="dl";e.textContent=t;box.appendChild(e);});
+  let prevM=null, weekSum=0; const curW=isoWeek(today);
+  for(let c=0;c<WEEKS;c++){
+    const ws=new Date(start); ws.setDate(ws.getDate()+c*7);
+    const ml=document.createElement("span"); ml.className="ml";
+    const mEnd=new Date(ws); mEnd.setDate(mEnd.getDate()+6);
+    const look=new Date(ws); look.setDate(look.getDate()+20);
+    if(prevM!==mEnd.getMonth()&&!(c===0&&look.getMonth()!==mEnd.getMonth())){ ml.textContent=["Січ","Лют","Бер","Кві","Тра","Чер","Лип","Сер","Вер","Жов","Лис","Гру"][mEnd.getMonth()]; prevM=mEnd.getMonth(); } else if(c===0) prevM=mEnd.getMonth();
+    box.appendChild(ml);
+    for(let r=0;r<7;r++){
+      const d=new Date(ws); d.setDate(d.getDate()+r);
+      const b=document.createElement("button"); b.type="button";
+      if(d>today){ b.className="fut"; b.tabIndex=-1; b.setAttribute("aria-hidden","true"); box.appendChild(b); continue; }
+      const a=dayActivity(d); if(isoWeek(d)===curW) weekSum+=a.total;
+      const k=dayKey(d);
+      b.className="l"+hmLevel(a.total)+(hmSel===k?" sel":"");
+      b.setAttribute("aria-label",d.toLocaleDateString("uk-UA",{day:"numeric",month:"long"})+": "+a.total);
+      b.title=d.toLocaleDateString("uk-UA",{day:"numeric",month:"short"})+": "+a.total;
+      b.onclick=()=>{hmSel=k; goToDate(new Date(d)); hmDetail(new Date(d));};
+      box.appendChild(b);
+    }
   }
+  const cs=Math.max(12,Math.min(22,Math.floor(wrapW/WEEKS)-3)); box.style.setProperty("--cs",cs+"px");
+  const st=hmStreaks();
+  $("hmStats").innerHTML="серія <b>"+st.cur+" дн.</b> · найдовша "+st.best+" · цей тиждень "+weekSum;
+  if(hmSel) hmDetail(new Date(hmSel+"T00:00")); else hmDetail(today);
+  const wrap=$("hmWrap");
+  if(!wrap._bound){ wrap._bound=true; wrap.addEventListener("scroll",()=>{ wrap._user=wrap.scrollLeft < wrap.scrollWidth-wrap.clientWidth-8; },{passive:true}); }
+  if(!wrap._user) requestAnimationFrame(()=>{ wrap.scrollLeft=wrap.scrollWidth; });
 }
 function editGoal(){
   const v=prompt("Центральна ціль:",state.goal);
@@ -1236,6 +1308,7 @@ function buildReport(){
     L.push("- "+it.t+": "+c+"/"+nDays+(isCurW?" (серія "+rtStreak(it.id)+" дн.)":""));});
   if(isCurW&&state.daily){let tot=0,dn=0;for(let i=0;i<nDays;i++){const d=new Date(weekStart);d.setDate(d.getDate()+i);(state.daily[dayKey(d)]||[]).forEach(pk=>{const p=pIdx(pk.p);if(p<0)return;tot++;if(isDone(p,pk.i,w))dn++;});}
     if(tot) L.push("- Щоденні підказки з сітки: виконано "+dn+" з "+tot);}
+  const st_=hmStreaks(); L.push(""); L.push("## Активність: серія "+st_.cur+" дн., найдовша "+st_.best+" дн.");
   L.push(""); L.push("## Динаміка (виконано дій з 64)");
   const hist=[]; for(let k=5;k>=0;k--){const d=new Date(weekStart);d.setDate(d.getDate()-7*k);const x=isoWeek(d);hist.push("т"+x.split("-W")[1]+": "+weekTotal(x));}
   L.push(hist.join(", "));
