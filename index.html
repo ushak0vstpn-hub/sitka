@@ -299,6 +299,28 @@ details.backup summary{cursor:pointer;font-family:"Unbounded","Onest",sans-serif
 .hm-day b{color:var(--ink);font-weight:600}
 .hm-legend{display:flex;align-items:center;gap:3px;font-size:11px;color:var(--muted)}
 .hm-legend i{display:inline-block;width:12px;height:12px;border-radius:3px}
+.tabs .badge.idea{background:#B9831C}
+.rep{font-size:12px;padding:1px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.repw{display:flex;gap:6px;align-items:flex-end}
+.repw input[type=number]{width:64px;color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px;background:var(--paper);min-height:40px}
+.ed .repw input[type=number]{background:var(--sheet)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}
+.chips button{border:1px solid var(--line);background:transparent;border-radius:999px;padding:4px 12px;font-size:13px;cursor:pointer;color:var(--muted)}
+.chips button[aria-pressed="true"]{border-color:var(--ink);color:var(--ink);background:var(--paper)}
+.idea-row{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--line)}
+.idea-row:first-child{border-top:0}
+.st{border:0;border-radius:999px;padding:3px 10px;font-size:12px;cursor:pointer;white-space:nowrap;margin-top:1px;min-width:78px}
+.st.new{background:color-mix(in srgb,#B9831C 22%,var(--sheet));color:var(--ink)}
+.st.wip{background:color-mix(in srgb,#2F6FB0 22%,var(--sheet));color:var(--ink)}
+.st.done{background:color-mix(in srgb,#2F8A78 22%,var(--sheet));color:var(--ink)}
+.idea-row .ib{flex:1;min-width:0}
+.idea-row .it{font-size:15px;cursor:text;overflow-wrap:anywhere}
+.idea-row.done .it{color:var(--muted);text-decoration:line-through}
+.idea-row .im{font-size:13px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;align-items:baseline}
+.idea-row .it input{width:100%;border:1px solid var(--line);border-radius:8px;padding:6px 8px;background:var(--paper);color:var(--ink);font-size:15px}
+.idea-row .ix{border:0;background:transparent;color:var(--muted);font-size:18px;cursor:pointer;width:32px;height:32px;border-radius:50%}
+.idea-row .ix:hover{background:var(--grid)}
+.ifoot{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;font-size:12px;color:var(--muted)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 @media (min-width:900px){.wrap{padding-top:28px}}
 </style>
@@ -332,6 +354,7 @@ details.backup summary{cursor:pointer;font-family:"Unbounded","Onest",sans-serif
   <div class="tabs" role="tablist">
     <button role="tab" id="tabGrid" aria-selected="true">Сітка</button>
     <button role="tab" id="tabTasks" aria-selected="false">Задачі<span class="badge" id="taskBadge" hidden></span></button>
+    <button role="tab" id="tabIdeas" aria-selected="false">Ідеї<span class="badge idea" id="ideaBadge" hidden></span></button>
   </div>
 
   <div id="viewGrid">
@@ -403,6 +426,7 @@ details.backup summary{cursor:pointer;font-family:"Unbounded","Onest",sans-serif
             <button data-v="2" aria-pressed="true">Звичайно</button>
             <button data-v="1" aria-pressed="false">Дрібниця</button>
           </div>
+          <span id="tRepSlot"></span>
           <button class="addbtn" id="tAdd">Додати</button>
         </div>
       </div>
@@ -420,6 +444,25 @@ details.backup summary{cursor:pointer;font-family:"Unbounded","Onest",sans-serif
       <h2>Мої пріоритети</h2>
       <div id="taskGroups"></div>
       <details id="doneBox"><summary id="doneSum">Виконані</summary><div id="doneList"></div></details>
+    </section>
+  </div>
+
+  <div id="viewIdeas" hidden>
+    <section class="card" style="margin-top:0">
+      <h2>Ідеї для 81</h2>
+      <div class="add">
+        <input type="text" id="iText" placeholder="Ідея, як покращити 81…" aria-label="Нова ідея" enterkeyhint="done">
+        <div class="r">
+          <label class="fld"><span>Тема</span><select id="iTag"></select></label>
+          <button class="addbtn" id="iAdd">Додати</button>
+        </div>
+      </div>
+    </section>
+    <section class="card">
+      <div class="chips" id="iFilters" role="group" aria-label="Фільтр за статусом"></div>
+      <div id="iList"></div>
+      <div class="ifoot"><span>Торкнись мітки статусу, щоб змінити її</span><button class="xbtn" id="iCopy">Скопіювати ідеї для Claude</button></div>
+      <textarea id="iCopyText" hidden readonly style="margin-top:10px;min-height:120px;font-size:12px" aria-label="Ідеї для Claude"></textarea>
     </section>
   </div>
 
@@ -704,6 +747,41 @@ function dueLabel(t){const d=daysTo(t.due);if(d===null)return "";
 function durLabel(m){if(!m)return "";if(m<60)return m+" хв";if(m>=180)return "3+ год";const h=m/60;return (Number.isInteger(h)?h:h.toFixed(1).replace(".",","))+" год";}
 const durChip=t=>t.dur?'<span class="dur'+(t.dur<=15?" quick":"")+'">'+durLabel(t.dur)+'</span>':"";
 function sortedOpen(){const dk=t=>(t.due||"9")+" "+(t.time||"99");return state.tasks.filter(t=>!t.done).sort((a,b)=>score(b)-score(a)||dk(a).localeCompare(dk(b)));}
+/* ---------- repeating tasks ---------- */
+const pl=(n,a,b,c)=>{const m10=n%10,m100=n%100;return m10===1&&m100!==11?a:(m10>=2&&m10<=4&&(m100<12||m100>14))?b:c;};
+function repLabel(r){ if(!r||!r.n) return "";
+  if(r.n===1) return r.u==="d"?"щодня":r.u==="w"?"щотижня":"щомісяця";
+  return "кожні "+r.n+" "+(r.u==="d"?pl(r.n,"день","дні","днів"):r.u==="w"?pl(r.n,"тиждень","тижні","тижнів"):pl(r.n,"місяць","місяці","місяців")); }
+const repChip=t=>t.rep?'<span class="rep" title="Повторювана задача">↻ '+repLabel(t.rep)+'</span>':"";
+const REP_PRESETS=[["","Ні"],["1d","Щодня"],["2d","Кожні 2 дні"],["3d","Кожні 3 дні"],["1w","Щотижня"],["2w","Кожні 2 тижні"],["1m","Щомісяця"],["c","Свій інтервал…"]];
+function repPicker(init){
+  const w=document.createElement("label"); w.className="fld";
+  w.innerHTML='<span>Повтор</span><div class="repw"><select class="rp-sel" aria-label="Повтор"></select><input type="number" class="rp-n" min="1" max="365" aria-label="Кожні скільки" hidden><select class="rp-u" aria-label="Одиниця" hidden><option value="d">днів</option><option value="w">тижнів</option><option value="m">місяців</option></select></div>';
+  const sel=w.querySelector(".rp-sel"), n=w.querySelector(".rp-n"), u=w.querySelector(".rp-u");
+  REP_PRESETS.forEach(([v,l])=>{const o=document.createElement("option");o.value=v;o.textContent=l;sel.appendChild(o);});
+  const showC=c=>{n.hidden=!c;u.hidden=!c;};
+  const setVal=r=>{ if(!r){sel.value="";showC(false);return;} const k=r.n+r.u; if(REP_PRESETS.some(([v])=>v===k)){sel.value=k;showC(false);} else {sel.value="c";n.value=r.n;u.value=r.u;showC(true);} };
+  sel.onchange=()=>{ const c=sel.value==="c"; showC(c); if(c&&!n.value){n.value=4;u.value="d";} if(c) n.focus(); };
+  setVal(init||null);
+  return {el:w, get(){ const v=sel.value; if(!v) return null; if(v==="c"){const k=parseInt(n.value,10); return k>0?{n:Math.min(k,365),u:u.value}:null;} return {n:parseInt(v,10),u:v.slice(-1)}; }, reset(){setVal(null);} };
+}
+function nextDue(t){
+  const today=new Date(); today.setHours(0,0,0,0);
+  let base=today; if(t.due){const [y,m,d]=t.due.split("-").map(Number); const dd=new Date(y,m-1,d); if(dd>today) base=dd;}
+  const nx=new Date(base); const r=t.rep;
+  if(r.u==="d") nx.setDate(nx.getDate()+r.n); else if(r.u==="w") nx.setDate(nx.getDate()+7*r.n); else nx.setMonth(nx.getMonth()+r.n);
+  return dayKey(nx);
+}
+function setTaskDone(t,v){
+  t.done=v; t.doneAt=v?Date.now():null;
+  if(v&&t.rep&&!(t.nextId&&state.tasks.some(x=>x.id===t.nextId))){
+    const nt=JSON.parse(JSON.stringify(t)); nt.id=Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+    nt.done=false; delete nt.doneAt; delete nt.nextId; nt.due=nextDue(t); state.tasks.push(nt); t.nextId=nt.id;
+    showStatus("Наступна: "+fmt(new Date(nt.due+"T00:00")));
+  }
+  if(!v&&t.nextId){ const nx=state.tasks.find(x=>x.id===t.nextId); if(nx&&!nx.done) state.tasks=state.tasks.filter(x=>x!==nx); delete t.nextId; }
+  save(); renderTasks();
+}
 const openNotes=new Set();
 function noteUI(t,container,meta){
   const btn=document.createElement("button"); btn.type="button"; btn.className="nbtn";
@@ -729,6 +807,7 @@ function taskEditor(t){
     '<label class="fld"><span>о котрій</span><input type="time" class="e-time"></label>'+
     '<label class="fld"><span>Тривалість</span><select class="e-dur"></select></label>'+
     '<div class="seg e-imp" role="group" aria-label="Важливість"><button type="button" data-v="3">Важливо</button><button type="button" data-v="2">Звичайно</button><button type="button" data-v="1">Дрібниця</button></div></div>'+
+    '<div class="r e-rep"></div>'+
     '<div class="acts"><button type="button" class="xbtn e-cancel">Скасувати</button><button type="button" class="addbtn e-save">Зберегти</button></div>';
   const q=c=>ed.querySelector(c);
   q("input[type=text]").value=t.t;
@@ -737,6 +816,7 @@ function taskEditor(t){
   durOpts.forEach(([v,l])=>{const o=document.createElement("option");o.value=v;o.textContent=l;q(".e-dur").appendChild(o);});
   if(t.dur&&!durOpts.some(([v])=>Number(v)===t.dur)){const o=document.createElement("option");o.value=t.dur;o.textContent=durLabel(t.dur);q(".e-dur").appendChild(o);}
   q(".e-dur").value=t.dur?String(t.dur):"";
+  const rp=repPicker(t.rep); q(".e-rep").appendChild(rp.el);
   let imp=t.imp; const segs=ed.querySelectorAll(".e-imp button");
   const paint=()=>segs.forEach(b=>b.setAttribute("aria-pressed",Number(b.dataset.v)===imp)); paint();
   segs.forEach(b=>b.onclick=()=>{imp=Number(b.dataset.v);paint();});
@@ -749,6 +829,7 @@ function taskEditor(t){
     if(due){t.due=due;} else if(tm){t.due=todayStr();} else {t.due=null;}
     if(tm) t.time=tm; else delete t.time;
     const d=parseInt(q(".e-dur").value,10); if(d>0) t.dur=d; else delete t.dur;
+    const rr=rp.get(); if(rr){ t.rep=rr; if(!t.due) t.due=todayStr(); } else delete t.rep;
     save(); renderTasks(); showStatus("Задачу оновлено");
   };
   q(".e-save").onclick=doSave;
@@ -759,11 +840,11 @@ function taskRow(t){
   const c=catOf(t.cat); const r=document.createElement("div"); r.className="task"+(t.done?" done":""); r.style.setProperty("--c",c.c);
   r.innerHTML='<button class="tc" aria-pressed="'+t.done+'" aria-label="Виконано">'+(t.done?"✓":"")+'</button>'+
     '<div class="tb"><div class="tt" title="Торкнись, щоб змінити"></div><div class="tm"><span class="cat"></span>'+
-    (t.imp===3?"<span>важливо</span>":t.imp===1?"<span>дрібниця</span>":"")+'<span>'+dueLabel(t)+'</span>'+durChip(t)+'</div></div>'+
+    (t.imp===3?"<span>важливо</span>":t.imp===1?"<span>дрібниця</span>":"")+'<span>'+dueLabel(t)+'</span>'+durChip(t)+repChip(t)+ideaMeta(t)+'</div></div>'+
     '<button class="te" aria-label="Редагувати задачу" title="Редагувати">✎</button><button class="tx" aria-label="Видалити">×</button>';
   r.querySelector(".tt").textContent=t.t; r.querySelector(".cat").textContent=c.name;
   noteUI(t,r.querySelector(".tb"),r.querySelector(".tm"));
-  r.querySelector(".tc").onclick=()=>{t.done=!t.done;t.doneAt=t.done?Date.now():null;save();renderTasks();};
+  r.querySelector(".tc").onclick=()=>setTaskDone(t,!t.done);
   const openEd=()=>{ if(r.querySelector(".ed")){r.querySelector(".ed").remove();return;} r.querySelector(".tb").appendChild(taskEditor(t)); r.querySelector(".ed input").focus(); };
   r.querySelector(".tt").onclick=openEd; r.querySelector(".te").onclick=openEd;
   r.querySelector(".tx").onclick=()=>{if(confirm("Видалити задачу?")){state.tasks=state.tasks.filter(x=>x!==t);save();renderTasks();}};
@@ -789,13 +870,15 @@ function renderTasks(){
 function renderNowTasks(open){
   const box=$("nowTasks"); box.innerHTML="";
   if(!open.length){box.innerHTML='<div class="empty">Відкритих задач немає.</div>';return;}
+  open=open.slice(); const ix=open.findIndex(t=>t.idea&&t.due&&daysTo(t.due)<=0);
+  if(ix>1){ const [it]=open.splice(ix,1); open.splice(1,0,it); }
   open.slice(0,12).forEach((t,i)=>{
     const c=catOf(t.cat); const r=document.createElement("div"); r.className="nt-row"+(i===0?" top":""); r.style.setProperty("--c",c.c);
-    r.innerHTML='<button class="tc" aria-label="Виконано"></button><div class="nb"><div class="nn"></div><div class="nm"><span class="cn"></span>'+(t.due?" · "+dueLabel(t):"")+'</div></div>'+durChip(t);
+    r.innerHTML='<button class="tc" aria-label="Виконано"></button><div class="nb"><div class="nn"></div><div class="nm"><span class="cn"></span>'+(t.due?" · "+dueLabel(t):"")+repChip(t)+ideaMeta(t)+'</div></div>'+durChip(t);
     r.querySelector(".nn").textContent=t.t; r.querySelector(".cn").textContent=c.name;
     noteUI(t,r.querySelector(".nb"),r.querySelector(".nm"));
-    r.querySelector(".tc").onclick=()=>{t.done=true;t.doneAt=Date.now();save();renderTasks();showStatus("Готово: "+t.t);};
-    r.querySelector(".nb").onclick=()=>showView("tasks");
+    r.querySelector(".tc").onclick=()=>{setTaskDone(t,true); if(!t.rep) showStatus("Готово: "+t.t);};
+    r.querySelector(".nb").onclick=()=>showView(t.idea?"ideas":"tasks");
     box.appendChild(r);
   });
   const more=document.createElement("button"); more.type="button"; more.className="nmore"; more.onclick=()=>showView("tasks");
@@ -817,6 +900,82 @@ function fitNow(){
   left.style.minHeight=right.offsetHeight+"px";
 }
 window.addEventListener("resize",()=>requestAnimationFrame(()=>{fitNow();renderHist();}));
+
+/* ---------- ideas for 81 ---------- */
+const ITAGS=["Інтерфейс","Задачі","Сітка","Рутина","Сповіщення","Звіт","Інше"];
+const IST={new:"нова",wip:"в роботі",done:"зроблено"}, INEXT={new:"wip",wip:"done",done:"new"};
+let iFilter="all";
+const newCount=()=>(state.ideas||[]).filter(x=>x.status==="new").length;
+function ideaMeta(t){ if(!t.idea) return ""; const n=newCount(); return n?'<span>💡 '+n+' '+pl(n,"нова ідея","нові ідеї","нових ідей")+'</span>':""; }
+function ensureIdeas(){
+  if(Array.isArray(state.ideas)) return false;
+  const mk=(t,tag,status,created)=>({id:"i"+Math.random().toString(36).slice(2,9),t,tag,status,created});
+  state.ideas=[
+    mk("Telegram-бот: задачі на день о 8:30, нагадування про журнал о 21:30","Сповіщення","new","2026-10-02"),
+    mk("Назва для сервісу: «Встигай» або «81»","Інше","new","2026-10-02"),
+    mk("Скоротити сітку до ядра: 2 дії на опору","Сітка","wip","2026-10-01"),
+    mk("Повторювані задачі з власним інтервалом","Задачі","done","2026-10-03"),
+    mk("Нотатник ідей для 81","Інтерфейс","done","2026-10-03"),
+    mk("Карта активності як у GitHub","Інтерфейс","done","2026-10-02"),
+    mk("Редагування наявних задач","Задачі","done","2026-10-02")
+  ];
+  if(!state.tasks.some(t=>t.idea&&!t.done))
+    state.tasks.push({id:"idea"+Date.now().toString(36),t:"Ідеї для 81: переглянути й дописати",cat:"time",imp:1,dur:5,due:todayStr(),rep:{n:2,u:"d"},idea:true,done:false});
+  return true;
+}
+function renderIdeas(){
+  if(ensureIdeas()) setTimeout(()=>save(true),0);
+  const all=state.ideas, n=newCount();
+  $("ideaBadge").hidden=!n; $("ideaBadge").textContent=n;
+  const f=$("iFilters"); f.innerHTML="";
+  [["all","Усі"],["new","Нові"],["wip","В роботі"],["done","Зроблено"]].forEach(([k,l])=>{
+    const c=k==="all"?all.length:all.filter(x=>x.status===k).length;
+    const b=document.createElement("button"); b.type="button"; b.textContent=l+" "+c; b.setAttribute("aria-pressed",iFilter===k);
+    b.onclick=()=>{iFilter=k;renderIdeas();}; f.appendChild(b);
+  });
+  const order={new:0,wip:1,done:2};
+  const list=all.filter(x=>iFilter==="all"||x.status===iFilter).sort((a,b)=>order[a.status]-order[b.status]||(b.created||"").localeCompare(a.created||""));
+  const box=$("iList"); box.innerHTML="";
+  if(!list.length) box.innerHTML='<div class="empty">Тут поки порожньо.</div>';
+  list.forEach(it=>{
+    const r=document.createElement("div"); r.className="idea-row"+(it.status==="done"?" done":"");
+    const [y,m,d]=(it.created||todayStr()).split("-");
+    r.innerHTML='<button class="st '+it.status+'" aria-label="Статус: '+IST[it.status]+'. Змінити"></button><div class="ib"><div class="it" title="Торкнись, щоб змінити"></div><div class="im"><span>'+d+"."+m+'</span><span class="tg"></span></div></div><button class="ix" aria-label="Видалити ідею">×</button>';
+    r.querySelector(".st").textContent=IST[it.status];
+    r.querySelector(".it").textContent=it.t; r.querySelector(".tg").textContent=it.tag;
+    r.querySelector(".st").onclick=()=>{it.status=INEXT[it.status]; save(); renderIdeas(); renderTasks();};
+    r.querySelector(".it").onclick=()=>{
+      const el=r.querySelector(".it"); if(el.querySelector("input")) return;
+      el.innerHTML='<input aria-label="Текст ідеї">'; const inp=el.querySelector("input"); inp.value=it.t; inp.focus();
+      let closed=false; const done=()=>{if(closed)return; closed=true; const v=inp.value.trim(); if(v) it.t=v; save(); renderIdeas();};
+      inp.onkeydown=e=>{if(e.key==="Enter")done(); if(e.key==="Escape"){closed=true;renderIdeas();}}; inp.onblur=done;
+    };
+    r.querySelector(".ix").onclick=()=>{if(confirm("Видалити ідею?")){state.ideas=state.ideas.filter(x=>x!==it);save();renderIdeas();renderTasks();}};
+    noteUI(it,r.querySelector(".ib"),r.querySelector(".im"));
+    box.appendChild(r);
+  });
+}
+(function initIdeas(){
+  const sel=$("iTag"); ITAGS.forEach(t=>{const o=document.createElement("option");o.value=t;o.textContent=t;sel.appendChild(o);});
+  const add=()=>{const v=$("iText").value.trim(); if(!v){$("iText").focus();return;}
+    ensureIdeas(); state.ideas.push({id:"i"+Date.now().toString(36),t:v,tag:sel.value,status:"new",created:todayStr()});
+    $("iText").value=""; iFilter="all"; save(); renderIdeas(); renderTasks(); showStatus("Ідею додано"); $("iText").focus();};
+  $("iAdd").onclick=add; $("iText").onkeydown=e=>{if(e.key==="Enter")add();};
+  $("tabIdeas").onclick=()=>showView("ideas");
+  $("iCopy").onclick=async()=>{
+    const L=["# Ідеї для 81 (стан на "+fmt(new Date())+")"];
+    [["new","Нові"],["wip","В роботі"],["done","Зроблено"]].forEach(([k,l])=>{
+      let xs=state.ideas.filter(x=>x.status===k); if(k==="done") xs=xs.slice(-5);
+      if(!xs.length) return; L.push(""); L.push("## "+l);
+      xs.forEach(x=>{const [y,m,d]=(x.created||"").split("-"); L.push("- ["+x.tag+"] "+x.t+(d?" ("+d+"."+m+")":"")); if(x.note) L.push("  Нотатка: "+x.note.replace(/\n+/g," / "));});
+    });
+    L.push(""); L.push("Подивись мої ідеї для 81: що варто зробити першим, що можна об'єднати, і як реалізувати 1–2 найкорисніші.");
+    const txt=L.join("\n"), ta=$("iCopyText"); ta.hidden=false; ta.value=txt;
+    let ok=false; try{await navigator.clipboard.writeText(txt);ok=true}catch(e){}
+    if(!ok){ta.focus();ta.select();try{ok=document.execCommand("copy")}catch(e){}}
+    showStatus(ok?"Ідеї скопійовано":"Виділи текст і скопіюй вручну");
+  };
+})();
 
 /* ---------- daily routine ---------- */
 const dayKey=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
@@ -988,25 +1147,29 @@ document.addEventListener("visibilitychange",()=>{if(document.visibilityState===
 function checkNewDay(){ if(renderedDay&&renderedDay!==todayStr()) render(); }
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")checkNewDay();});
 setInterval(checkNewDay,60000);
+const tRep=repPicker(null);
 (function initTaskForm(){
+  $("tRepSlot").replaceWith(tRep.el);
   const sel=$("tCat"); CATS.forEach(c=>{const o=document.createElement("option");o.value=c.id;o.textContent=c.name;sel.appendChild(o);});
   let imp=2;
   $("tImp").querySelectorAll("button").forEach(b=>b.onclick=()=>{imp=Number(b.dataset.v);$("tImp").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));});
   const add=()=>{const t=$("tTitle").value.trim(); if(!t){$("tTitle").focus();return;}
     const task={id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),t,cat:sel.value,imp,due:$("tDue").value||null,done:false};
     const dm=parseInt($("tDur").value,10); if(dm>0) task.dur=dm;
+    const rr=tRep.get(); if(rr){ task.rep=rr; if(!task.due) task.due=todayStr(); } tRep.reset();
     if($("tTime").value){ if(!task.due) task.due=todayStr(); task.time=$("tTime").value; }
     state.tasks.push(task);
     $("tTitle").value="";$("tDue").value="";$("tTime").value="";$("tDur").value="";save();renderTasks();showStatus("Додано");$("tTitle").focus();};
   $("tAdd").onclick=add; $("tTitle").onkeydown=e=>{if(e.key==="Enter")add();};
 })();
 function showView(v){
-  $("viewGrid").hidden=v!=="grid"; $("viewTasks").hidden=v!=="tasks";
-  $("tabGrid").setAttribute("aria-selected",v==="grid"); $("tabTasks").setAttribute("aria-selected",v==="tasks");
+  $("viewGrid").hidden=v!=="grid"; $("viewTasks").hidden=v!=="tasks"; $("viewIdeas").hidden=v!=="ideas";
+  $("tabGrid").setAttribute("aria-selected",v==="grid"); $("tabTasks").setAttribute("aria-selected",v==="tasks"); $("tabIdeas").setAttribute("aria-selected",v==="ideas");
+  if(v==="ideas") renderIdeas();
   try{localStorage.setItem("sitka9x9-view",v)}catch(e){}
 }
 $("tabGrid").onclick=()=>{showView("grid");renderTasks();}; $("tabTasks").onclick=()=>{showView("tasks");renderTasks();};
-try{if(localStorage.getItem("sitka9x9-view")==="tasks")showView("tasks")}catch(e){}
+try{const v0=localStorage.getItem("sitka9x9-view"); if(v0==="tasks"||v0==="ideas") setTimeout(()=>showView(v0),0);}catch(e){}
 
 /* ---------- render grid ---------- */
 function render(){
@@ -1049,9 +1212,11 @@ function render(){
   }
   renderJournal();
   renderHist();
+  if(ensureIdeas()) setTimeout(()=>save(true),0);
   renderProjects();
   renderTasks();
   renderRoutine();
+  if(!$("viewIdeas").hidden) renderIdeas(); else { const n=newCount(); $("ideaBadge").hidden=!n; $("ideaBadge").textContent=n; }
   if(openP!==null) renderSheet();
 }
 /* ---------- activity heatmap ---------- */
@@ -1288,7 +1453,7 @@ function buildReport(){
   L.push(""); L.push("## Відкриті задачі (за пріоритетом)");
   const open=sortedOpen(); if(!open.length) L.push("- немає");
   open.forEach((t,i)=>{const d=daysTo(t.due);
-    L.push((i+1)+". ["+catOf(t.cat).name+"] "+t.t+(t.due?" · дедлайн "+t.due+(t.time?" "+t.time:"")+(d<0?" (прострочено)":""):"")+" · "+(t.imp===3?"важливо":t.imp===1?"дрібниця":"звичайно")+(t.dur?" · ~"+durLabel(t.dur):"")+" · група: "+QUADS[quadrant(t)][0]); if(t.note) L.push("   Нотатка: "+t.note.replace(/\n+/g," / "));});
+    L.push((i+1)+". ["+catOf(t.cat).name+"] "+t.t+(t.due?" · дедлайн "+t.due+(t.time?" "+t.time:"")+(d<0?" (прострочено)":""):"")+" · "+(t.imp===3?"важливо":t.imp===1?"дрібниця":"звичайно")+(t.dur?" · ~"+durLabel(t.dur):"")+(t.rep?" · повтор: "+repLabel(t.rep):"")+" · група: "+QUADS[quadrant(t)][0]); if(t.note) L.push("   Нотатка: "+t.note.replace(/\n+/g," / "));});
   const from=Date.parse(ws), to=from+7*864e5;
   const doneW=state.tasks.filter(t=>t.done&&t.doneAt>=from&&t.doneAt<to);
   L.push(""); L.push("## Виконані задачі цього тижня");
@@ -1343,13 +1508,16 @@ $("bulkAdd").onclick=()=>{
     const parts=line.split(/\s[·|]\s|\s—\s/); let first=parts.shift(); let cat="other", due=null, imp=2;
     const cm=first.match(/^\[([^\]]+)\]\s*/); if(cm){cat=findCat(cm[1]);first=first.slice(cm[0].length);}
     let dur=null, time=null;
-    parts.forEach(seg=>{const l=seg.toLowerCase();
+    let rep=null;
+    parts.forEach(seg=>{const l=seg.toLowerCase().trim();
+      if(/^щодня$/.test(l)){rep={n:1,u:"d"};return;} if(/^щотижня$/.test(l)){rep={n:1,u:"w"};return;} if(/^щомісяця$/.test(l)){rep={n:1,u:"m"};return;}
+      const rm=l.match(/^(?:↻\s*)?кожн\S*\s+(\d+)?\s*(дн|ден|тиж|міс)/); if(rm){rep={n:rm[1]?parseInt(rm[1],10):1,u:/^тиж/.test(rm[2])?"w":/^міс/.test(rm[2])?"m":"d"};return;}
       const tm=l.match(/(?:^|\s|о\s*)(\d{1,2}):(\d{2})(?!\d)/); if(tm&&Number(tm[1])<24){time=tm[1].padStart(2,"0")+":"+tm[2];}
       const dm=l.match(/(\d+(?:[.,]\d+)?)\s*(хв|год|h|min)/);
       if(dm&&!/до\s*\d/.test(l)){const n=parseFloat(dm[1].replace(",","."));dur=Math.round(/год|h/.test(dm[2])?n*60:n);return;}
       if(/важлив/.test(l))imp=3; else if(/дрібн/.test(l))imp=1; const d=parseDue(seg); if(d)due=d;});
     if(!first.trim())return;
-    const nt={id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),t:first.trim(),cat,imp,due,done:false}; if(dur>0)nt.dur=dur; if(time){if(!nt.due)nt.due=todayStr(); nt.time=time;}
+    const nt={id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),t:first.trim(),cat,imp,due,done:false}; if(dur>0)nt.dur=dur; if(rep){nt.rep=rep; if(!nt.due) nt.due=todayStr();} if(time){if(!nt.due)nt.due=todayStr(); nt.time=time;}
     state.tasks.push(nt); n++;
   });
   if(n){$("bulkText").value="";save();renderTasks();showStatus("Додано задач: "+n);} else showStatus("Не знайшов задач у тексті");
