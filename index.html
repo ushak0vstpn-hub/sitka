@@ -272,6 +272,16 @@ textarea.tnote{margin-top:6px;min-height:60px;font-size:14px}
 .nt-row .nm{display:flex;flex-wrap:wrap;gap:0 8px;align-items:baseline}
 .nt-row[hidden],.nmore[hidden],.npv[hidden]{display:none}
 .nmore{border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:13px;padding:10px 0 2px;text-decoration:underline;text-underline-offset:3px;display:block}
+details.backup summary{cursor:pointer;font-family:"Unbounded","Onest",sans-serif;font-weight:500;font-size:16px}
+.task .te{border:0;background:transparent;cursor:pointer;color:var(--muted);font-size:15px;width:32px;height:32px;border-radius:50%}
+.task .te:hover,.task .tx:hover{background:var(--grid)}
+.ed{margin-top:8px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--paper);display:grid;gap:8px}
+.ed input[type=text]{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--sheet);color:var(--ink);font-size:15px}
+.ed .r{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}
+.ed select,.ed input[type=date],.ed input[type=time]{color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--sheet);min-height:40px;color-scheme:light dark}
+.ed .seg button:not([aria-pressed="true"]){background:var(--sheet)}
+.ed .acts{display:flex;gap:8px;justify-content:flex-end}
+.ed .acts .addbtn{margin-left:0}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 @media (min-width:900px){.wrap{padding-top:28px}}
 </style>
@@ -403,9 +413,9 @@ textarea.tnote{margin-top:6px;min-height:60px;font-size:14px}
     <textarea id="repText" hidden readonly style="margin-top:10px;min-height:140px;font-size:12px" aria-label="Звіт для Claude"></textarea>
   </section>
 
-  <section class="card" id="xferCard">
-    <h2>Перенесення даних</h2>
-    <p class="hint" style="margin-top:0">Щоб перенести відмітки, нотатки й задачі в іншу версію сітки (наприклад, у застосунок на телефоні): тут натисни «Скопіювати мої дані», там натисни «Вставити дані» і встав текст.</p>
+  <details class="card backup" id="xferCard">
+    <summary>Резервна копія</summary>
+    <p class="hint">Синхронізація вже зберігає все в базі. Раз на місяць завантаж файл копії про всяк випадок. «Скопіювати / Вставити дані» потрібні лише для перенесення в іншу версію сітки.</p>
     <div class="r" style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="xbtn" id="xCopy">Скопіювати мої дані</button>
       <button class="xbtn" id="xPasteOpen">Вставити дані</button>
@@ -414,7 +424,7 @@ textarea.tnote{margin-top:6px;min-height:60px;font-size:14px}
     </div>
     <textarea id="xText" hidden style="margin-top:10px;min-height:110px;font-size:12px" aria-label="Дані для перенесення"></textarea>
     <button class="xbtn" id="xImport" hidden style="margin-top:8px">Імпортувати вставлені дані</button>
-  </section>
+  </details>
 
   <div class="foot">
     <span><span class="sync-dot" id="syncDot"></span><span id="storeTxt">Завантаження…</span></span>
@@ -686,22 +696,52 @@ function noteUI(t,container,meta){
   meta.appendChild(btn); container.appendChild(pv);
   if(openNotes.has(t.id)) open(); sync();
 }
+function taskEditor(t){
+  const ed=document.createElement("div"); ed.className="ed";
+  const durOpts=[["","?"],["5","5 хв"],["15","15 хв"],["30","30 хв"],["45","45 хв"],["60","1 год"],["90","1,5 год"],["120","2 год"],["180","3+ год"]];
+  ed.innerHTML='<input type="text" aria-label="Назва задачі">'+
+    '<div class="r"><label class="fld"><span>Категорія</span><select class="e-cat"></select></label>'+
+    '<label class="fld"><span>Дедлайн: дата</span><input type="date" class="e-due"></label>'+
+    '<label class="fld"><span>о котрій</span><input type="time" class="e-time"></label>'+
+    '<label class="fld"><span>Тривалість</span><select class="e-dur"></select></label>'+
+    '<div class="seg e-imp" role="group" aria-label="Важливість"><button type="button" data-v="3">Важливо</button><button type="button" data-v="2">Звичайно</button><button type="button" data-v="1">Дрібниця</button></div></div>'+
+    '<div class="acts"><button type="button" class="xbtn e-cancel">Скасувати</button><button type="button" class="addbtn e-save">Зберегти</button></div>';
+  const q=c=>ed.querySelector(c);
+  q("input[type=text]").value=t.t;
+  CATS.forEach(c=>{const o=document.createElement("option");o.value=c.id;o.textContent=c.name;q(".e-cat").appendChild(o);}); q(".e-cat").value=t.cat;
+  q(".e-due").value=t.due||""; q(".e-time").value=t.time||"";
+  durOpts.forEach(([v,l])=>{const o=document.createElement("option");o.value=v;o.textContent=l;q(".e-dur").appendChild(o);});
+  if(t.dur&&!durOpts.some(([v])=>Number(v)===t.dur)){const o=document.createElement("option");o.value=t.dur;o.textContent=durLabel(t.dur);q(".e-dur").appendChild(o);}
+  q(".e-dur").value=t.dur?String(t.dur):"";
+  let imp=t.imp; const segs=ed.querySelectorAll(".e-imp button");
+  const paint=()=>segs.forEach(b=>b.setAttribute("aria-pressed",Number(b.dataset.v)===imp)); paint();
+  segs.forEach(b=>b.onclick=()=>{imp=Number(b.dataset.v);paint();});
+  ed.onclick=e=>e.stopPropagation();
+  q(".e-cancel").onclick=()=>ed.remove();
+  const doSave=()=>{
+    const title=q("input[type=text]").value.trim(); if(title) t.t=title;
+    t.cat=q(".e-cat").value; t.imp=imp;
+    const due=q(".e-due").value, tm=q(".e-time").value;
+    if(due){t.due=due;} else if(tm){t.due=todayStr();} else {t.due=null;}
+    if(tm) t.time=tm; else delete t.time;
+    const d=parseInt(q(".e-dur").value,10); if(d>0) t.dur=d; else delete t.dur;
+    save(); renderTasks(); showStatus("Задачу оновлено");
+  };
+  q(".e-save").onclick=doSave;
+  q("input[type=text]").onkeydown=e=>{if(e.key==="Enter")doSave(); if(e.key==="Escape")ed.remove();};
+  return ed;
+}
 function taskRow(t){
   const c=catOf(t.cat); const r=document.createElement("div"); r.className="task"+(t.done?" done":""); r.style.setProperty("--c",c.c);
   r.innerHTML='<button class="tc" aria-pressed="'+t.done+'" aria-label="Виконано">'+(t.done?"✓":"")+'</button>'+
     '<div class="tb"><div class="tt" title="Торкнись, щоб змінити"></div><div class="tm"><span class="cat"></span>'+
     (t.imp===3?"<span>важливо</span>":t.imp===1?"<span>дрібниця</span>":"")+'<span>'+dueLabel(t)+'</span>'+durChip(t)+'</div></div>'+
-    '<button class="tx" aria-label="Видалити">×</button>';
+    '<button class="te" aria-label="Редагувати задачу" title="Редагувати">✎</button><button class="tx" aria-label="Видалити">×</button>';
   r.querySelector(".tt").textContent=t.t; r.querySelector(".cat").textContent=c.name;
   noteUI(t,r.querySelector(".tb"),r.querySelector(".tm"));
   r.querySelector(".tc").onclick=()=>{t.done=!t.done;t.doneAt=t.done?Date.now():null;save();renderTasks();};
-  r.querySelector(".tt").onclick=()=>{
-    const v=prompt("Задача:",t.t); if(v===null)return; if(v.trim())t.t=v.trim();
-    const d=prompt("Дедлайн (РРРР-ММ-ДД або РРРР-ММ-ДД ГГ:ХХ), порожньо — без дедлайну:",t.due?(t.due+(t.time?" "+t.time:"")):"");
-    if(d!==null){const mm=d.trim().match(/^(\d{4}-\d{2}-\d{2})(?:\s+(\d{1,2}):(\d{2}))?$/);
-      if(mm){t.due=mm[1];if(mm[2])t.time=String(mm[2]).padStart(2,"0")+":"+mm[3];else delete t.time;}else{t.due=null;delete t.time;}}
-    const m=prompt("Скільки хвилин займе? Порожньо — без оцінки:",t.dur||""); if(m!==null){const n=parseInt(m,10);if(n>0)t.dur=n;else delete t.dur;}
-    save();renderTasks();};
+  const openEd=()=>{ if(r.querySelector(".ed")){r.querySelector(".ed").remove();return;} r.querySelector(".tb").appendChild(taskEditor(t)); r.querySelector(".ed input").focus(); };
+  r.querySelector(".tt").onclick=openEd; r.querySelector(".te").onclick=openEd;
   r.querySelector(".tx").onclick=()=>{if(confirm("Видалити задачу?")){state.tasks=state.tasks.filter(x=>x!==t);save();renderTasks();}};
   return r;
 }
@@ -1180,7 +1220,7 @@ function buildReport(){
   const from=Date.parse(ws), to=from+7*864e5;
   const doneW=state.tasks.filter(t=>t.done&&t.doneAt>=from&&t.doneAt<to);
   L.push(""); L.push("## Виконані задачі цього тижня");
-  if(!doneW.length) L.push("- немає"); doneW.forEach(t=>L.push("- ["+catOf(t.cat).name+"] "+t.t));
+  if(!doneW.length) L.push("- немає"); doneW.forEach(t=>{L.push("- ["+catOf(t.cat).name+"] "+t.t); if(t.note) L.push("  Нотатка: "+t.note.replace(/\n+/g," / "));});
   const wn=state.weekNotes[w]||{};
   L.push(""); L.push("## Журнал тижня");
   let anyDay=false;
