@@ -328,6 +328,7 @@ details.backup summary{cursor:pointer;font-family:"Unbounded","Onest",sans-serif
 .act-text .star{color:var(--c);margin-right:4px}
 .act-text .hint{font-size:13px;color:var(--muted);margin-top:2px}
 .sheet .about{max-width:760px;margin:6px auto 0;font-size:14px;opacity:.92;padding:0 0 0 2px}
+textarea.grat{background:color-mix(in srgb,#B9831C 8%,var(--paper))}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 @media (min-width:900px){.wrap{padding-top:28px}}
 </style>
@@ -401,6 +402,8 @@ details.backup summary{cursor:pointer;font-family:"Unbounded","Onest",sans-serif
     <textarea id="dBad" placeholder="Напр.: термінова задача від керівника"></textarea>
     <label class="f" for="dNext">Фокус на завтра</label>
     <textarea id="dNext" placeholder="1–2 речі, з яких почну завтра"></textarea>
+    <label class="f" for="dGrat">🙏 За що я вдячний сьогодні</label>
+    <textarea id="dGrat" class="grat" placeholder="Людина, момент, результат — навіть дрібниця"></textarea>
     <details class="week-view"><summary>Переглянути весь тиждень</summary><div id="weekJournal"></div></details>
     <label class="f" for="wFocus" style="margin-top:18px">Фокус наступного тижня</label>
     <textarea id="wFocus" placeholder="1–3 дії, на які ставлю пріоритет"></textarea>
@@ -1409,7 +1412,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&openP!==null)closeP
 /* ---------- daily journal ---------- */
 const DAY_SHORT=["Пн","Вт","Ср","Чт","Пт","Сб","Нд"];
 const DAY_FULL=["Понеділок","Вівторок","Середа","Четвер","П'ятниця","Субота","Неділя"];
-const JF=[["good","Що спрацювало"],["bad","Що заважало"],["next","Фокус на завтра"]];
+const JF=[["good","Що спрацювало"],["bad","Що заважало"],["next","Фокус на завтра"],["grat","Вдячність"]];
 let selDay=null, selWeek=null;
 const todayIdx=()=>{const d=new Date().getDay();return d===0?6:d-1};
 function migrateJournal(){
@@ -1428,7 +1431,7 @@ function migrateJournal(){
   return changed;
 }
 const dayData=(w,i)=>((state.weekNotes[w]||{}).days||{})[i]||{};
-const dayHas=(w,i)=>{const d=dayData(w,i);return !!(d.good||d.bad||d.next);};
+const dayHas=(w,i)=>{const d=dayData(w,i);return !!(d.good||d.bad||d.next||d.grat);};
 function renderJournal(){
   if(migrateJournal()) setTimeout(()=>save(true),0);
   const w=wk();
@@ -1447,7 +1450,7 @@ function renderJournal(){
   const sd=new Date(weekStart); sd.setDate(sd.getDate()+selDay);
   $("dayTitle").textContent=DAY_FULL[selDay]+", "+sd.toLocaleDateString("uk-UA",{day:"numeric",month:"long"})+(isCur&&selDay===todayIdx()?" · сьогодні":"");
   const dd=dayData(w,selDay);
-  $("dGood").value=dd.good||""; $("dBad").value=dd.bad||""; $("dNext").value=dd.next||"";
+  $("dGood").value=dd.good||""; $("dBad").value=dd.bad||""; $("dNext").value=dd.next||""; $("dGrat").value=dd.grat||"";
   $("wFocus").value=(state.weekNotes[w]||{}).focus||"";
   renderWeekJournal();
 }
@@ -1470,7 +1473,7 @@ function bindDay(id,f){$(id).oninput=e=>{
   const chip=$("dayChips").children[selDay]; if(chip) chip.classList.toggle("has",dayHas(w,selDay));
   renderWeekJournal();
 };}
-bindDay("dGood","good");bindDay("dBad","bad");bindDay("dNext","next");
+bindDay("dGood","good");bindDay("dBad","bad");bindDay("dNext","next");bindDay("dGrat","grat");
 $("wFocus").oninput=e=>{const w=wk();state.weekNotes[w]=state.weekNotes[w]||{};state.weekNotes[w].focus=e.target.value;save();};
 $("prevW").onclick=()=>{weekStart.setDate(weekStart.getDate()-7);render();};
 $("nextW").onclick=()=>{weekStart.setDate(weekStart.getDate()+7);render();};
