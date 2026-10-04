@@ -321,6 +321,13 @@ details.backup summary{cursor:pointer;font-family:"Unbounded","Onest",sans-serif
 .idea-row .ix{border:0;background:transparent;color:var(--muted);font-size:18px;cursor:pointer;width:32px;height:32px;border-radius:50%}
 .idea-row .ix:hover{background:var(--grid)}
 .ifoot{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;font-size:12px;color:var(--muted)}
+.cell.act.core{box-shadow:inset 0 0 0 2px var(--c)}
+@media (min-width:600px){.cell.act.core{font-weight:700}}
+.cell.act.core:not(.done)::after{content:"★";position:absolute;top:1px;right:3px;font-size:.8em;color:var(--c)}
+.act-row.core{border-left-width:6px}
+.act-text .star{color:var(--c);margin-right:4px}
+.act-text .hint{font-size:13px;color:var(--muted);margin-top:2px}
+.sheet .about{max-width:760px;margin:6px auto 0;font-size:14px;opacity:.92;padding:0 0 0 2px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 @media (min-width:900px){.wrap{padding-top:28px}}
 </style>
@@ -515,7 +522,7 @@ details.backup summary{cursor:pointer;font-family:"Unbounded","Onest",sans-serif
     <button class="back" id="sheetBack">‹ Сітка</button>
     <h3 id="sheetTitle"></h3>
     <span class="count" id="sheetCount"></span>
-  </div></div>
+  </div><div class="about" id="sheetAbout"></div></div>
   <div class="body">
     <section class="card" id="sheetProjCard" style="margin:0 0 14px;display:none"><h2>Робочі проєкти</h2><div id="sheetProj"></div></section>
     <div id="sheetActs"></div>
@@ -531,79 +538,82 @@ details.backup summary{cursor:pointer;font-family:"Unbounded","Onest",sans-serif
 <script>
 (function(){
 const PILLARS=[
- {id:"fin",name:"Фінанси",s:"Фінанси",c:"#2F6FB0",a:[
-  ["3×30 хв теми місяця: TVM → звітність → DCF → облігації → CAPM → деривативи → макро","Тема місяця"],
-  ["Щодня 10 хв новин: НБУ, Forbes Україна, FT","Новини 10 хв"],
-  ["Одна модель в Excel: NPV, DCF або облігація","Модель в Excel"],
-  ["Відстежити ставку НБУ, інфляцію, курс","Макро: 3 цифри"],
-  ["Розібрати річний звіт однієї компанії","Звіт компанії"],
-  ["20 карток з термінами в Anki","Anki ×20"],
-  ["Одна лекція чи подкаст (Damodaran, Odd Lots)","Лекція"],
-  ["Неділя: пояснити тему тижня за 5 хв (метод Фейнмана)","Фейнман"]]},
- {id:"uni",name:"Університет",s:"Універ",c:"#7556B3",a:[
-  ["Неділя: огляд усіх дедлайнів тижня","Дедлайни"],
-  ["2 блоки глибокої роботи по 90 хв","2×90 хв"],
-  ["10 хв нотаток одразу після пари","Нотатки"],
-  ["Великі завдання ділю на кроки по 25 хв","Кроки 25 хв"],
-  ["Застряг на 20+ хв, питаю одногрупників чи викладача","Питати"],
-  ["Повторення в дорозі: Anki, аудіо","Дорога"],
-  ["Теми робіт обираю з фінансових інтересів","Теми робіт"],
-  ["Огляд пройденого за тиждень, 45 хв","Огляд"]]},
- {id:"work",name:"Робота",s:"Робота",c:"#2F8A78",a:[
-  ["Стабільні робочі дні та години","Графік"],
-  ["Щодня топ-3 задачі","Топ-3"],
-  ["Курс «Основи бюджетної системи»: +10% за тиждень","Бюджетна система"],
-  ["Курс Power BI: 2 сесії по 45 хв + міні-дашборд","Power BI"],
-  ["Записати досягнення тижня (для CV)","Досягнення"],
-  ["Нові задачі беру лише після перегляду плану","Фільтр задач"],
-  ["Короткий фідбек від керівника","Фідбек"],
-  ["Переклад тендерних закупівель: ~300 рядків за тиждень","Переклад тендерів"]]},
- {id:"str",name:"Сила",s:"Сила",c:"#C0413A",a:[
-  ["3 тренування по 60 хв, внесені в календар","3 тренування"],
-  ["База: присід, жим лежачи, станова, тяга, жим стоячи","База"],
-  ["Прогрес: +2,5 кг або +1 повтор","Прогрес"],
-  ["Журнал: вага, повтори, самопочуття","Журнал"],
-  ["10 хв розминки перед кожним тренуванням","Розминка"],
-  ["Кожен 5-й тиждень — розвантажувальний","Розвантаж."],
-  ["План Б на завал: 30 хв, 2 базові вправи","План Б"],
-  ["Раз на 4 тижні тест робочих ваг","Тест ваг"]]},
- {id:"rec",name:"Відновлення",s:"Віднов­лення",c:"#B9831C",a:[
-  ["Сон 7–8 год, підйом в один час","Сон"],
-  ["1,6–2 г білка на кг ваги щодня","Білок"],
-  ["Неділя: готую їжу на 3 дні","Мілпреп"],
-  ["2+ л води на день","Вода"],
-  ["Кава лише до 14:00","Кава до 14"],
-  ["20 хв прогулянки без телефону","Прогулянка"],
-  ["30 хв до сну без екранів","Без екранів"],
-  ["Один вечір на тиждень без справ","Вільний вечір"]]},
- {id:"ph",name:"Телефон",s:"Телефон",c:"#56646F",a:[
-  ["Ліміт на соцмережі: 30 хв на день","Ліміт 30 хв"],
-  ["Затягуючі застосунки прибрані з головного екрана","Головний екран"],
-  ["Телефон ночує поза спальнею","Поза спальнею"],
-  ["Чорно-білий режим екрана","Ч/Б режим"],
-  ["Сповіщення лише від людей","Сповіщення"],
-  ["Соцмережі у 2 вікна: 13:00 і 20:00","2 вікна"],
-  ["Заміна під рукою: Anki, книга, подкаст","Заміна"],
-  ["Неділя: статистика екрана, ліміт −10%","Ліміт −10%"]]},
- {id:"trk",name:"Фінтрекер",s:"Трекер",c:"#A9487A",a:[
-  ["Описати MVP: доходи, витрати, категорії, план","MVP"],
-  ["Логіка розподілу: подушка → цілі → інвестиції (ОВДП, депозити, ETF)","Логіка"],
-  ["Прототип у Google Sheets","Sheets"],
-  ["Веду в трекері власні фінанси","Тест на собі"],
-  ["Дашборд із графіками: куди йде кожна гривня","Дашборд"],
-  ["Перенесення в застосунок (Python + Streamlit)","Застосунок"],
-  ["Цілі з прогресом і нагадування про внесок","Цілі"],
-  ["Показати 2–3 друзям, зібрати фідбек","Фідбек"]]},
- {id:"time",name:"Система часу",s:"Час",c:"#7A6440",a:[
-  ["Неділя: 30 хв планування тижня","План тижня"],
-  ["Тайм-блокінг під кожну опору","Блоки часу"],
-  ["Усі задачі в одному місці (Notion, Todoist)","Одне місце"],
-  ["Групую однотипні задачі","Групування"],
-  ["20% часу залишаю як буфер","Буфер 20%"],
-  ["Правило 2 хвилин","2 хвилини"],
-  ["Прив'язую звички до наявних","Зв'язки звичок"],
-  ["П'ятниця: огляд тижня","Огляд"]]}
+ {id:"fin",name:"Фінанси",s:"Фінанси",c:"#2F6FB0",about:"Розвиток як фінансиста (теорія, моделі, ринки) і контроль власного портфеля.",a:[
+  ["3 сесії по 30 хв на тему місяця (TVM → звітність → DCF → облігації → …)","Тема місяця","Черга тем: TVM → звітність → DCF → облігації → CAPM → деривативи → макро",1],
+  ["Одна модель в Excel за чергою: NPV/IRR → ОВДП → DCF → CAPM","Модель Excel","30–60 хв, таблиця рахує формулами, а не вручну",1],
+  ["Неділя: пояснити тему тижня за 5 хв (метод Фейнмана)","Фейнман","Простими словами вголос або письмово; де запнувся — там прогалина"],
+  ["Неділя: зведення: ставка НБУ, інфляція, курс + 3 головні новини тижня","Макро тижня","Після цього попросити Claude зробити огляд тижня і звірити"],
+  ["Розібрати одну компанію: 3 ключові показники зі звітності за 30 хв","Компанія","Наприклад, виручка, маржа, борг + 1 висновок"],
+  ["20 нових карток Anki з термінів тижня","Anki 20","Терміни з пар, курсів і новин тижня"],
+  ["Одна довга лекція чи подкаст (Damodaran, Odd Lots)","Лекція","Короткі щоденні подкасти не рахуються, вони в рутині"],
+  ["Неділя: огляд портфеля (ОВДП, Inzur REIT, акції): зміни, новини, 1 висновок","Мій портфель","Лише спостереження, рішення раз на місяць під час внеску"]]},
+ {id:"uni",name:"Університет",s:"Універ",c:"#7556B3",about:"Засвоювати матеріал через практику й не залишати роботи на останній день.",a:[
+  ["Практика: тема тижня на даних від ШІ або реальних (OpenBudget)","Практика","ШІ пояснює → дає дані → роблю сам → ШІ перевіряє; реальні дані раз на місяць",1],
+  ["Великі роботи й презентації починаю за 3+ дні до дедлайну","Старт за 3 дні","Перший крок — 25 хв, щоб розібрати, що вимагають",1],
+  ["2 блоки глибокої роботи по 90 хв, спершу ЕКМ і СТР","Глибока робота","Телефон в іншій кімнаті"],
+  ["Неділя: зібрати дедлайни всіх 8 предметів і внести в задачі","Дедлайни","У назві задачі скорочення предмета: «ЕКМ: …»"],
+  ["Після пояснення ШІ розв'язати 1 задачу самостійно","Без ШІ","ШІ лише перевіряє результат"],
+  ["Огляд пройденого за тиждень, 45 хв","Огляд пар","По кожному предмету 1–2 речення: що зрозумів, що ні"],
+  ["Хоча б 1 питання викладачу чи одногрупникам по складній темі","Питання","На парі, на консультації або в чаті"],
+  ["Розібрати помилки з повернутого тесту чи роботи","Розбір помилок","Якщо нічого не повернули — повторити найслабшу тему"]]},
+ {id:"work",name:"Робота",s:"Робота",c:"#2F8A78",about:"Аналіз видатків місцевих бюджетів, робота з даними (OpenBudget, Spending, Prozorro, Excel) і виконання головної задачі.",a:[
+  ["Головна робоча задача: тижневий план виконано","Головна задача","Зараз це переклад 500 рядків, прогрес у «Робочих проєктах»",1],
+  ["Курс «Основи бюджетної системи»: +10% за тиждень","Бюджет +10%","2–3 сесії по 30–40 хв",1],
+  ["Курс Excel або Power BI: 2 сесії по 45 хв","Excel / BI","Один курс на тиждень, не обидва"],
+  ["Розібрати видатки одного місцевого бюджету (OpenBudget, Spending, Prozorro)","Видатки","30–45 хв: куди йдуть гроші + 1 висновок"],
+  ["Застосувати 1 новий прийом Excel у робочій задачі","Прийом Excel","З курсу або знайдений під задачу"],
+  ["Прочитати 1 аналітику про бюджети (свій центр, Мінфін, CEDOS)","Аналітика","Записати 1 думку, корисну для роботи"],
+  ["Монотонну роботу чергувати: 50 хв, потім інша задача","Чергування","Проти нудьги й головного болю на перекладі"],
+  ["П'ятниця: записати досягнення тижня (для CV)","Досягнення","1–3 пункти з цифрами"]]},
+ {id:"str",name:"Енергія",s:"Енергія",c:"#C0413A",about:"Сон, їжа й тіло — база, без якої не працює решта.",a:[
+  ["3 тренування за планом тренера (план Б: 30 хв, 2 базові вправи)","3 тренування","Внести в календар у неділю",1],
+  ["Підйом в один час (±30 хв) 5 днів із 7","Підйом","Обрати одну годину між 7:00 і 8:00",1],
+  ["Відбій до 00:30 5 вечорів із 7","Відбій","Коли стане стабільно, зсунути до 00:00"],
+  ["30 хв до сну без екранів 4 вечори з 7","Без екранів","Книга, душ, розмова"],
+  ["3+ прийоми їжі з білком 5 днів із 7","Їжа 3+","У бізнес-ланчі обирати м'ясо, рибу чи яйця"],
+  ["Баня 1 раз на тиждень","Баня","Не встиг — не страшно, це не ядро"],
+  ["Перерва від екрана 5 хв щогодини 4 з 5 робочих днів","Перерви","Встати, вода, вікно"],
+  ["8000+ кроків 5 днів із 7","Кроки","Вигул собаки зараховується"]]},
+ {id:"rec",name:"Відпочинок",s:"Відпо­чинок",c:"#B9831C",about:"Свідомий відпочинок, стосунки й близькі — заплановані, а не «якщо залишиться час».",a:[
+  ["Один вечір на тиждень без справ, запланований заздалегідь","Вільний вечір","Обрати день у неділю під час планування",1],
+  ["Побачення: вибратися кудись разом, можна спонтанно","Побачення","Навіть коротко, головне — не вдома",1],
+  ["Зробити щось приємне для партнера(-ки)","Приємне","Дрібниця теж рахується"],
+  ["Зустріч з друзями наживо (рибалка, прогулянка, гра)","Друзі","Дзвінок не рахується"],
+  ["3 прогулянки з собакою без телефону","Прогулянка","Телефон лишити вдома або в кишені беззвучно"],
+  ["1+ год з рідними без телефону","Рідні","Вечеря, розмова, спільна справа"],
+  ["Ігри (приставка, шахи) запланованим блоком після роботи, а не між задачами","Ігри в плані","Гра як нагорода, без докорів сумління"],
+  ["Біг на доріжці для задоволення, 20–30 хв","Біг","Без плану й темпу"]]},
+ {id:"ph",name:"Фокус",s:"Фокус",c:"#56646F",about:"Робота без відволікань — телефон, месенджери, відео й ігри не розривають увагу.",a:[
+  ["5+ блоків по 50 хв без телефону, ігор і відео (музика без слів можна)","Блоки фокусу","Перед блоком закрити вкладки з відео й іграми",1],
+  ["Соцмережі разом з YouTube Shorts у межах 30 хв 5 днів із 7","Ліміт 30 хв","Перевіряти за статистикою екрана",1],
+  ["Неділя: записати статистику екрана й поставити ціль на тиждень","Статистика","Середній час + соцмережі окремо"],
+  ["Соцмережі лише у 2 вікна, 13:00 і 20:00, 4 дні з 7","2 вікна","Поза вікнами не відкривати"],
+  ["Книга: 2 сесії по 15 хв, телефон в іншій кімнаті","Книга","Тренування уваги, а не швидкість читання"],
+  ["Месенджери пакетами: 3–4 перевірки на день (староста й керівник — одразу)","Месенджери","Термінову справу старости записати 1 рядком у журнал"],
+  ["Перша година після пробудження без соцмереж 5 днів із 7","Ранок без соц","Месенджери за потреби можна"],
+  ["Неділя: записати, що найбільше відволікало, і 1 зміну на тиждень","Розбір","2 рядки"]]},
+ {id:"trk",name:"Свої проєкти",s:"Проєкти",c:"#A9487A",about:"Фінтрекер (модель щомісячних внесків в активи) і сайт 81.",a:[
+  ["2 сесії по 60 хв над фінтрекером","Фінтрекер","Зараз це переробка з нуля",1],
+  ["Закрити 1 конкретний крок проєкту","Крок тижня","Можна маленький, на 20 хв",1],
+  ["Сайт 81: одне покращення або виправлення","Сайт 81","З переліку ідей"],
+  ["Неділя: переглянути ідеї й обрати фокус тижня","Ідеї","10 хв"],
+  ["Журнал проєкту: 3 рядки про те, що зроблено і що далі","Журнал","Після кожної сесії або раз на тиждень"],
+  ["Записати 1 незручність, помічену під час користування","Незручність","У трекері або на сайті 81"],
+  ["Перевірити, що синхронізація й дані 81 працюють","Перевірка","5 хв"],
+  ["Прибрати 1 зайве: аркуш, колонку чи функцію","Спрощення","Якщо не знаєш, навіщо воно, — прибрати"]]},
+ {id:"time",name:"Система часу",s:"Час",c:"#7A6440",about:"Планувати реалістично й тримати всі задачі під контролем.",a:[
+  ["Неділя: 30 хв планування тижня, 20% часу лишаю як буфер","План тижня","Спершу пари, робота й тренування, потім ★ дії",1],
+  ["Тайм-блоки в календарі для ★ дій сітки","Тайм-блоки","Тільки ★, не всі дії",1],
+  ["Неділя: надіслати «Звіт для Claude»","Звіт","У чат «Звіти: [місяць рік]»"],
+  ["П'ятниця: 15 хв міні-огляд того, що не встигаю","П'ятниця","Перенести або скоротити до вихідних"],
+  ["Чистка задач: прострочені й без дедлайну чи тривалості","Чистка задач","Дописати дату й тривалість, перенести або видалити"],
+  ["Перевірити, що години задач на тиждень ≤ вільного часу","Навантаження","Якщо більше — одразу перенести"],
+  ["Звірити план і факт часу для 3 задач","Оцінка часу","Вчить точніше ставити тривалість"],
+  ["Відмітити сітку й рутину до неділі 21:00","Відмітки","Перед звітом"]]}
 ];
+const isCore=(p,i)=>!!PILLARS[p].a[i][3];
+const coreCount=(p,w)=>PILLARS[p].a.reduce((n,a,i)=>n+(a[3]&&isDone(p,i,w)?1:0),0);
+const CORE_TOTAL=PILLARS.reduce((n,P)=>n+P.a.filter(a=>a[3]).length,0);
 const DEFAULT_GOAL="Фінансист, який встигає";
 const BLOCK_POS=[0,1,2,3,5,6,7,8]; // blocks around the center
 const $=id=>document.getElementById(id);
@@ -658,13 +668,14 @@ function logGrid(w,k,v){
 }
 function setDone(p,i,v){const w=wk();state.checks[w]=state.checks[w]||{};if(v)state.checks[w][key(PILLARS[p].id,i)]=true;else delete state.checks[w][key(PILLARS[p].id,i)];logGrid(w,key(PILLARS[p].id,i),v);save();}
 const pillarCount=(p,w)=>PILLARS[p].a.reduce((n,_,i)=>n+(isDone(p,i,w)?1:0),0);
-const weekTotal=w=>state.checks[w]?Object.keys(state.checks[w]).length:0;
+const weekTotal=w=>(state.legacyTotals&&state.legacyTotals[w]!=null)?state.legacyTotals[w]:(state.checks[w]?Object.keys(state.checks[w]).length:0);
+const coreTotal=w=>PILLARS.reduce((n,P,p)=>n+coreCount(p,w),0);
 
 /* ---------- work projects ---------- */
 const PROJECTS=[
  {id:"budget",name:"Курс «Основи бюджетної системи»",unit:"%",total:100,start:20,step:5,plan:10},
  {id:"pbi",name:"Курс Power BI",unit:"%",total:100,start:0,step:5,plan:10},
- {id:"tr",name:"Переклад тендерних закупівель, укр → англ",unit:"рядків",total:2900,start:0,step:50,plan:300}
+ {id:"tr",name:"Переклад тендерних закупівель, укр → англ",unit:"рядків",total:2900,start:0,step:50,plan:500}
 ];
 const wIdx=w=>{const [y,n]=w.split("-W").map(Number);return y*53+n};
 const pVal=P=>state.proj[P.id]!=null?state.proj[P.id]:P.start;
@@ -1029,14 +1040,14 @@ function pickAction(p,k,avoid){
   const w=isoWeek(new Date());
   const undone=PILLARS[p].a.map((_,i)=>i).filter(i=>!isDone(p,i,w)&&!avoid.includes(i));
   if(!undone.length) return null;
-  undone.sort((a,b)=>hsh(k+PILLARS[p].id+a)-hsh(k+PILLARS[p].id+b));
+  undone.sort((a,b)=>(isCore(p,b)?1:0)-(isCore(p,a)?1:0)||hsh(k+PILLARS[p].id+a)-hsh(k+PILLARS[p].id+b));
   return undone[0];
 }
 function genDaily(k){
   const w=isoWeek(new Date());
   const y=new Date(); y.setDate(y.getDate()-1); const prev=(state.daily&&state.daily[dayKey(y)])||[];
   const order=PILLARS.map((P,p)=>p).filter(p=>pillarCount(p,w)<8)
-    .sort((a,b)=>pillarCount(a,w)-pillarCount(b,w)||hsh(k+a)-hsh(k+b));
+    .sort((a,b)=>coreCount(a,w)-coreCount(b,w)||pillarCount(a,w)-pillarCount(b,w)||hsh(k+a)-hsh(k+b));
   const out=[];
   for(const p of order){
     if(out.length>=3) break;
@@ -1172,13 +1183,72 @@ $("tabGrid").onclick=()=>{showView("grid");renderTasks();}; $("tabTasks").onclic
 try{const v0=localStorage.getItem("sitka9x9-view"); if(v0==="tasks"||v0==="ideas") setTimeout(()=>showView(v0),0);}catch(e){}
 
 /* ---------- render grid ---------- */
+/* ---------- migration to grid v2 (05.10.2026) ---------- */
+const MIG_V2={"fin.0":["fin.0"],"fin.2":["fin.1"],"fin.7":["fin.2"],"fin.1":["fin.3"],"fin.3":["fin.3"],"fin.4":["fin.4"],"fin.5":["fin.5"],"fin.6":["fin.6"],
+ "uni.3":["uni.1"],"uni.1":["uni.2"],"uni.0":["uni.3"],"uni.7":["uni.5"],"uni.4":["uni.6"],
+ "work.7":["work.0"],"work.2":["work.1"],"work.3":["work.2"],"work.0":["work.6"],"work.4":["work.7"],
+ "str.0":["str.0"],"rec.0":["str.1","str.2"],"rec.6":["str.3"],"rec.1":["str.4"],
+ "rec.7":["rec.0"],"rec.5":["rec.4"],
+ "ph.0":["ph.1"],"ph.7":["ph.2"],"ph.5":["ph.3"],"ph.6":["ph.4"],
+ "time.0":["time.0"],"time.1":["time.1"],"time.7":["time.3"],"time.4":["time.5"]};
+function migrateV2(){
+  if(state.gridV>=2) return false;
+  if(!Array.isArray(state.tasks)) return false;          // wait for real data
+  const curW=isoWeek(new Date());
+  // 1. weekly checks: keep old totals for history, remap keys
+  state.legacyTotals=state.legacyTotals||{};
+  const nc={};
+  Object.keys(state.checks||{}).forEach(w=>{
+    const old=state.checks[w]||{}; if(w<curW) state.legacyTotals[w]=Object.keys(old).length;
+    const nw={}; Object.keys(old).forEach(k=>(MIG_V2[k]||[]).forEach(n=>nw[n]=true));
+    if(Object.keys(nw).length) nc[w]=nw;
+  });
+  state.checks=nc;
+  // 2. action notes
+  const oldNotes=state.notes||{}, nn={};
+  Object.keys(oldNotes).forEach(k=>{ const v=oldNotes[k]; if(!v) return;
+    (MIG_V2[k]||[]).forEach(n=>{ nn[n]=nn[n]?nn[n]+"\n"+v:v; }); });
+  state.notes=nn;
+  state.texts={};                                        // custom wording belonged to old actions
+  // 3. tasks: remove duplicates, close finished, add new ones
+  const open=t=>!t.done, has=(t,s)=>t.t.toLowerCase().includes(s.toLowerCase());
+  const drop=["Модель NPV та IRR","Підйом в один час 5 днів","Ідеї для 81: переглянути","Карта таблиці","що куди вносити","Внести дані за тиждень","Журнал: 2 рядки щовечора"];
+  state.tasks=state.tasks.filter(t=>!(open(t)&&(drop.some(s=>has(t,s))||t.idea)));
+  state.tasks.forEach(t=>{ if(open(t)&&has(t,"Скоротити сітку до ядра")){ t.done=true; t.doneAt=Date.now(); } });
+  const id=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+  const add=(t,cat,due,dur,rep,note,imp)=>{ const x={id:id(),t,cat,imp:imp||2,due:due||null,done:false}; if(dur)x.dur=dur; if(rep){x.rep=rep; if(!x.due)x.due=todayStr();} if(note)x.note=note; state.tasks.push(x); };
+  add("Фінтрекер: перелік ліквідних активів із сумами (ОВДП, Inzur REIT, акції, картки)","trk","2026-10-06",45);
+  add("Фінтрекер: MVP — що модель рахує щомісяця і які дані на вході","trk","2026-10-07",60);
+  add("Фінтрекер: правила розподілу внеску: подушка → цілі → ОВДП / REIT / акції","trk","2026-10-09",90);
+  add("Фінтрекер: нова таблиця за MVP + розрахунок внеску за жовтень","trk","2026-10-11",120);
+  add("Внесок в активи за моделлю фінтрекера","fin",null,30,{n:1,u:"m"});
+  add("Сеанс з психологом","rec",null,60,{n:2,u:"w"});
+  add("Почистити сповіщення від груп і контактів","ph",null,15,{n:1,u:"m"},oldNotes["ph.4"]||null);
+  add("Прибрати в кімнаті","other",null,30,{n:1,u:"w"});
+  // 4. routine
+  ensureRoutine();
+  const R=state.routine, byId=x=>R.items.find(it=>it.id===x);
+  const news=byId("news"); if(news) news.t="15 хв: ринки + новини, 1 речення висновку"; else R.items.push({id:"news",t:"15 хв: ринки + новини, 1 речення висновку"});
+  R.items=R.items.filter(it=>it.id!=="gfin");
+  [["pairs","Нотатки після пар (у дні пар)"],["starosta","Пошта старости: 5 хв перевірка"],["top3","Топ-3 робочі задачі зранку"],["water","2+ л води"],["coffee","Кава до 14:00"],["phone","Телефон ночує поза спальнею"]]
+    .forEach(([i,t])=>{ if(!byId(i)) R.items.push({id:i,t}); });
+  // 5. ideas, daily picks
+  (state.ideas||[]).forEach(x=>{ if(x.t.includes("Скоротити сітку до ядра")) x.status="done"; });
+  state.ideas&&state.ideas.push({id:"i"+id(),t:"Сітка v2: 8 нових опор з ядром ★",tag:"Сітка",status:"done",created:todayStr()});
+  if(state.daily) delete state.daily[todayStr()];
+  state.gridV=2;
+  return true;
+}
+
 function render(){
+  if(migrateV2()) setTimeout(()=>save(true),0);
   const ws=weekStart, we=new Date(ws);we.setDate(we.getDate()+6);
   $("weekLbl").innerHTML="<b>Тиждень "+wk().split("-W")[1]+"</b>"+fmt(ws)+" – "+fmt(we);
   $("goalSub").textContent=state.goal;
   const tot=weekTotal(wk());
-  $("progTxt").textContent="Виконано "+tot+" з 64";
-  $("progBar").style.width=(tot/64*100)+"%";
+  const ct=coreTotal(wk());
+  $("progTxt").innerHTML="Ядро ★ <b>"+ct+" з "+CORE_TOTAL+"</b> · усього "+tot+" з 64";
+  $("progBar").style.width=(ct/CORE_TOTAL*100)+"%";
   const nNotes=Object.values(state.notes).filter(Boolean).length;
   $("noteTxt").textContent=nNotes?("Нотаток: "+nNotes):"";
 
@@ -1190,17 +1260,17 @@ function render(){
         const el=document.createElement("button"); el.type="button";
         if(c===4){el.className="cell goal";el.textContent=state.goal;el.title="Змінити центральну ціль";el.onclick=editGoal;}
         else{const p=BLOCK_POS.indexOf(c);el.className="cell pillar inner";el.style.setProperty("--c",PILLARS[p].c);
-          el.innerHTML=PILLARS[p].s+"<small>"+pillarCount(p,wk())+"/8</small>";el.onclick=()=>openPillar(p);}
+          el.innerHTML=PILLARS[p].s+"<small>★"+coreCount(p,wk())+"/2</small>";el.onclick=()=>openPillar(p);}
         blk.appendChild(el);
       }
     } else {
       const p=BLOCK_POS.indexOf(b); let ai=0;
       for(let c=0;c<9;c++){
         const el=document.createElement("button"); el.type="button"; el.style.setProperty("--c",PILLARS[p].c);
-        if(c===4){el.className="cell pillar";el.innerHTML=PILLARS[p].s+"<small>"+pillarCount(p,wk())+"/8</small>";el.onclick=()=>openPillar(p);el.setAttribute("aria-label","Відкрити опору "+PILLARS[p].name);}
+        if(c===4){el.className="cell pillar";el.innerHTML=PILLARS[p].s+"<small>★"+coreCount(p,wk())+"/2 · "+pillarCount(p,wk())+"/8</small>";el.onclick=()=>openPillar(p);el.setAttribute("aria-label","Відкрити опору "+PILLARS[p].name);}
         else{
           const i=ai++; const done=isDone(p,i);
-          el.className="cell act"+(done?" done":"")+(state.notes[key(PILLARS[p].id,i)]?" has-note":"");
+          el.className="cell act"+(done?" done":"")+(isCore(p,i)?" core":"")+(state.notes[key(PILLARS[p].id,i)]?" has-note":"");
           el.textContent=short(p,i); el.title=text(p,i);
           el.setAttribute("aria-pressed",done); el.setAttribute("aria-label",text(p,i));
           el.onclick=()=>{setDone(p,i,!isDone(p,i));render();};
@@ -1291,18 +1361,20 @@ function closePillar(){openP=null;$("sheet").classList.remove("open");document.b
 function renderSheet(){
   const p=openP, P=PILLARS[p]; const sh=$("sheet"); sh.style.setProperty("--c",P.c);
   $("sheetTitle").textContent=P.name;
+  $("sheetAbout").textContent=P.about||"";
   $("sheetProjCard").style.display=P.id==="work"?"block":"none";
-  $("sheetCount").textContent=pillarCount(p,wk())+"/8 · т"+wk().split("-W")[1];
+  $("sheetCount").textContent="★"+coreCount(p,wk())+"/2 · "+pillarCount(p,wk())+"/8 · т"+wk().split("-W")[1];
   const box=$("sheetActs"); box.innerHTML="";
   P.a.forEach((_,i)=>{
-    const k=key(P.id,i); const row=document.createElement("div"); row.className="act-row";
+    const k=key(P.id,i); const row=document.createElement("div"); row.className="act-row"+(isCore(p,i)?" core":"");
     const done=isDone(p,i);
     let streak=""; for(let s=5;s>=0;s--){const d=new Date(weekStart);d.setDate(d.getDate()-7*s);streak+='<i class="'+(isDone(p,i,isoWeek(d))?"on":"")+'"></i>';}
     row.innerHTML=
       '<div class="act-head"><button class="chk'+(done?" on":"")+'" aria-pressed="'+done+'" aria-label="Виконано цього тижня">'+(done?"✓":"")+'</button>'+
-      '<div class="act-text"><div class="t"></div><div class="streak">'+streak+'<span>&nbsp;6 тижнів</span></div></div></div>'+
+      '<div class="act-text">'+(isCore(p,i)?'<span class="star" aria-label="Ядро">★ ядро</span>':'')+'<div class="t"></div>'+(P.a[i][2]?'<div class="hint"></div>':'')+'<div class="streak">'+streak+'<span>&nbsp;6 тижнів</span></div></div></div>'+
       '<div class="tools"><button data-a="note">'+(state.notes[k]?"Нотатка ✎":"Додати нотатку")+'</button><button data-a="edit">Змінити дію</button></div>';
     row.querySelector(".t").textContent=text(p,i);
+    if(P.a[i][2]) row.querySelector(".hint").textContent=P.a[i][2];
     row.querySelector(".chk").onclick=()=>{setDone(p,i,!isDone(p,i));renderSheet();};
     const tools=row.querySelector(".tools");
     let ta=null;
@@ -1437,12 +1509,13 @@ function buildReport(){
   const L=[];
   L.push("# Сітка 9×9: звіт за тиждень "+w.split("-W")[1]+" ("+fmt(ws)+" – "+fmt(we)+" "+we.getFullYear()+")");
   L.push("Ціль: "+state.goal);
-  L.push("Виконано дій цього тижня: "+weekTotal(w)+" з 64");
+  L.push("Ядро ★ виконано: "+coreTotal(w)+" з "+CORE_TOTAL+" · усього дій: "+weekTotal(w)+" з 64");
+  L.push("(Сітка v2 з 05.10.2026: перші 3–4 тижні обов'язкове лише ядро ★, решта за бажанням.)");
   L.push(""); L.push("## Опори");
   PILLARS.forEach((P,p)=>{
-    L.push("### "+P.name+": "+pillarCount(p,w)+"/8");
+    L.push("### "+P.name+": ★"+coreCount(p,w)+"/2 · "+pillarCount(p,w)+"/8");
     P.a.forEach((_,i)=>{
-      L.push((isDone(p,i,w)?"- [x] ":"- [ ] ")+text(p,i));
+      L.push((isDone(p,i,w)?"- [x] ":"- [ ] ")+(isCore(p,i)?"★ ":"")+text(p,i));
       const n=state.notes[key(P.id,i)]; if(n) L.push("  Нотатка: "+n.replace(/\n+/g," / "));
     });
     const pn=state.pillarNotes[P.id]; if(pn) L.push("Нотатки опори: "+pn.replace(/\n+/g," / "));
@@ -1496,8 +1569,9 @@ function parseDue(seg){
   if(!m[3]&&(now-d)>60*864e5) d.setFullYear(y+1);
   return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
 }
+const CAT_ALIASES={"сила":"str","відновлення":"str","телефон":"ph","фінтрекер":"trk","проєкти":"trk","свої проекти":"trk","час":"time"};
 function findCat(name){
-  const n=name.trim().toLowerCase(); if(!n) return "other";
+  const n=name.trim().toLowerCase(); if(!n) return "other"; if(CAT_ALIASES[n]) return CAT_ALIASES[n];
   const c=CATS.find(c=>c.name.toLowerCase()===n||c.id===n)||CATS.find(c=>c.name.toLowerCase().startsWith(n)||n.startsWith(c.name.toLowerCase().slice(0,4)));
   return c?c.id:"other";
 }
