@@ -329,6 +329,17 @@ details.backup summary{cursor:pointer;font-family:"Unbounded","Onest",sans-serif
 .act-text .hint{font-size:13px;color:var(--muted);margin-top:2px}
 .sheet .about{max-width:760px;margin:6px auto 0;font-size:14px;opacity:.92;padding:0 0 0 2px}
 textarea.grat{background:color-mix(in srgb,#B9831C 8%,var(--paper))}
+.tf{margin:4px 0 6px}
+.tf .tfh{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin:8px 0 6px}
+.tf .tfh b{color:var(--ink);font-weight:600}
+.tf .row{display:flex;gap:6px;flex-wrap:wrap}
+.tf button.fc{border:1px solid var(--line);background:transparent;border-radius:999px;padding:5px 12px;font-size:13px;cursor:pointer;color:var(--muted);display:inline-flex;align-items:center;gap:6px;min-height:32px}
+.tf button.fc:hover{border-color:var(--ink)}
+.tf button.fc[aria-pressed="true"]{color:var(--ink);border-color:var(--ink);background:var(--paper);font-weight:600}
+.tf button.fc.urg[aria-pressed="true"]{border-color:#C0413A;background:color-mix(in srgb,#C0413A 16%,var(--sheet))}
+.tf button.fc .dot{width:8px;height:8px;border-radius:50%;background:var(--c)}
+.tf button.fc[aria-pressed="true"].cat{border-color:var(--c);background:color-mix(in srgb,var(--c) 16%,var(--sheet))}
+.tf .reset{border:0;background:transparent;color:var(--muted);text-decoration:underline;text-underline-offset:3px;cursor:pointer;font-size:12px;padding:0}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 @media (min-width:900px){.wrap{padding-top:28px}}
 </style>
@@ -452,6 +463,7 @@ textarea.grat{background:color-mix(in srgb,#B9831C 8%,var(--paper))}
 
     <section class="card">
       <h2>Мої пріоритети</h2>
+      <div id="taskFilters" class="tf"></div>
       <div id="taskGroups"></div>
       <details id="doneBox"><summary id="doneSum">Виконані</summary><div id="doneList"></div></details>
     </section>
@@ -864,12 +876,55 @@ function taskRow(t){
   r.querySelector(".tx").onclick=()=>{if(confirm("Видалити задачу?")){state.tasks=state.tasks.filter(x=>x!==t);save();renderTasks();}};
   return r;
 }
+/* ---------- task filters ---------- */
+const QF=[["urg","🔥 Термінові",t=>{const d=daysTo(t.due);return d!==null&&d<=1;}],
+          ["quick","⚡ Швидкі ≤15 хв",t=>t.dur?t.dur<=15:t.imp===1],
+          ["nodate","Без дати",t=>!t.due],
+          ["rep","↻ Повторювані",t=>!!t.rep]];
+let tf={q:null,cats:[]};
+try{const x=JSON.parse(localStorage.getItem("sitka9x9-tf")||"null"); if(x&&Array.isArray(x.cats)) tf=x;}catch(e){}
+const saveTf=()=>{try{localStorage.setItem("sitka9x9-tf",JSON.stringify(tf))}catch(e){}};
+const passQ=(t,q)=>!q||(QF.find(f=>f[0]===q)||[0,0,()=>true])[2](t);
+const passC=t=>!tf.cats.length||tf.cats.includes(t.cat);
+function renderTaskFilters(open,shown){
+  const box=$("taskFilters"); box.innerHTML="";
+  const active=tf.q||tf.cats.length;
+  const head=document.createElement("div"); head.className="tfh";
+  head.innerHTML='<span>Швидкі фільтри</span>'+(active?'<span>показано <b>'+shown+'</b> з '+open.length+' · <button class="reset" type="button">скинути</button></span>':'');
+  box.appendChild(head);
+  if(active) head.querySelector(".reset").onclick=()=>{tf={q:null,cats:[]};saveTf();renderTasks();};
+  const r1=document.createElement("div"); r1.className="row";
+  const inCats=open.filter(passC);
+  const all=document.createElement("button"); all.type="button"; all.className="fc"; all.textContent="Усі "+inCats.length; all.setAttribute("aria-pressed",!tf.q);
+  all.onclick=()=>{tf.q=null;saveTf();renderTasks();}; r1.appendChild(all);
+  QF.forEach(([k,l,fn])=>{
+    const b=document.createElement("button"); b.type="button"; b.className="fc"+(k==="urg"?" urg":"");
+    b.textContent=l+" "+inCats.filter(fn).length; b.setAttribute("aria-pressed",tf.q===k);
+    b.onclick=()=>{tf.q=tf.q===k?null:k;saveTf();renderTasks();}; r1.appendChild(b);
+  });
+  box.appendChild(r1);
+  const h2=document.createElement("div"); h2.className="tfh"; h2.innerHTML="<span>Категорії · можна кілька</span>"; box.appendChild(h2);
+  const r2=document.createElement("div"); r2.className="row";
+  const inQ=open.filter(t=>passQ(t,tf.q));
+  CATS.forEach(c=>{
+    const n=inQ.filter(t=>t.cat===c.id).length, on=tf.cats.includes(c.id);
+    if(!n&&!on&&!open.some(t=>t.cat===c.id)) return;
+    const b=document.createElement("button"); b.type="button"; b.className="fc cat"; b.style.setProperty("--c",c.c);
+    b.innerHTML='<span class="dot"></span><span></span>'; b.lastChild.textContent=c.name+" "+n; b.setAttribute("aria-pressed",on);
+    b.onclick=()=>{tf.cats=on?tf.cats.filter(x=>x!==c.id):tf.cats.concat(c.id);saveTf();renderTasks();};
+    r2.appendChild(b);
+  });
+  box.appendChild(r2);
+}
 function renderTasks(){
   const open=sortedOpen();
+  const shownList=open.filter(t=>passQ(t,tf.q)&&passC(t));
+  renderTaskFilters(open,shownList.length);
   const g=$("taskGroups"); g.innerHTML="";
   if(!open.length) g.innerHTML='<div class="empty">Задач немає. Додай першу вище.</div>';
+  else if(!shownList.length) g.innerHTML='<div class="empty">Немає задач за цим фільтром.</div>';
   QUADS.forEach((q,qi)=>{
-    const list=open.filter(t=>quadrant(t)===qi); if(!list.length)return;
+    const list=shownList.filter(t=>quadrant(t)===qi); if(!list.length)return;
     const sec=document.createElement("div"); sec.className="grp";
     sec.innerHTML='<h3>'+q[0]+' · '+list.length+'</h3><p class="gd">'+q[1]+'</p>';
     list.forEach(t=>sec.appendChild(taskRow(t))); g.appendChild(sec);

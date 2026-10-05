@@ -1,5 +1,5 @@
 // Офлайн-режим. Після змін у файлах збільш номер версії, щоб телефон підтягнув оновлення.
-const VERSION = "sitka-v14";
+const VERSION = "sitka-v15";
 const SHELL = ["./", "./index.html", "./config.js", "./manifest.webmanifest",
   "./icons/icon-192.png", "./icons/icon-512.png", "./icons/apple-touch-icon.png"];
 
