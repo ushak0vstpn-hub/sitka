@@ -341,6 +341,42 @@ textarea.grat{background:color-mix(in srgb,#B9831C 8%,var(--paper))}
 .tf button.fc .dot{width:8px;height:8px;border-radius:50%;background:var(--c)}
 .tf button.fc[aria-pressed="true"].cat{border-color:var(--c);background:color-mix(in srgb,var(--c) 16%,var(--sheet))}
 .tf .reset{border:0;background:transparent;color:var(--muted);text-decoration:underline;text-underline-offset:3px;cursor:pointer;font-size:12px;padding:0}
+.top3{background:var(--sheet);border:1.5px solid var(--ink);border-radius:14px;padding:14px 16px;margin-bottom:12px}
+.t3h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin-bottom:10px}
+.t3t{font-family:"Unbounded","Onest",sans-serif;font-weight:500;font-size:15px;color:var(--ink)}
+.t3grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:8px}
+.t3c{display:flex;gap:10px;align-items:flex-start;border-radius:12px;padding:10px 10px 10px 12px;border:1px solid var(--line);background:var(--paper);min-height:64px;box-shadow:inset 4px 0 0 var(--bar,transparent)}
+.t3c .tc{flex:0 0 24px;height:24px;border-radius:7px;border:2px solid var(--c);background:transparent;cursor:pointer;color:#fff;font-size:14px;margin-top:2px}
+.t3c.done{background:color-mix(in srgb,#2F8A78 14%,var(--sheet));border-color:transparent}
+.t3c.done .tc{background:#2F8A78;border-color:#2F8A78}
+.t3c.done .t3x{text-decoration:line-through;color:var(--muted)}
+.t3b{flex:1;min-width:0}
+.t3n{font-size:12px;color:var(--muted)}
+.t3n .late{color:inherit;font-weight:600}
+.t3x{font-size:15px;font-weight:600;overflow-wrap:anywhere;margin-top:1px}
+.t3m{font-size:12px;color:var(--muted);margin-top:2px}
+.t3rm{border:0;background:transparent;color:var(--muted);font-size:16px;cursor:pointer;width:28px;height:28px;border-radius:50%;flex:0 0 28px}
+.t3c.dl-red{background:color-mix(in srgb,#C0413A 16%,var(--sheet));border-color:#C0413A}
+.t3c.dl-red .t3n{color:#C0413A}
+.t3c.dl-amber .t3n{color:#B9831C}
+.t3c.empty{border-style:dashed;justify-content:center;align-items:center;padding:0}
+.t3add{border:0;background:transparent;color:var(--muted);cursor:pointer;width:100%;height:100%;min-height:62px;font-size:14px;border-radius:12px}
+.t3add:hover{color:var(--ink)}
+.t3offer{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:14px}
+.t3oa{display:flex;gap:6px}
+.t3pick{margin-top:10px;border-top:1px solid var(--line);padding-top:8px;display:grid;gap:2px}
+.t3opt{display:flex;flex-direction:column;align-items:flex-start;gap:1px;text-align:left;border:0;background:transparent;border-radius:8px;padding:8px 10px;cursor:pointer;box-shadow:inset 3px 0 0 var(--bar,var(--line))}
+.t3opt:hover{background:var(--paper)}
+.t3on{font-size:14px;color:var(--ink)}
+.t3om{font-size:12px;color:var(--muted)}
+.dl-red{--bar:#C0413A}.dl-amber{--bar:#D9952B}.dl-blue{--bar:#2F6FB0}.dl-none{--bar:var(--line)}
+.nt-row{box-shadow:inset 3px 0 0 var(--bar,transparent);padding-left:8px!important;border-radius:4px}
+.nt-row.top{box-shadow:inset 4px 0 0 var(--bar,transparent)}
+.task{box-shadow:inset 3px 0 0 var(--bar,transparent);padding-left:8px}
+.task.done{box-shadow:none}
+.pin{border:0;background:transparent;cursor:pointer;width:32px;height:32px;border-radius:50%;font-size:14px;opacity:.35;filter:grayscale(1);flex:0 0 32px}
+.pin:hover{opacity:.8}
+.pin.on{opacity:1;filter:none;background:var(--grid)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 @media (min-width:900px){.wrap{padding-top:28px}}
 </style>
@@ -378,6 +414,7 @@ textarea.grat{background:color-mix(in srgb,#B9831C 8%,var(--paper))}
   </div>
 
   <div id="viewGrid">
+  <section class="top3" id="top3" aria-label="Топ-3 сьогодні"></section>
   <div class="now" id="nowPanel">
     <section class="now-card">
       <div class="now-h"><span>Далі за пріоритетом</span><button class="linkbtn" id="nowAll">усі задачі →</button></div>
@@ -387,8 +424,6 @@ textarea.grat{background:color-mix(in srgb,#B9831C 8%,var(--paper))}
       <div class="now-h"><span>Рутина сьогодні</span><b id="rtCount"></b></div>
       <div class="rt-bar"><i id="rtBar"></i></div>
       <div id="rtList"></div>
-      <div class="sg-h"><span>З сітки на сьогодні</span><b id="sgCount"></b></div>
-      <div id="sgList"></div>
       <div class="rt-foot"><span>Скидається щоранку</span><button class="linkbtn" id="rtEdit">редагувати</button></div>
     </section>
   </div>
@@ -809,6 +844,84 @@ function setTaskDone(t,v){
   if(!v&&t.nextId){ const nx=state.tasks.find(x=>x.id===t.nextId); if(nx&&!nx.done) state.tasks=state.tasks.filter(x=>x!==nx); delete t.nextId; }
   save(); renderTasks();
 }
+/* ---------- deadline colors ---------- */
+function dlClass(t){
+  if(t.done) return ""; const d=daysTo(t.due); if(d===null) return "dl-none";
+  const ml=minsLeft(t);
+  if(d<0||(ml!==null&&ml<60)) return "dl-red";
+  if(d===0) return "dl-amber"; if(d===1) return "dl-blue"; return "dl-none";
+}
+/* ---------- top-3 of the day ---------- */
+let t3Picking=false;
+function t3List(k){ state.top3=state.top3||{}; return (state.top3[k||todayStr()]||[]); }
+function t3Tasks(k){ return t3List(k).map(id=>state.tasks.find(t=>t.id===id)).filter(Boolean); }
+const inTop3=t=>t3List().includes(t.id);
+function t3Toggle(t){
+  state.top3=state.top3||{}; const k=todayStr(); const L=(state.top3[k]=(state.top3[k]||[]).filter(id=>state.tasks.some(x=>x.id===id)));
+  if(L.includes(t.id)){ state.top3[k]=L.filter(x=>x!==t.id); showStatus("Прибрано з Топ-3"); }
+  else { if(L.length>=3){ showStatus("Топ-3 вже заповнено: спершу прибери одну"); return false; } L.push(t.id); showStatus("Додано в Топ-3"); }
+  t3Picking=false; save(); renderTasks(); return true;
+}
+function t3Carry(){
+  // most recent earlier day with unfinished top-3 tasks, offered once per day
+  const k=todayStr(); state.top3=state.top3||{}; state.t3offer=state.t3offer||{};
+  if(state.t3offer[k]||t3List(k).length>=3) return null;
+  const old=new Date(); old.setDate(old.getDate()-60); Object.keys(state.top3).forEach(d=>{if(d<dayKey(old)) delete state.top3[d];});
+  const prev=Object.keys(state.top3).filter(d=>d<k).sort().pop(); if(!prev) return null;
+  const left=t3Tasks(prev).filter(t=>!t.done&&!t3List(k).includes(t.id));
+  return left.length?{prev,left}:null;
+}
+const pin=t=>'<button class="pin'+(inTop3(t)?" on":"")+'" aria-pressed="'+inTop3(t)+'" aria-label="'+(inTop3(t)?"Прибрати з Топ-3":"Додати в Топ-3")+'" title="'+(inTop3(t)?"Прибрати з Топ-3":"У Топ-3")+'">📌</button>';
+function renderTop3(){
+  const box=$("top3"); if(!box) return; box.innerHTML="";
+  const k=todayStr(), tasks=t3Tasks(k), doneN=tasks.filter(t=>t.done).length;
+  const head=document.createElement("div"); head.className="t3h";
+  head.innerHTML='<span class="t3t">🎯 Топ-3 сьогодні</span><span>'+(tasks.length?doneN+" / "+tasks.length+" зроблено":"обери 3 головні задачі дня")+'</span>';
+  box.appendChild(head);
+  const offer=t3Carry();
+  if(offer){
+    const o=document.createElement("div"); o.className="t3offer";
+    const names=offer.left.map(t=>"«"+t.t+"»").join(", ");
+    o.innerHTML='<span></span><div class="t3oa"><button class="xbtn dark" type="button">Перенести</button><button class="xbtn" type="button">Очистити</button></div>';
+    const y=new Date(); y.setDate(y.getDate()-1);
+    o.firstChild.textContent=(offer.prev===dayKey(y)?"Вчора":"З "+fmt(new Date(offer.prev+"T00:00")))+" не завершено: "+names+".";
+    const [bMove,bClear]=o.querySelectorAll("button");
+    bMove.onclick=()=>{ state.top3[k]=(state.top3[k]||[]); offer.left.forEach(t=>{ if(state.top3[k].length<3&&!state.top3[k].includes(t.id)) state.top3[k].push(t.id); }); state.t3offer[k]=1; save(); renderTasks(); };
+    bClear.onclick=()=>{ state.t3offer[k]=1; save(); renderTasks(); };
+    box.appendChild(o);
+  }
+  const grid=document.createElement("div"); grid.className="t3grid";
+  for(let s=0;s<3;s++){
+    const t=tasks[s], num="①②③"[s];
+    const c=document.createElement("div");
+    if(t){
+      const cat=catOf(t.cat); c.className="t3c "+(t.done?"done":dlClass(t)); c.style.setProperty("--c",cat.c);
+      c.innerHTML='<button class="tc" aria-pressed="'+t.done+'" aria-label="Виконано">'+(t.done?"✓":"")+'</button><div class="t3b"><div class="t3n">'+num+' '+(t.done?"готово":(t.due?dueLabel(t):"без дедлайну"))+'</div><div class="t3x"></div><div class="t3m"><span class="cn"></span>'+(t.dur?" · "+durLabel(t.dur):"")+'</div></div><button class="t3rm" aria-label="Прибрати з Топ-3">×</button>';
+      c.querySelector(".t3x").textContent=t.t; c.querySelector(".cn").textContent=cat.name;
+      c.querySelector(".tc").onclick=()=>setTaskDone(t,!t.done);
+      c.querySelector(".t3rm").onclick=()=>t3Toggle(t);
+    } else {
+      c.className="t3c empty"; c.innerHTML='<button class="t3add" type="button">'+num+' + обрати задачу</button>';
+      c.querySelector("button").onclick=()=>{t3Picking=!t3Picking; renderTop3();};
+    }
+    grid.appendChild(c);
+  }
+  box.appendChild(grid);
+  if(t3Picking&&tasks.length<3){
+    const pk=document.createElement("div"); pk.className="t3pick";
+    const cand=sortedOpen().filter(t=>!inTop3(t));
+    if(!cand.length) pk.innerHTML='<div class="empty">Відкритих задач немає.</div>';
+    cand.slice(0,10).forEach(t=>{
+      const b=document.createElement("button"); b.type="button"; b.className="t3opt "+dlClass(t); b.style.setProperty("--c",catOf(t.cat).c);
+      b.innerHTML='<span class="t3on"></span><span class="t3om"></span>';
+      b.firstChild.textContent=t.t; b.lastChild.innerHTML=catOf(t.cat).name+(t.due?" · "+dueLabel(t):"")+(t.dur?" · "+durLabel(t.dur):"");
+      b.onclick=()=>t3Toggle(t); pk.appendChild(b);
+    });
+    const cl=document.createElement("button"); cl.type="button"; cl.className="linkbtn"; cl.textContent="закрити"; cl.onclick=()=>{t3Picking=false;renderTop3();};
+    pk.appendChild(cl); box.appendChild(pk);
+  }
+}
+
 const openNotes=new Set();
 function noteUI(t,container,meta){
   const btn=document.createElement("button"); btn.type="button"; btn.className="nbtn";
@@ -864,13 +977,14 @@ function taskEditor(t){
   return ed;
 }
 function taskRow(t){
-  const c=catOf(t.cat); const r=document.createElement("div"); r.className="task"+(t.done?" done":""); r.style.setProperty("--c",c.c);
+  const c=catOf(t.cat); const r=document.createElement("div"); r.className="task "+(t.done?"done":dlClass(t)); r.style.setProperty("--c",c.c);
   r.innerHTML='<button class="tc" aria-pressed="'+t.done+'" aria-label="Виконано">'+(t.done?"✓":"")+'</button>'+
     '<div class="tb"><div class="tt" title="Торкнись, щоб змінити"></div><div class="tm"><span class="cat"></span>'+
     (t.imp===3?"<span>важливо</span>":t.imp===1?"<span>дрібниця</span>":"")+'<span>'+dueLabel(t)+'</span>'+durChip(t)+repChip(t)+ideaMeta(t)+'</div></div>'+
-    '<button class="te" aria-label="Редагувати задачу" title="Редагувати">✎</button><button class="tx" aria-label="Видалити">×</button>';
+    (t.done?'':pin(t))+'<button class="te" aria-label="Редагувати задачу" title="Редагувати">✎</button><button class="tx" aria-label="Видалити">×</button>';
   r.querySelector(".tt").textContent=t.t; r.querySelector(".cat").textContent=c.name;
   noteUI(t,r.querySelector(".tb"),r.querySelector(".tm"));
+  if(r.querySelector(".pin")) r.querySelector(".pin").onclick=e=>{e.stopPropagation();t3Toggle(t);};
   r.querySelector(".tc").onclick=()=>setTaskDone(t,!t.done);
   const openEd=()=>{ if(r.querySelector(".ed")){r.querySelector(".ed").remove();return;} r.querySelector(".tb").appendChild(taskEditor(t)); r.querySelector(".ed input").focus(); };
   r.querySelector(".tt").onclick=openEd; r.querySelector(".te").onclick=openEd;
@@ -935,18 +1049,21 @@ function renderTasks(){
   const dl=$("doneList"); dl.innerHTML=""; done.slice(0,30).forEach(t=>dl.appendChild(taskRow(t)));
   const urgentN=open.filter(t=>quadrant(t)===0).length;
   $("taskBadge").hidden=!urgentN; $("taskBadge").textContent=urgentN;
+  renderTop3();
   renderNowTasks(open);
 }
 function renderNowTasks(open){
   const box=$("nowTasks"); box.innerHTML="";
   if(!open.length){box.innerHTML='<div class="empty">Відкритих задач немає.</div>';return;}
-  open=open.slice(); const ix=open.findIndex(t=>t.idea&&t.due&&daysTo(t.due)<=0);
+  open=open.filter(t=>!inTop3(t)); if(!open.length){box.innerHTML='<div class="empty">Усі відкриті задачі вже в Топ-3.</div>';return;}
+  const ix=open.findIndex(t=>t.idea&&t.due&&daysTo(t.due)<=0);
   if(ix>1){ const [it]=open.splice(ix,1); open.splice(1,0,it); }
   open.slice(0,12).forEach((t,i)=>{
-    const c=catOf(t.cat); const r=document.createElement("div"); r.className="nt-row"+(i===0?" top":""); r.style.setProperty("--c",c.c);
-    r.innerHTML='<button class="tc" aria-label="Виконано"></button><div class="nb"><div class="nn"></div><div class="nm"><span class="cn"></span>'+(t.due?" · "+dueLabel(t):"")+repChip(t)+ideaMeta(t)+'</div></div>'+durChip(t);
+    const c=catOf(t.cat); const r=document.createElement("div"); r.className="nt-row "+dlClass(t)+(i===0?" top":""); r.style.setProperty("--c",c.c);
+    r.innerHTML='<button class="tc" aria-label="Виконано"></button><div class="nb"><div class="nn"></div><div class="nm"><span class="cn"></span>'+(t.due?" · "+dueLabel(t):"")+repChip(t)+ideaMeta(t)+'</div></div>'+durChip(t)+pin(t);
     r.querySelector(".nn").textContent=t.t; r.querySelector(".cn").textContent=c.name;
     noteUI(t,r.querySelector(".nb"),r.querySelector(".nm"));
+    r.querySelector(".pin").onclick=e=>{e.stopPropagation();t3Toggle(t);};
     r.querySelector(".tc").onclick=()=>{setTaskDone(t,true); if(!t.rep) showStatus("Готово: "+t.t);};
     r.querySelector(".nb").onclick=()=>showView(t.idea?"ideas":"tasks");
     box.appendChild(r);
@@ -959,7 +1076,7 @@ function fitNow(){
   const box=$("nowTasks"); if(!box) return;
   const left=box.closest(".now-card"), right=$("rtList").closest(".now-card");
   const rows=[...box.querySelectorAll(".nt-row")], more=box.querySelector(".nmore");
-  const total=state.tasks.filter(t=>!t.done).length;
+  const total=state.tasks.filter(t=>!t.done&&!inTop3(t)).length;
   rows.forEach(r=>r.hidden=false); left.style.minHeight="";
   const upd=()=>{const vis=rows.filter(r=>!r.hidden).length, rest=total-vis; if(more){more.hidden=rest<=0; more.textContent="ще "+rest+" "+(rest%10===1&&rest%100!==11?"задача":(rest%10>=2&&rest%10<=4&&(rest%100<12||rest%100>14))?"задачі":"задач")+" →";}};
   const side=left.offsetParent&&Math.abs(left.getBoundingClientRect().top-right.getBoundingClientRect().top)<4;
@@ -1087,7 +1204,6 @@ function renderRoutine(){
     list.appendChild(r);
   }
   $("rtEdit").textContent=rtEditing?"готово":"редагувати";
-  renderDaily();
   requestAnimationFrame(fitNow);
 }
 $("rtEdit").onclick=()=>{rtEditing=!rtEditing;renderRoutine();};
@@ -1603,6 +1719,8 @@ function buildReport(){
   L.push(""); L.push("## Щоденна рутина ("+(isCurW?"за "+nDays+" дн. цього тижня":"за тиждень")+")");
   state.routine.items.forEach(it=>{let c=0;for(let i=0;i<nDays;i++){const d=new Date(weekStart);d.setDate(d.getDate()+i);if(rtDone(it.id,dayKey(d)))c++;}
     L.push("- "+it.t+": "+c+"/"+nDays+(isCurW?" (серія "+rtStreak(it.id)+" дн.)":""));});
+  if(state.top3){let tot=0,dn=0,days=0;for(let i=0;i<nDays;i++){const d=new Date(weekStart);d.setDate(d.getDate()+i);const ts=t3Tasks(dayKey(d));if(ts.length)days++;tot+=ts.length;dn+=ts.filter(t=>t.done).length;}
+    if(tot) L.push("- Топ-3 дня: виконано "+dn+" з "+tot+" (днів з вибраним Топ-3: "+days+")");}
   if(isCurW&&state.daily){let tot=0,dn=0;for(let i=0;i<nDays;i++){const d=new Date(weekStart);d.setDate(d.getDate()+i);(state.daily[dayKey(d)]||[]).forEach(pk=>{const p=pIdx(pk.p);if(p<0)return;tot++;if(isDone(p,pk.i,w))dn++;});}
     if(tot) L.push("- Щоденні підказки з сітки: виконано "+dn+" з "+tot);}
   const st_=hmStreaks(); L.push(""); L.push("## Активність: серія "+st_.cur+" дн., найдовша "+st_.best+" дн.");
