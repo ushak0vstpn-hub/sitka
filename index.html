@@ -268,6 +268,7 @@ header{position:relative}
 .nbtn:hover{color:var(--ink)}
 .npv{font-size:13px;color:var(--muted);font-style:italic;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
 .npv::before{content:"📝 ";font-style:normal}
+.npv.raw::before{content:none}
 textarea.tnote{margin-top:6px;min-height:60px;font-size:14px}
 .nt-row .nm{display:flex;flex-wrap:wrap;gap:0 8px;align-items:baseline}
 .nt-row[hidden],.nmore[hidden],.npv[hidden]{display:none}
@@ -455,7 +456,7 @@ textarea.grat{background:color-mix(in srgb,#B9831C 8%,var(--paper))}
     <section class="card">
       <details>
         <summary>Додати кілька задач одразу (наприклад, від Claude)</summary>
-        <p class="hint">Кожна задача з нового рядка у форматі:<br><code>[Робота] Перекласти 300 рядків · до 04.10 18:00 · важливо · ~2 год</code><br>Категорія, дата, час дедлайну, важливість і тривалість необов'язкові. Важливість: «важливо» або «дрібниця».</p>
+        <p class="hint">Кожна задача з нового рядка у форматі:<br><code>[Робота] Перекласти 300 рядків · до 04.10 18:00 · важливо · ~2 год</code><br>Категорія, дата, час дедлайну, важливість і тривалість необов'язкові. Важливість: «важливо» або «дрібниця».<br>Рядки під задачею, що починаються з <code>📝</code> (твоя нотатка) або <code>💡</code> (порада Claude), додаються в нотатку цієї задачі.</p>
         <textarea id="bulkText" placeholder="[Фінанси] Модель NPV та IRR · до 05.10 · важливо"></textarea>
         <button class="xbtn dark" id="bulkAdd" style="margin-top:8px">Додати задачі</button>
       </details>
@@ -813,7 +814,7 @@ function noteUI(t,container,meta){
   const btn=document.createElement("button"); btn.type="button"; btn.className="nbtn";
   const pv=document.createElement("div"); pv.className="npv";
   let ta=null;
-  const sync=()=>{const o=openNotes.has(t.id); btn.textContent=o?"сховати нотатку":(t.note?"нотатка":"+ нотатка"); pv.textContent=t.note?t.note.split("\n")[0]:""; pv.hidden=!t.note||o;};
+  const sync=()=>{const o=openNotes.has(t.id); btn.textContent=o?"сховати нотатку":(t.note?"нотатка":"+ нотатка"); pv.textContent=t.note?t.note.split("\n")[0]:""; pv.classList.toggle("raw",!!t.note&&/^(📝|💡)/.test(t.note)); pv.hidden=!t.note||o;};
   const open=()=>{ta=document.createElement("textarea"); ta.className="tnote"; ta.placeholder="Деталі, посилання, з чого почати"; ta.value=t.note||"";
     ta.oninput=()=>{t.note=ta.value; if(!t.note.trim()) delete t.note; save();};
     ta.onclick=e=>e.stopPropagation(); container.appendChild(ta);};
@@ -1635,8 +1636,11 @@ function findCat(name){
 }
 $("bulkAdd").onclick=()=>{
   const lines=$("bulkText").value.split(/\n/).map(l=>l.replace(/^\s*(?:[-•*]|\d+[.)])\s*/,"").trim()).filter(Boolean);
-  let n=0;
+  let n=0, last=null;
   lines.forEach(line=>{
+    const nm=line.match(/^(📝|💡|нотатка\s*:|порада\s*:)\s*(.*)$/i);
+    if(nm){ if(!last) return; const tag=/^💡|^порада/i.test(nm[1])?"💡":"📝"; const txt=nm[2].trim(); if(!txt) return;
+      last.note=(last.note?last.note+"\n":"")+tag+" "+txt; return; }
     const parts=line.split(/\s[·|]\s|\s—\s/); let first=parts.shift(); let cat="other", due=null, imp=2;
     const cm=first.match(/^\[([^\]]+)\]\s*/); if(cm){cat=findCat(cm[1]);first=first.slice(cm[0].length);}
     let dur=null, time=null;
@@ -1650,7 +1654,7 @@ $("bulkAdd").onclick=()=>{
       if(/важлив/.test(l))imp=3; else if(/дрібн/.test(l))imp=1; const d=parseDue(seg); if(d)due=d;});
     if(!first.trim())return;
     const nt={id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),t:first.trim(),cat,imp,due,done:false}; if(dur>0)nt.dur=dur; if(rep){nt.rep=rep; if(!nt.due) nt.due=todayStr();} if(time){if(!nt.due)nt.due=todayStr(); nt.time=time;}
-    state.tasks.push(nt); n++;
+    state.tasks.push(nt); n++; last=nt;
   });
   if(n){$("bulkText").value="";save();renderTasks();showStatus("Додано задач: "+n);} else showStatus("Не знайшов задач у тексті");
 };
