@@ -151,6 +151,8 @@ textarea{width:100%;min-height:72px;resize:vertical;border:1px solid var(--line)
 .task .tm{font-size:13px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;margin-top:2px}
 .task .tm .cat{color:var(--c);font-weight:600}
 .task .tm .late{color:#C0413A;font-weight:600}
+.soon{color:#C9A227;font-weight:600}
+.t3n .soon{color:inherit}
 .task .tx{border:0;background:transparent;cursor:pointer;color:var(--muted);font-size:18px;width:32px;height:32px;border-radius:50%}
 .task .tx:hover{background:var(--grid)}
 .empty{color:var(--muted);font-size:14px;padding:8px 0}
@@ -170,7 +172,7 @@ details summary{cursor:pointer;font-weight:600;margin-top:12px}
 .auth .msg.err{color:#C0413A}
 .auth .skip{display:block;margin:16px auto 0;border:0;background:transparent;color:var(--muted);text-decoration:underline;cursor:pointer;font-size:14px}
 .sync-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:var(--muted);vertical-align:middle}
-.sync-dot.ok{background:#2F8A78}.sync-dot.off{background:#B9831C}
+.sync-dot.ok{background:#2F8A78}.sync-dot.off{background:#E2B93B}
 .report-actions{display:flex;gap:8px;flex-wrap:wrap}
 .xbtn.dark{background:var(--ink);color:var(--sheet);border-color:var(--ink);font-weight:600}
 .days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin:4px 0 12px}
@@ -300,7 +302,7 @@ details.backup summary{cursor:pointer;font-family:"Unbounded","Onest",sans-serif
 .hm-day b{color:var(--ink);font-weight:600}
 .hm-legend{display:flex;align-items:center;gap:3px;font-size:11px;color:var(--muted)}
 .hm-legend i{display:inline-block;width:12px;height:12px;border-radius:3px}
-.tabs .badge.idea{background:#B9831C}
+.tabs .badge.idea{background:#E2B93B;color:#3A2E00}
 .rep{font-size:12px;padding:1px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
 .repw{display:flex;gap:6px;align-items:flex-end}
 .repw input[type=number]{width:64px;color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px;background:var(--paper);min-height:40px}
@@ -311,7 +313,7 @@ details.backup summary{cursor:pointer;font-family:"Unbounded","Onest",sans-serif
 .idea-row{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--line)}
 .idea-row:first-child{border-top:0}
 .st{border:0;border-radius:999px;padding:3px 10px;font-size:12px;cursor:pointer;white-space:nowrap;margin-top:1px;min-width:78px}
-.st.new{background:color-mix(in srgb,#B9831C 22%,var(--sheet));color:var(--ink)}
+.st.new{background:#FFF3C4;color:#5C4700}
 .st.wip{background:color-mix(in srgb,#2F6FB0 22%,var(--sheet));color:var(--ink)}
 .st.done{background:color-mix(in srgb,#2F8A78 22%,var(--sheet));color:var(--ink)}
 .idea-row .ib{flex:1;min-width:0}
@@ -358,7 +360,7 @@ textarea.grat{background:color-mix(in srgb,#B9831C 8%,var(--paper))}
 .t3rm{border:0;background:transparent;color:var(--muted);font-size:16px;cursor:pointer;width:28px;height:28px;border-radius:50%;flex:0 0 28px}
 .t3c.dl-red{background:color-mix(in srgb,#C0413A 16%,var(--sheet));border-color:#C0413A}
 .t3c.dl-red .t3n{color:#C0413A}
-.t3c.dl-amber .t3n{color:#B9831C}
+.t3c.dl-amber .t3n{color:#C9A227}
 .t3c.empty{border-style:dashed;justify-content:center;align-items:center;padding:0}
 .t3add{border:0;background:transparent;color:var(--muted);cursor:pointer;width:100%;height:100%;min-height:62px;font-size:14px;border-radius:12px}
 .t3add:hover{color:var(--ink)}
@@ -369,7 +371,7 @@ textarea.grat{background:color-mix(in srgb,#B9831C 8%,var(--paper))}
 .t3opt:hover{background:var(--paper)}
 .t3on{font-size:14px;color:var(--ink)}
 .t3om{font-size:12px;color:var(--muted)}
-.dl-red{--bar:#C0413A}.dl-amber{--bar:#D9952B}.dl-blue{--bar:#2F6FB0}.dl-none{--bar:var(--line)}
+.dl-red{--bar:#C0413A}.dl-amber{--bar:#E2B93B}.dl-blue{--bar:#2F6FB0}.dl-none{--bar:var(--line)}
 .nt-row{box-shadow:inset 3px 0 0 var(--bar,transparent);padding-left:8px!important;border-radius:4px}
 .nt-row.top{box-shadow:inset 4px 0 0 var(--bar,transparent)}
 .task{box-shadow:inset 3px 0 0 var(--bar,transparent);padding-left:8px}
@@ -377,6 +379,13 @@ textarea.grat{background:color-mix(in srgb,#B9831C 8%,var(--paper))}
 .pin{border:0;background:transparent;cursor:pointer;width:32px;height:32px;border-radius:50%;font-size:14px;opacity:.35;filter:grayscale(1);flex:0 0 32px}
 .pin:hover{opacity:.8}
 .pin.on{opacity:1;filter:none;background:var(--grid)}
+.fld[hidden]{display:none}
+.chips.spaces{margin:2px 0 12px}
+.chips .spc[aria-pressed="true"]{background:#FFF3C4;color:#5C4700;border-color:#E2B93B;font-weight:600}
+.chips .spc.new{border-style:dashed}
+.spadd{display:inline-flex;gap:6px;align-items:center}
+.spadd input{width:150px;border:1px solid var(--line);border-radius:999px;padding:4px 12px;background:var(--paper);color:var(--ink);font-size:13px}
+.idea-row .im .spn{white-space:nowrap}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 @media (min-width:900px){.wrap{padding-top:28px}}
 </style>
@@ -507,11 +516,13 @@ textarea.grat{background:color-mix(in srgb,#B9831C 8%,var(--paper))}
 
   <div id="viewIdeas" hidden>
     <section class="card" style="margin-top:0">
-      <h2>Ідеї для 81</h2>
+      <h2>Ідеї</h2>
+      <div class="chips spaces" id="iSpaces" role="group" aria-label="Простори ідей"></div>
       <div class="add">
-        <input type="text" id="iText" placeholder="Ідея, як покращити 81…" aria-label="Нова ідея" enterkeyhint="done">
+        <input type="text" id="iText" placeholder="Ідея…" aria-label="Нова ідея" enterkeyhint="done">
         <div class="r">
-          <label class="fld"><span>Тема</span><select id="iTag"></select></label>
+          <label class="fld"><span>Простір</span><select id="iSpaceSel"></select></label>
+          <label class="fld" id="iTagWrap"><span>Тема</span><select id="iTag"></select></label>
           <button class="addbtn" id="iAdd">Додати</button>
         </div>
       </div>
@@ -625,7 +636,7 @@ const PILLARS=[
   ["Баня 1 раз на тиждень","Баня","Не встиг — не страшно, це не ядро"],
   ["Перерва від екрана 5 хв щогодини 4 з 5 робочих днів","Перерви","Встати, вода, вікно"],
   ["8000+ кроків 5 днів із 7","Кроки","Вигул собаки зараховується"]]},
- {id:"rec",name:"Відпочинок",s:"Відпо­чинок",c:"#B9831C",about:"Свідомий відпочинок, стосунки й близькі — заплановані, а не «якщо залишиться час».",a:[
+ {id:"rec",name:"Відпочинок",s:"Відпо­чинок",c:"#C9A227",about:"Свідомий відпочинок, стосунки й близькі — заплановані, а не «якщо залишиться час».",a:[
   ["Один вечір на тиждень без справ, запланований заздалегідь","Вільний вечір","Обрати день у неділю під час планування",1],
   ["Побачення: вибратися кудись разом, можна спонтанно","Побачення","Навіть коротко, головне — не вдома",1],
   ["Зробити щось приємне для партнера(-ки)","Приємне","Дрібниця теж рахується"],
@@ -802,8 +813,8 @@ function dueLabel(t){const d=daysTo(t.due);if(d===null)return "";
   if(d<0)return '<span class="late">прострочено '+(-d)+' дн.</span>';
   if(d===0){const ml=minsLeft(t);
     if(ml!==null&&ml<0)return '<span class="late">сьогодні'+at+' · час минув</span>';
-    if(ml!==null&&ml<=180)return '<span class="late">сьогодні'+at+' · через '+(ml<60?ml+" хв":Math.floor(ml/60)+" год "+(ml%60?ml%60+" хв":""))+'</span>';
-    return '<span class="late">сьогодні'+at+'</span>';}
+    if(ml!==null&&ml<=180)return '<span class="'+(ml<60?"late":"soon")+'">сьогодні'+at+' · через '+(ml<60?ml+" хв":Math.floor(ml/60)+" год "+(ml%60?ml%60+" хв":""))+'</span>';
+    return '<span class="soon">сьогодні'+at+'</span>';}
   if(d===1){const ml=minsLeft(t); return "завтра"+at+(ml!==null&&ml>0?" · залишилось "+Math.round(ml/60)+" год":"");}
   const [y,m,dd]=t.due.split("-").map(Number);return "до "+fmt(new Date(y,m-1,dd))+at+" (через "+d+" дн.)";}
 function durLabel(m){if(!m)return "";if(m<60)return m+" хв";if(m>=180)return "3+ год";const h=m/60;return (Number.isInteger(h)?h:h.toFixed(1).replace(".",","))+" год";}
@@ -1110,26 +1121,63 @@ function ensureIdeas(){
     state.tasks.push({id:"idea"+Date.now().toString(36),t:"Ідеї для 81: переглянути й дописати",cat:"time",imp:1,dur:5,due:todayStr(),rep:{n:2,u:"d"},idea:true,done:false});
   return true;
 }
+const DEFAULT_SPACES=[{id:"81",n:"Сайт 81",e:"🧭"},{id:"fin",n:"Фінтрекер",e:"💰"},{id:"study",n:"Навчання",e:"🎓"},{id:"life",n:"Особисте",e:"🌿"}];
+let iSpace="all"; try{iSpace=localStorage.getItem("sitka9x9-ispace")||"all";}catch(e){}
+let spAdding=false;
+function ensureSpaces(){
+  let ch=false;
+  if(!Array.isArray(state.ideaSpaces)){ state.ideaSpaces=JSON.parse(JSON.stringify(DEFAULT_SPACES)); ch=true; }
+  (state.ideas||[]).forEach(x=>{ if(!x.space){ x.space=/фінансов\S* трекер|фінтрекер/i.test(x.t)?"fin":"81"; ch=true; } });
+  return ch;
+}
+const spaceOf=id=>(state.ideaSpaces||DEFAULT_SPACES).find(s=>s.id===id)||{id,n:"Інше",e:"📁"};
+const spLabel=s=>s.e+" "+s.n;
 function renderIdeas(){
-  if(ensureIdeas()) setTimeout(()=>save(true),0);
-  const all=state.ideas, n=newCount();
-  $("ideaBadge").hidden=!n; $("ideaBadge").textContent=n;
+  let ch=ensureIdeas(); if(ensureSpaces()) ch=true; if(ch) setTimeout(()=>save(true),0);
+  if(iSpace!=="all"&&!state.ideaSpaces.some(s=>s.id===iSpace)) iSpace="all";
+  const n=newCount(); $("ideaBadge").hidden=!n; $("ideaBadge").textContent=n;
+  // spaces row
+  const sp=$("iSpaces"); sp.innerHTML="";
+  const mk=(id,label,cnt)=>{const b=document.createElement("button"); b.type="button"; b.className="spc"; b.textContent=label+" · "+cnt; b.setAttribute("aria-pressed",iSpace===id);
+    b.onclick=()=>{iSpace=id; try{localStorage.setItem("sitka9x9-ispace",id)}catch(e){} renderIdeas();}; sp.appendChild(b);};
+  mk("all","Усі",state.ideas.length);
+  state.ideaSpaces.forEach(s=>mk(s.id,spLabel(s),state.ideas.filter(x=>x.space===s.id).length));
+  if(spAdding){
+    const w=document.createElement("span"); w.className="spadd";
+    w.innerHTML='<input type="text" placeholder="🏋️ Назва" aria-label="Новий простір: емодзі і назва"><button class="xbtn" type="button">OK</button>';
+    const inp=w.querySelector("input"), ok=w.querySelector("button");
+    const done=()=>{ const v=inp.value.trim(); spAdding=false; if(v){ const m=v.match(/^(\p{Extended_Pictographic}\uFE0F?)\s*(.*)$/u); const e=m?m[1]:"📁", nm=(m?m[2]:v).trim()||"Простір";
+        const id="s"+Date.now().toString(36); state.ideaSpaces.push({id,n:nm,e}); iSpace=id; try{localStorage.setItem("sitka9x9-ispace",id)}catch(er){} save(); } renderIdeas(); };
+    ok.onclick=done; inp.onkeydown=e=>{if(e.key==="Enter")done(); if(e.key==="Escape"){spAdding=false;renderIdeas();}};
+    sp.appendChild(w); setTimeout(()=>inp.focus(),0);
+  } else {
+    const b=document.createElement("button"); b.type="button"; b.className="spc new"; b.textContent="+ простір"; b.onclick=()=>{spAdding=true;renderIdeas();}; sp.appendChild(b);
+  }
+  // add form: space select + tag (tags only for site 81)
+  const ss=$("iSpaceSel"), keep=ss.value; ss.innerHTML="";
+  state.ideaSpaces.forEach(s=>{const o=document.createElement("option");o.value=s.id;o.textContent=spLabel(s);ss.appendChild(o);});
+  ss.value=iSpace!=="all"?iSpace:(keep&&state.ideaSpaces.some(s=>s.id===keep)?keep:"81");
+  $("iTagWrap").hidden=ss.value!=="81";
+  $("iCopy").textContent=iSpace==="all"?"Скопіювати всі ідеї для Claude":"Скопіювати «"+spaceOf(iSpace).n+"» для Claude";
+  // status filters within space
+  const inSp=state.ideas.filter(x=>iSpace==="all"||x.space===iSpace);
   const f=$("iFilters"); f.innerHTML="";
   [["all","Усі"],["new","Нові"],["wip","В роботі"],["done","Зроблено"]].forEach(([k,l])=>{
-    const c=k==="all"?all.length:all.filter(x=>x.status===k).length;
+    const c=k==="all"?inSp.length:inSp.filter(x=>x.status===k).length;
     const b=document.createElement("button"); b.type="button"; b.textContent=l+" "+c; b.setAttribute("aria-pressed",iFilter===k);
     b.onclick=()=>{iFilter=k;renderIdeas();}; f.appendChild(b);
   });
   const order={new:0,wip:1,done:2};
-  const list=all.filter(x=>iFilter==="all"||x.status===iFilter).sort((a,b)=>order[a.status]-order[b.status]||(b.created||"").localeCompare(a.created||""));
+  const list=inSp.filter(x=>iFilter==="all"||x.status===iFilter).sort((a,b)=>order[a.status]-order[b.status]||(b.created||"").localeCompare(a.created||""));
   const box=$("iList"); box.innerHTML="";
   if(!list.length) box.innerHTML='<div class="empty">Тут поки порожньо.</div>';
   list.forEach(it=>{
     const r=document.createElement("div"); r.className="idea-row"+(it.status==="done"?" done":"");
     const [y,m,d]=(it.created||todayStr()).split("-");
-    r.innerHTML='<button class="st '+it.status+'" aria-label="Статус: '+IST[it.status]+'. Змінити"></button><div class="ib"><div class="it" title="Торкнись, щоб змінити"></div><div class="im"><span>'+d+"."+m+'</span><span class="tg"></span></div></div><button class="ix" aria-label="Видалити ідею">×</button>';
+    r.innerHTML='<button class="st '+it.status+'" aria-label="Статус: '+IST[it.status]+'. Змінити"></button><div class="ib"><div class="it" title="Торкнись, щоб змінити"></div><div class="im"><span>'+d+"."+m+'</span><span class="spn"></span><span class="tg"></span></div></div><button class="ix" aria-label="Видалити ідею">×</button>';
     r.querySelector(".st").textContent=IST[it.status];
-    r.querySelector(".it").textContent=it.t; r.querySelector(".tg").textContent=it.tag;
+    r.querySelector(".it").textContent=it.t;
+    r.querySelector(".spn").textContent=spLabel(spaceOf(it.space)); r.querySelector(".tg").textContent=it.tag||"";
     r.querySelector(".st").onclick=()=>{it.status=INEXT[it.status]; save(); renderIdeas(); renderTasks();};
     r.querySelector(".it").onclick=()=>{
       const el=r.querySelector(".it"); if(el.querySelector("input")) return;
@@ -1144,19 +1192,26 @@ function renderIdeas(){
 }
 (function initIdeas(){
   const sel=$("iTag"); ITAGS.forEach(t=>{const o=document.createElement("option");o.value=t;o.textContent=t;sel.appendChild(o);});
+  $("iSpaceSel").onchange=()=>{$("iTagWrap").hidden=$("iSpaceSel").value!=="81";};
   const add=()=>{const v=$("iText").value.trim(); if(!v){$("iText").focus();return;}
-    ensureIdeas(); state.ideas.push({id:"i"+Date.now().toString(36),t:v,tag:sel.value,status:"new",created:todayStr()});
-    $("iText").value=""; iFilter="all"; save(); renderIdeas(); renderTasks(); showStatus("Ідею додано"); $("iText").focus();};
+    ensureIdeas(); ensureSpaces(); const space=$("iSpaceSel").value||"81";
+    state.ideas.push({id:"i"+Date.now().toString(36),t:v,space,tag:space==="81"?sel.value:"",status:"new",created:todayStr()});
+    $("iText").value=""; iFilter="all"; save(); renderIdeas(); renderTasks(); showStatus("Ідею додано: "+spaceOf(space).n); $("iText").focus();};
   $("iAdd").onclick=add; $("iText").onkeydown=e=>{if(e.key==="Enter")add();};
   $("tabIdeas").onclick=()=>showView("ideas");
   $("iCopy").onclick=async()=>{
-    const L=["# Ідеї для 81 (стан на "+fmt(new Date())+")"];
-    [["new","Нові"],["wip","В роботі"],["done","Зроблено"]].forEach(([k,l])=>{
-      let xs=state.ideas.filter(x=>x.status===k); if(k==="done") xs=xs.slice(-5);
-      if(!xs.length) return; L.push(""); L.push("## "+l);
-      xs.forEach(x=>{const [y,m,d]=(x.created||"").split("-"); L.push("- ["+x.tag+"] "+x.t+(d?" ("+d+"."+m+")":"")); if(x.note) L.push("  Нотатка: "+x.note.replace(/\n+/g," / "));});
+    const spaces=iSpace==="all"?state.ideaSpaces:[spaceOf(iSpace)];
+    const L=["# Ідеї"+(iSpace==="all"?"":": "+spaceOf(iSpace).n)+" (стан на "+fmt(new Date())+")"];
+    spaces.forEach(s=>{
+      const inS=state.ideas.filter(x=>x.space===s.id); if(!inS.length) return;
+      if(iSpace==="all"){L.push("");L.push("# "+spLabel(s));}
+      [["new","Нові"],["wip","В роботі"],["done","Зроблено"]].forEach(([k,l])=>{
+        let xs=inS.filter(x=>x.status===k); if(k==="done") xs=xs.slice(-5);
+        if(!xs.length) return; L.push(""); L.push("## "+l);
+        xs.forEach(x=>{const [y,m,d]=(x.created||"").split("-"); L.push("- "+(x.tag?"["+x.tag+"] ":"")+x.t+(d?" ("+d+"."+m+")":"")); if(x.note) L.push("  Нотатка: "+x.note.replace(/\n+/g," / "));});
+      });
     });
-    L.push(""); L.push("Подивись мої ідеї для 81: що варто зробити першим, що можна об'єднати, і як реалізувати 1–2 найкорисніші.");
+    L.push(""); L.push(iSpace==="81"?"Подивись мої ідеї для 81: що варто зробити першим, що можна об'єднати, і як реалізувати 1–2 найкорисніші.":"Подивись ці ідеї: що варто зробити першим, що можна об'єднати, і з чого почати.");
     const txt=L.join("\n"), ta=$("iCopyText"); ta.hidden=false; ta.value=txt;
     let ok=false; try{await navigator.clipboard.writeText(txt);ok=true}catch(e){}
     if(!ok){ta.focus();ta.select();try{ok=document.execCommand("copy")}catch(e){}}
