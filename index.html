@@ -409,6 +409,20 @@ textarea.grat{background:color-mix(in srgb,#B9831C 8%,var(--paper))}
 .e-lrow .e-ln{flex:0 1 160px;min-width:0}.e-lrow .e-lu{flex:1;min-width:0}
 .e-prog input[type=range]{width:100%;accent-color:#C9A227}
 .e-prog[hidden]{display:none}
+.rt-row .rw{flex:1;min-width:0}
+.rt-row .ri{flex:0 0 24px;text-align:center;font-size:17px}
+.rt-row.water .rwt{font-size:15px}.rt-row.water .rwt b{font-weight:600}
+.cups{display:flex;gap:4px;margin-top:5px;flex-wrap:wrap}
+.cups i{width:14px;height:18px;border-radius:3px 3px 5px 5px;border:1.5px solid var(--line);display:inline-block}
+.cups i.f{background:#85B7EB;border-color:#85B7EB}
+.rt-row.water.done .cups i.f{background:#2F8A78;border-color:#2F8A78}
+.wbtn{border:1px solid var(--line);background:transparent;border-radius:8px;padding:5px 10px;font-size:13px;cursor:pointer;color:var(--ink);min-height:32px}
+.wbtn.plus{background:#FFF3C4;color:#5C4700;border-color:#E2B93B;font-weight:600}
+.rt-row.auto{cursor:pointer}
+.rt-row .ro{cursor:default}
+.rt-row.auto .rsub{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.dots3{display:inline-flex;gap:3px}.dots3 i{width:9px;height:9px;border-radius:50%;border:1.5px solid var(--line);display:inline-block}.dots3 i.f{background:#2F8A78;border-color:#2F8A78}
+.autotag{font-size:11px;padding:1px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 @media (min-width:900px){.wrap{padding-top:28px}}
 </style>
@@ -1150,6 +1164,7 @@ function renderTasks(){
   $("taskBadge").hidden=!urgentN; $("taskBadge").textContent=urgentN;
   renderTop3();
   renderNowTasks(open);
+  if(typeof rtEditing!=="undefined"&&$("rtList").children.length) renderRoutine();
 }
 function renderNowTasks(open){
   const box=$("nowTasks"); box.innerHTML="";
@@ -1312,7 +1327,32 @@ function renderIdeas(){
 /* ---------- daily routine ---------- */
 const dayKey=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
 let rtEditing=false, renderedDay=null;
-const rtDone=(id,k)=>!!(state.routine.log[k]&&state.routine.log[k][id]);
+const rtItem=id=>(state.routine.items||[]).find(x=>x.id===id);
+function jFilled(k){ const d=new Date(k+"T00:00"); const dd=dayData(isoWeek(d),(d.getDay()+6)%7); return ["good","bad","next","grat"].filter(f=>dd[f]&&dd[f].trim().length>=2).length; }
+function t3Stat(k){ const ts=t3Tasks(k); return {n:ts.length,done:ts.filter(t=>t.done).length}; }
+const waterMl=k=>((state.routine.water||{})[k]||0);
+function rtDone(id,k){
+  const it=rtItem(id), ty=it&&it.type;
+  if(ty==="water") return waterMl(k)>=(it.goal||2000);
+  if(ty==="journal") return jFilled(k)>=2;
+  if(ty==="top3"){ const s=t3Stat(k); return s.n>=3&&s.done>=2; }
+  return !!(state.routine.log[k]&&state.routine.log[k][id]);
+}
+function migrateRoutineV2(){
+  ensureRoutine(); const R=state.routine; if(R.v>=2) return false;
+  R.items.forEach(it=>{
+    if(it.id==="water"||/^2\+?\s*л\s*вод/i.test(it.t)){ it.type="water"; it.t="Вода"; it.goal=2000; it.glass=250; }
+    else if(/журнал/i.test(it.t)){ it.type="journal"; it.t="Запис у журнал"; }
+    else if(it.id==="top3"||/топ-?3/i.test(it.t)){ it.type="top3"; it.t="Топ-3 дня"; }
+  });
+  if(!R.items.some(it=>it.type==="water")) R.items.push({id:"water",t:"Вода",type:"water",goal:2000,glass:250});
+  if(!R.items.some(it=>it.type==="journal")) R.items.push({id:"journal",t:"Запис у журнал",type:"journal"});
+  if(!R.items.some(it=>it.type==="top3")) R.items.push({id:"top3",t:"Топ-3 дня",type:"top3"});
+  R.water=R.water||{};
+  const w=R.items.find(it=>it.type==="water");
+  if(w) Object.keys(R.log||{}).forEach(d=>{ if(R.log[d][w.id]&&!R.water[d]) R.water[d]=w.goal; });
+  R.v=2; return true;
+}
 function rtStreak(id){
   const d=new Date(); if(!rtDone(id,dayKey(d))) d.setDate(d.getDate()-1);
   let n=0; while(rtDone(id,dayKey(d))&&n<999){n++;d.setDate(d.getDate()-1);} return n;
@@ -1331,6 +1371,24 @@ function renderRoutine(){
       const inp=r.querySelector("input"); inp.value=it.t;
       inp.oninput=()=>{it.t=inp.value;save();};
       r.querySelector(".rx").onclick=()=>{if(confirm("Прибрати «"+it.t+"» з рутини?")){items.splice(idx,1);save();renderRoutine();}};
+    } else if(it.type==="water"){
+      const ml=waterMl(k), goal=it.goal||2000, gl=it.glass||250, cups=Math.ceil(goal/gl), full=Math.min(cups,Math.floor(ml/gl)), done=ml>=goal, st=rtStreak(it.id);
+      r.className="rt-row water"+(done?" done":"");
+      r.innerHTML='<span class="ri">💧</span><div class="rw"><div class="rwt"><span class="rn"></span> <b>'+ml+' / '+goal+' мл</b>'+(st?' <span class="rs">🔥 '+st+'</span>':'')+'</div><div class="cups" aria-hidden="true">'+Array.from({length:cups},(_,j)=>'<i class="'+(j<full?"f":"")+'"></i>').join("")+'</div></div><button class="wbtn minus" aria-label="Мінус склянка">−</button><button class="wbtn plus" aria-label="Плюс склянка '+gl+' мл">+ '+gl+'</button>';
+      r.querySelector(".rn").textContent=it.t;
+      const setMl=v=>{ state.routine.water=state.routine.water||{}; v=Math.max(0,v); if(v) state.routine.water[k]=v; else delete state.routine.water[k]; save(); renderRoutine(); };
+      r.querySelector(".plus").onclick=()=>{ setMl(ml+gl); if(ml<goal&&ml+gl>=goal) showStatus("2 л набрано 💧"); };
+      r.querySelector(".minus").onclick=()=>setMl(ml-gl);
+    } else if(it.type==="journal"||it.type==="top3"){
+      const done=rtDone(it.id,k), st=rtStreak(it.id);
+      let sub="";
+      if(it.type==="journal"){ const n=jFilled(k); sub="заповнено "+n+" з 4 полів"+(n<2?" · потрібно 2":""); }
+      else { const s3=t3Stat(k); sub=s3.n<3?"обрано "+s3.n+" з 3 · обери Топ-3":'<span class="dots3">'+[0,1,2].map(j=>'<i class="'+(j<s3.done?"f":"")+'"></i>').join("")+'</span>'+s3.done+" / 3 виконано · потрібно 2"; }
+      r.className="rt-row auto"+(done?" done":"");
+      r.innerHTML='<span class="rc ro" aria-hidden="true">'+(done?"✓":"")+'</span><div class="rw"><span class="rn"></span><div class="rsub">'+sub+'</div></div><span class="rs">'+(st?"🔥 "+st:"")+'</span><span class="autotag" title="Рахується автоматично">авто</span>';
+      r.querySelector(".rn").textContent=it.t;
+      r.setAttribute("aria-label",it.t+": "+(done?"виконано":"ще ні")+" (автоматично)");
+      r.onclick=()=>{ if(it.type==="journal"){ const el=$("dayChips"); showView("grid"); if(el) el.scrollIntoView({behavior:"smooth",block:"center"}); } else { $("top3").scrollIntoView({behavior:"smooth",block:"start"}); } };
     } else {
       const done=rtDone(it.id,k), st=rtStreak(it.id);
       r.className="rt-row"+(done?" done":"");
@@ -1562,6 +1620,7 @@ function migrateV2(){
 
 function render(){
   if(migrateV2()) setTimeout(()=>save(true),0);
+  if(migrateRoutineV2()) setTimeout(()=>save(true),0);
   const ws=weekStart, we=new Date(ws);we.setDate(we.getDate()+6);
   $("weekLbl").innerHTML="<b>Тиждень "+wk().split("-W")[1]+"</b>"+fmt(ws)+" – "+fmt(we);
   $("goalSub").textContent=state.goal;
@@ -1614,7 +1673,7 @@ let hmSel=null;
 function dayActivity(d){
   const k=dayKey(d), from=new Date(d); from.setHours(0,0,0,0); const to=from.getTime()+864e5;
   const tasks=state.tasks.filter(t=>t.done&&t.doneAt>=from.getTime()&&t.doneAt<to).length;
-  const rt=state.routine&&state.routine.log[k]?Object.keys(state.routine.log[k]).length:0;
+  const rt=state.routine?(state.routine.items||[]).filter(it=>rtDone(it.id,k)).length:0;
   const grid=state.gridLog&&state.gridLog[k]?Object.keys(state.gridLog[k]).length:0;
   const jn=dayHas(isoWeek(d),(d.getDay()+6)%7)?1:0;
   return {tasks,rt,grid,jn,total:tasks+rt+grid+jn};
@@ -1786,7 +1845,7 @@ function renderWeekJournal(){
 function bindDay(id,f){$(id).oninput=e=>{
   const w=wk(); const wn=state.weekNotes[w]=state.weekNotes[w]||{}; wn.days=wn.days||{};
   const d=wn.days[selDay]=wn.days[selDay]||{}; d[f]=e.target.value; if(!d[f]) delete d[f];
-  save();
+  save(); if(wk()===isoWeek(new Date())&&selDay===todayIdx()) renderRoutine();
   const chip=$("dayChips").children[selDay]; if(chip) chip.classList.toggle("has",dayHas(w,selDay));
   renderWeekJournal();
 };}
@@ -1862,7 +1921,9 @@ function buildReport(){
   ensureRoutine();
   const isCurW=w===isoWeek(new Date()), nDays=isCurW?todayIdx()+1:7;
   L.push(""); L.push("## Щоденна рутина ("+(isCurW?"за "+nDays+" дн. цього тижня":"за тиждень")+")");
-  state.routine.items.forEach(it=>{let c=0;for(let i=0;i<nDays;i++){const d=new Date(weekStart);d.setDate(d.getDate()+i);if(rtDone(it.id,dayKey(d)))c++;}
+  state.routine.items.forEach(it=>{ if(it.type==="water"){ let c=0,sum=0; for(let i=0;i<nDays;i++){const d=new Date(weekStart);d.setDate(d.getDate()+i);const ml=waterMl(dayKey(d));sum+=ml;if(ml>=(it.goal||2000))c++;}
+      L.push("- Вода 2 л: "+c+"/"+nDays+" (у середньому "+Math.round(sum/nDays)+" мл на день)"); return; }
+    let c=0;for(let i=0;i<nDays;i++){const d=new Date(weekStart);d.setDate(d.getDate()+i);if(rtDone(it.id,dayKey(d)))c++;}
     L.push("- "+it.t+": "+c+"/"+nDays+(isCurW?" (серія "+rtStreak(it.id)+" дн.)":""));});
   if(state.top3){let tot=0,dn=0,days=0;for(let i=0;i<nDays;i++){const d=new Date(weekStart);d.setDate(d.getDate()+i);const ts=t3Tasks(dayKey(d));if(ts.length)days++;tot+=ts.length;dn+=ts.filter(t=>t.done).length;}
     if(tot) L.push("- Топ-3 дня: виконано "+dn+" з "+tot+" (днів з вибраним Топ-3: "+days+")");
