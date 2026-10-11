@@ -442,6 +442,33 @@ textarea.grat{background:color-mix(in srgb,#B9831C 8%,var(--paper))}
 .mpb.top,.mpb.ex{background:#FFF3C4;color:#5C4700;border-color:#E2B93B;font-weight:600}
 .mpb.x{border:0;color:var(--muted);font-size:16px;padding:4px 8px}
 .fhint{font-size:12px;color:var(--muted);margin-top:4px}
+.tabs{max-width:100%;overflow-x:auto;scrollbar-width:none}
+.tabs .badge[hidden]{display:none}
+@media (max-width:480px){.tabs{width:100%}.tabs button{flex:1 1 auto;padding:8px 9px;font-size:14px}.tabs .badge{margin-left:4px;min-width:18px;padding:0 5px;line-height:18px;font-size:11px}}
+.tabs button{white-space:nowrap}
+.prjh{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}
+.prjh .addbtn{background:#FFF3C4;color:#5C4700;border:1px solid #E2B93B}
+.prj{padding:12px 0;border-top:1px solid var(--line)}
+#projList .prj:first-child{border-top:0}
+.prj .ph{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.prj .pn{font-weight:600}
+.prj .pv{font-size:14px;white-space:nowrap}.prj .pv b{font-weight:700}
+.prj .pe{border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:14px;width:30px;height:30px;border-radius:50%}
+.prj .pe:hover{background:var(--grid)}
+.prj .pbar{height:9px;background:var(--grid);border-radius:999px;overflow:hidden;margin:8px 0}
+.prj .pbar i{display:block;height:100%;background:var(--c);border-radius:999px}
+.prj .pfoot{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.prj .pm{font-size:13px;color:var(--muted)}.prj .pm b{color:var(--ink)}
+.prj .pbtns{display:flex;gap:6px}
+.prj .pbtns button{border:1px solid var(--line);background:transparent;border-radius:999px;padding:4px 12px;font-size:13px;cursor:pointer;min-height:32px;color:var(--ink)}
+.pform{margin-top:10px}
+.pform .fld[hidden]{display:none}
+.pform input[type=number],.pform input[type=text]:not(.pf-n),.pform input[type=date]{color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--sheet);min-height:40px;color-scheme:light dark}
+.pform .acts{flex-wrap:wrap}
+#projAddWrap .pform{margin:0 0 12px}
+.prjd{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--line);font-size:14px}
+.prjd span:first-child{flex:1;min-width:140px}
+.prjd .pm{font-size:12px;color:var(--muted)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 @media (min-width:900px){.wrap{padding-top:28px}}
 </style>
@@ -476,6 +503,7 @@ textarea.grat{background:color-mix(in srgb,#B9831C 8%,var(--paper))}
     <button role="tab" id="tabGrid" aria-selected="true">Сітка</button>
     <button role="tab" id="tabTasks" aria-selected="false">Задачі<span class="badge" id="taskBadge" hidden></span></button>
     <button role="tab" id="tabIdeas" aria-selected="false">Ідеї<span class="badge idea" id="ideaBadge" hidden></span></button>
+    <button role="tab" id="tabProjects" aria-selected="false">Проєкти</button>
   </div>
 
   <div id="viewGrid">
@@ -500,10 +528,6 @@ textarea.grat{background:color-mix(in srgb,#B9831C 8%,var(--paper))}
   <div class="mandala" id="mandala" aria-label="Сітка цілей"></div>
   <p class="hint">Торкнись дії, щоб відмітити її виконаною цього тижня. Торкнись назви опори, щоб відкрити нотатки та деталі. Крапка під дією означає, що там є нотатка.</p>
 
-  <section class="card">
-    <h2>Робочі проєкти</h2>
-    <div id="projMain"></div>
-  </section>
 
   <section class="card">
     <h2>Журнал тижня</h2>
@@ -569,6 +593,16 @@ textarea.grat{background:color-mix(in srgb,#B9831C 8%,var(--paper))}
       <div id="taskFilters" class="tf"></div>
       <div id="taskGroups"></div>
       <details id="doneBox"><summary id="doneSum">Виконані</summary><div id="doneList"></div></details>
+    </section>
+  </div>
+
+  <div id="viewProjects" hidden>
+    <section class="card" style="margin-top:0">
+      <div class="prjh"><h2 style="margin:0">Проєкти</h2><button type="button" class="addbtn" id="projAdd">+ проєкт</button></div>
+      <div id="projAddWrap"></div>
+      <div class="tf"><div class="row" id="projChips"></div></div>
+      <div id="projList"></div>
+      <details id="projDone"><summary id="projDoneSum">Завершені</summary><div id="projDoneList"></div></details>
     </section>
   </div>
 
@@ -644,7 +678,7 @@ textarea.grat{background:color-mix(in srgb,#B9831C 8%,var(--paper))}
     <span class="count" id="sheetCount"></span>
   </div><div class="about" id="sheetAbout"></div></div>
   <div class="body">
-    <section class="card" id="sheetProjCard" style="margin:0 0 14px;display:none"><h2>Робочі проєкти</h2><div id="sheetProj"></div></section>
+    <section class="card" id="sheetProjCard" style="margin:0 0 14px;display:none"><h2>Проєкти</h2><div id="sheetProj"></div></section>
     <div id="sheetActs"></div>
     <section class="card" style="margin-top:8px">
       <h2>Нотатки опори</h2>
@@ -792,49 +826,129 @@ const weekTotal=w=>(state.legacyTotals&&state.legacyTotals[w]!=null)?state.legac
 const coreTotal=w=>PILLARS.reduce((n,P,p)=>n+coreCount(p,w),0);
 
 /* ---------- work projects ---------- */
-const PROJECTS=[
- {id:"budget",name:"Курс «Основи бюджетної системи»",unit:"%",total:100,start:20,step:5,plan:10},
- {id:"pbi",name:"Курс Power BI",unit:"%",total:100,start:0,step:5,plan:10},
- {id:"tr",name:"Переклад тендерних закупівель, укр → англ",unit:"рядків",total:2900,start:0,step:50,plan:500}
+/* ---------- projects ---------- */
+const LEGACY_PROJECTS=[
+ {id:"budget",name:"Курс «Основи бюджетної системи»",cat:"work",unit:"%",total:100,start:20,step:5,plan:10},
+ {id:"pbi",name:"Курс Power BI",cat:"work",unit:"%",total:100,start:0,step:5,plan:10},
+ {id:"tr",name:"Переклад тендерних закупівель, укр → англ",cat:"work",unit:"рядків",total:2900,start:0,step:50,plan:500}
 ];
-const wIdx=w=>{const [y,n]=w.split("-W").map(Number);return y*53+n};
-const pVal=P=>state.proj[P.id]!=null?state.proj[P.id]:P.start;
-function pBefore(P,w){ // value at the end of the last recorded week before w
-  const h=state.projHist[P.id]||{}; let best=null;
-  Object.keys(h).forEach(k=>{if(wIdx(k)<wIdx(w)&&(best===null||wIdx(k)>wIdx(best)))best=k;});
-  return best?h[best]:P.start;
+function ensureProjects(){
+  if(Array.isArray(state.projects)) return false;
+  state.projects=JSON.parse(JSON.stringify(LEGACY_PROJECTS));
+  state.projects.push({id:"fintr",name:"Фінтрекер",cat:"trk",unit:"%",total:100,start:20,step:5,plan:10});
+  state.proj=state.proj||{}; if(state.proj.fintr==null) state.proj.fintr=20;
+  return true;
 }
+const activeProjects=()=>(state.projects||[]).filter(P=>!P.done);
+const isPct=P=>P.unit==="%";
+const wIdx=w=>{const [y,n]=w.split("-W").map(Number);return y*53+n};
+const pVal=P=>state.proj[P.id]!=null?state.proj[P.id]:(P.start||0);
+function pBefore(P,w){ const h=state.projHist[P.id]||{}; let best=null;
+  Object.keys(h).forEach(k=>{if(wIdx(k)<wIdx(w)&&(best===null||wIdx(k)>wIdx(best)))best=k;});
+  return best?h[best]:(P.start||0); }
 function pAt(P,w){const h=state.projHist[P.id]||{};return h[w]!=null?h[w]:pBefore(P,w);}
 function setProj(P,v){
   v=Math.max(0,Math.min(P.total,Math.round(Number(v)||0)));
   state.proj[P.id]=v; state.projHist[P.id]=state.projHist[P.id]||{}; state.projHist[P.id][isoWeek(new Date())]=v;
   save(); renderProjects();
 }
+const pUnit=P=>isPct(P)?"%":" "+P.unit;
+function pPace(P){
+  const v=pVal(P), left=P.total-v; if(left<=0) return "<b>Готово</b>";
+  if(P.deadline){ const d=daysTo(P.deadline); if(d<0) return '<span class="late">дедлайн минув '+fmt(new Date(P.deadline+"T00:00"))+'</span>';
+    const wl=Math.max(1,Math.ceil((d+1)/7)), need=Math.ceil(left/wl);
+    return "до "+fmt(new Date(P.deadline+"T00:00"))+" · треба ~"+need+pUnit(P)+" на тиждень"; }
+  if(P.plan>0) return "~"+Math.ceil(left/P.plan)+" тиж. у такому темпі";
+  return "залишилось "+left+pUnit(P);
+}
+let projFilter="all", projEditing=null;
+function projCard(P,compact){
+  const v=pVal(P), pct=Math.min(100,v/P.total*100), w=wk(), g=pAt(P,w)-pBefore(P,w), c=catOf(P.cat);
+  const d=document.createElement("div"); d.className="prj"; d.style.setProperty("--c",c.c);
+  d.innerHTML='<div class="ph"><span class="pn"></span><span class="pv">'+(isPct(P)?"<b>"+v+"%</b>":"<b>"+v+"</b> / "+P.total+" "+P.unit.replace(/^\s+/,""))+(compact?"":' <button class="pe" type="button" aria-label="Редагувати проєкт">✎</button>')+'</span></div>'+
+    '<div class="pbar"><i style="width:'+pct+'%"></i></div>'+
+    '<div class="pfoot"><span class="pm"><span class="pcat"></span> · цього тижня <b>+'+Math.max(0,g)+pUnit(P)+'</b>'+(P.plan?" з "+P.plan+pUnit(P)+(g>=P.plan?" ✓":""):"")+' · '+pPace(P)+'</span>'+
+    '<span class="pbtns"><button type="button" class="pminus">−'+P.step+'</button><button type="button" class="pplus">+'+P.step+'</button></span></div>';
+  d.querySelector(".pn").textContent=P.name; d.querySelector(".pcat").textContent=c.name;
+  d.querySelector(".pminus").onclick=()=>setProj(P,pVal(P)-P.step);
+  d.querySelector(".pplus").onclick=()=>{ setProj(P,pVal(P)+P.step); if(pVal(P)>=P.total) showStatus("Проєкт на 100%: заверши його через ✎"); };
+  if(!compact) d.querySelector(".pe").onclick=()=>{ projEditing=projEditing===P.id?null:P.id; renderProjects(); };
+  if(!compact&&projEditing===P.id) d.appendChild(projForm(P));
+  return d;
+}
+function projForm(P){
+  const isNew=!P; P=P||{name:"",cat:"trk",unit:"%",total:100,step:5,plan:10};
+  const f=document.createElement("div"); f.className="ed pform";
+  f.innerHTML='<input type="text" class="pf-n" placeholder="Назва проєкту" aria-label="Назва проєкту">'+
+   '<div class="r"><label class="fld"><span>Категорія</span><select class="pf-c"></select></label>'+
+   '<div class="fld"><span>Вимір</span><div class="seg pf-t"><button type="button" data-t="pct">У %</button><button type="button" data-t="cnt">Кількість</button></div></div>'+
+   '<label class="fld pf-cnt"><span>Обсяг</span><input type="number" class="pf-tot" min="1" style="width:90px"></label>'+
+   '<label class="fld pf-cnt"><span>Одиниця</span><input type="text" class="pf-u" placeholder="рядків, етапів…" style="width:120px"></label>'+
+   '<label class="fld"><span>Крок кнопок</span><input type="number" class="pf-s" min="1" style="width:80px"></label></div>'+
+   '<div class="r"><label class="fld"><span>План на тиждень</span><input type="number" class="pf-p" min="0" style="width:100px"></label>'+
+   '<label class="fld"><span>Дедлайн (необов\'язково)</span><input type="date" class="pf-d"></label>'+
+   '<label class="fld"><span>'+(isNew?"Вже зроблено":"Зараз")+'</span><input type="number" class="pf-v" min="0" style="width:90px"></label></div>'+
+   '<div class="acts">'+(isNew?"":'<button type="button" class="xbtn pf-done">Завершити</button><button type="button" class="xbtn pf-del">Видалити</button><span style="flex:1"></span>')+'<button type="button" class="xbtn pf-cancel">Скасувати</button><button type="button" class="addbtn pf-save">Зберегти</button></div>';
+  const q=x=>f.querySelector(x);
+  q(".pf-n").value=P.name; CATS.forEach(c=>{const o=document.createElement("option");o.value=c.id;o.textContent=c.name;q(".pf-c").appendChild(o);}); q(".pf-c").value=P.cat||"other";
+  let type=isPct(P)?"pct":"cnt";
+  const paint=()=>{ f.querySelectorAll(".pf-t button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.t===type)); f.querySelectorAll(".pf-cnt").forEach(x=>x.hidden=type==="pct"); };
+  f.querySelectorAll(".pf-t button").forEach(b=>b.onclick=()=>{type=b.dataset.t; if(type==="pct"){q(".pf-s").value=q(".pf-s").value||5;} paint();});
+  q(".pf-tot").value=isPct(P)?"":P.total; q(".pf-u").value=isPct(P)?"":P.unit; q(".pf-s").value=P.step; q(".pf-p").value=P.plan||""; q(".pf-d").value=P.deadline||"";
+  q(".pf-v").value=isNew?0:pVal(P); paint();
+  f.onclick=e=>e.stopPropagation();
+  q(".pf-cancel").onclick=()=>{ projEditing=null; renderProjects(); };
+  q(".pf-save").onclick=()=>{
+    const name=q(".pf-n").value.trim(); if(!name){q(".pf-n").focus();return;}
+    const unit=type==="pct"?"%":(q(".pf-u").value.trim()||"кроків"), total=type==="pct"?100:Math.max(1,parseInt(q(".pf-tot").value,10)||0);
+    if(type==="cnt"&&!(parseInt(q(".pf-tot").value,10)>0)){ q(".pf-tot").focus(); showStatus("Вкажи обсяг проєкту"); return; }
+    const step=Math.max(1,parseInt(q(".pf-s").value,10)||1), plan=Math.max(0,parseInt(q(".pf-p").value,10)||0), dl=q(".pf-d").value||null;
+    const val=Math.max(0,Math.min(total,parseInt(q(".pf-v").value,10)||0));
+    if(isNew){ const id="p"+Date.now().toString(36);
+      state.projects.push({id,name,cat:q(".pf-c").value,unit,total,start:val,step,plan,deadline:dl}); state.proj[id]=val; showStatus("Проєкт додано");
+    } else { Object.assign(P,{name,cat:q(".pf-c").value,unit,total,step,plan,deadline:dl}); if(!P.deadline) delete P.deadline;
+      if(val!==pVal(P)){ state.proj[P.id]=val; state.projHist[P.id]=state.projHist[P.id]||{}; state.projHist[P.id][isoWeek(new Date())]=val; }
+      showStatus("Проєкт оновлено"); }
+    projEditing=null; $("projAddWrap").innerHTML=""; save(); renderProjects();
+  };
+  if(!isNew){
+    q(".pf-done").onclick=()=>{ P.done=true; P.doneAt=todayStr(); projEditing=null; save(); renderProjects(); showStatus("Проєкт завершено 🎉"); };
+    q(".pf-del").onclick=()=>{ if(!confirm("Видалити проєкт «"+P.name+"» разом з історією?")) return; state.projects=state.projects.filter(x=>x!==P); delete state.proj[P.id]; delete state.projHist[P.id]; projEditing=null; save(); renderProjects(); };
+  }
+  return f;
+}
 function renderProjects(){
-  ["projMain","sheetProj"].forEach(cid=>{
-    const box=$(cid); if(!box) return; box.innerHTML="";
-    PROJECTS.forEach(P=>{
-      const v=pVal(P), pct=v/P.total*100, left=P.total-v;
-      const w=wk(), gained=pAt(P,w)-pBefore(P,w);
-      const weeksLeft=left>0?Math.ceil(left/P.plan):0;
-      const d=document.createElement("div"); d.className="proj";
-      d.innerHTML='<div class="ph"><span class="pn"></span><span class="pv"></span></div>'+
-        '<div class="pbar"><i style="width:'+pct+'%"></i></div>'+
-        '<div class="pc"><button data-d="-1" aria-label="Зменшити">−'+P.step+'</button><button data-d="1" aria-label="Збільшити">+'+P.step+'</button>'+
-        '<input type="number" inputmode="numeric" min="0" max="'+P.total+'" aria-label="Поточний прогрес"><span style="font-size:13px;color:var(--muted)">'+(P.unit==="%"?"%":"з "+P.total)+'</span></div>'+
-        '<div class="pm"></div>';
-      d.querySelector(".pn").textContent=P.name;
-      d.querySelector(".pv").textContent=P.unit==="%"?v+"%":v+" / "+P.total;
-      const inp=d.querySelector("input"); inp.value=v;
-      inp.onchange=()=>setProj(P,inp.value);
-      d.querySelectorAll("button").forEach(b=>b.onclick=()=>setProj(P,pVal(P)+Number(b.dataset.d)*P.step));
-      const unit=P.unit==="%"?"%":" рядків";
-      d.querySelector(".pm").innerHTML=left<=0?"<b>Готово</b>":
-        'Тиждень '+w.split("-W")[1]+': <b>+'+Math.max(0,gained)+unit+'</b> з плану '+P.plan+unit+
-        '. Залишилось '+left+unit+', це ~'+weeksLeft+' тиж. у такому темпі.';
-      box.appendChild(d);
-    });
-  });
+  if(ensureProjects()) setTimeout(()=>save(true),0);
+  const act=activeProjects();
+  // tab
+  const ch=$("projChips");
+  if(ch){
+    ch.innerHTML="";
+    const cats=CATS.filter(c=>act.some(P=>P.cat===c.id));
+    if(projFilter!=="all"&&!cats.some(c=>c.id===projFilter)) projFilter="all";
+    const mkChip=(id,label,n,color)=>{ const b=document.createElement("button"); b.type="button"; b.className="fc cat"; if(color) b.style.setProperty("--c",color);
+      b.innerHTML=(color?'<span class="dot"></span>':"")+'<span></span>'; b.lastChild.textContent=label+" "+n; b.setAttribute("aria-pressed",projFilter===id);
+      b.onclick=()=>{projFilter=id;renderProjects();}; ch.appendChild(b); };
+    mkChip("all","Усі",act.length,null); cats.forEach(c=>mkChip(c.id,c.name,act.filter(P=>P.cat===c.id).length,c.c));
+    const list=$("projList"); list.innerHTML="";
+    const shown=act.filter(P=>projFilter==="all"||P.cat===projFilter);
+    if(!shown.length) list.innerHTML='<div class="empty">Активних проєктів немає. Додай перший через «+ проєкт».</div>';
+    shown.forEach(P=>list.appendChild(projCard(P,false)));
+    const done=(state.projects||[]).filter(P=>P.done);
+    $("projDoneSum").textContent="Завершені · "+done.length; $("projDone").hidden=!done.length;
+    const dl=$("projDoneList"); dl.innerHTML="";
+    done.forEach(P=>{ const r=document.createElement("div"); r.className="prjd";
+      r.innerHTML='<span></span><span class="pm">'+(isPct(P)?pVal(P)+"%":pVal(P)+" / "+P.total+" "+P.unit)+(P.doneAt?" · "+fmt(new Date(P.doneAt+"T00:00")):"")+'</span><button type="button" class="linkbtn">відновити</button>';
+      r.firstChild.textContent=P.name; r.querySelector("button").onclick=()=>{ delete P.done; delete P.doneAt; save(); renderProjects(); };
+      dl.appendChild(r); });
+  }
+  // pillar sheet
+  const sb=$("sheetProj");
+  if(sb&&typeof openP!=="undefined"&&openP!==null){
+    sb.innerHTML=""; const pid=PILLARS[openP].id, mine=act.filter(P=>P.cat===pid);
+    $("sheetProjCard").style.display=mine.length?"block":"none";
+    mine.forEach(P=>sb.appendChild(projCard(P,true)));
+  }
 }
 
 /* ---------- tasks ---------- */
@@ -1656,13 +1770,16 @@ const tRep=repPicker(null);
   $("tAdd").onclick=add; $("tTitle").onkeydown=e=>{if(e.key==="Enter")add();};
 })();
 function showView(v){
-  $("viewGrid").hidden=v!=="grid"; $("viewTasks").hidden=v!=="tasks"; $("viewIdeas").hidden=v!=="ideas";
+  $("viewGrid").hidden=v!=="grid"; $("viewTasks").hidden=v!=="tasks"; $("viewIdeas").hidden=v!=="ideas"; $("viewProjects").hidden=v!=="projects";
+  $("tabProjects").setAttribute("aria-selected",v==="projects"); if(v==="projects") renderProjects();
   $("tabGrid").setAttribute("aria-selected",v==="grid"); $("tabTasks").setAttribute("aria-selected",v==="tasks"); $("tabIdeas").setAttribute("aria-selected",v==="ideas");
   if(v==="ideas") renderIdeas();
   try{localStorage.setItem("sitka9x9-view",v)}catch(e){}
 }
 $("tabGrid").onclick=()=>{showView("grid");renderTasks();}; $("tabTasks").onclick=()=>{showView("tasks");renderTasks();};
-try{const v0=localStorage.getItem("sitka9x9-view"); if(v0==="tasks"||v0==="ideas") setTimeout(()=>showView(v0),0);}catch(e){}
+try{const v0=localStorage.getItem("sitka9x9-view"); if(v0==="tasks"||v0==="ideas"||v0==="projects") setTimeout(()=>showView(v0),0);}catch(e){}
+$("tabProjects").onclick=()=>showView("projects");
+$("projAdd").onclick=()=>{ const w=$("projAddWrap"); if(w.firstChild){w.innerHTML="";return;} const f=projForm(null); w.appendChild(f); f.querySelector(".pf-n").focus(); };
 
 /* ---------- render grid ---------- */
 /* ---------- migration to grid v2 (05.10.2026) ---------- */
@@ -1845,7 +1962,7 @@ function renderSheet(){
   const p=openP, P=PILLARS[p]; const sh=$("sheet"); sh.style.setProperty("--c",P.c);
   $("sheetTitle").textContent=P.name;
   $("sheetAbout").textContent=P.about||"";
-  $("sheetProjCard").style.display=P.id==="work"?"block":"none";
+  renderProjects();
   $("sheetCount").textContent="★"+coreCount(p,wk())+"/2 · "+pillarCount(p,wk())+"/8 · т"+wk().split("-W")[1];
   const box=$("sheetActs"); box.innerHTML="";
   P.a.forEach((_,i)=>{
@@ -2003,9 +2120,11 @@ function buildReport(){
     });
     const pn=state.pillarNotes[P.id]; if(pn) L.push("Нотатки опори: "+pn.replace(/\n+/g," / "));
   });
-  L.push(""); L.push("## Робочі проєкти");
-  PROJECTS.forEach(P=>{const v=pVal(P);const g=pAt(P,w)-pBefore(P,w);
-    L.push("- "+P.name+": "+(P.unit==="%"?v+"%":v+" з "+P.total+" рядків")+" (цього тижня +"+Math.max(0,g)+", план "+P.plan+(P.unit==="%"?"%":" рядків")+"/тиж.)");});
+  ensureProjects();
+  L.push(""); L.push("## Проєкти");
+  const ap=activeProjects(); if(!ap.length) L.push("- немає активних");
+  ap.forEach(P=>{const v=pVal(P);const g=pAt(P,w)-pBefore(P,w);
+    L.push("- ["+catOf(P.cat).name+"] "+P.name+": "+(isPct(P)?v+"%":v+" з "+P.total+" "+P.unit)+" (цього тижня +"+Math.max(0,g)+pUnit(P)+(P.plan?", план "+P.plan+pUnit(P)+"/тиж.":"")+(P.deadline?", дедлайн "+P.deadline:"")+")");});
   L.push(""); L.push("## Відкриті задачі (за пріоритетом)");
   const open=sortedOpen(); if(!open.length) L.push("- немає");
   open.forEach((t,i)=>{const d=daysTo(t.due);
