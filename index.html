@@ -428,6 +428,20 @@ textarea.grat{background:color-mix(in srgb,#B9831C 8%,var(--paper))}
 .t3x{cursor:pointer}
 @keyframes flash{0%{background:color-mix(in srgb,#E2B93B 35%,transparent)}100%{background:transparent}}
 .task.flash{animation:flash 1.8s ease-out}
+.mplan{background:var(--sheet);border:1px solid var(--line);border-radius:14px;padding:12px 16px;margin-bottom:12px}
+.mplan[hidden]{display:none}
+.mph{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-bottom:6px}
+.mph .mpt{font-size:14px;font-weight:600;color:var(--ink)}
+.mph .reset{border:0;background:transparent;color:var(--muted);text-decoration:underline;cursor:pointer;font-size:12px;padding:0}
+.mpr{display:flex;align-items:center;gap:6px;padding:8px 0;border-top:1px solid var(--line);flex-wrap:wrap}
+.mpr .mpx{flex:1;min-width:140px;font-size:14px}
+.mpr.done .mpx{color:var(--muted);text-decoration:line-through}
+.mpr .mpl{font-size:12px;color:var(--muted)}
+.mpr select{color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:5px 8px;background:var(--paper);font-size:13px;min-height:32px}
+.mpb{border:1px solid var(--line);background:transparent;border-radius:8px;padding:5px 10px;font-size:13px;cursor:pointer;color:var(--ink);min-height:32px}
+.mpb.top,.mpb.ex{background:#FFF3C4;color:#5C4700;border-color:#E2B93B;font-weight:600}
+.mpb.x{border:0;color:var(--muted);font-size:16px;padding:4px 8px}
+.fhint{font-size:12px;color:var(--muted);margin-top:4px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 @media (min-width:900px){.wrap{padding-top:28px}}
 </style>
@@ -465,6 +479,7 @@ textarea.grat{background:color-mix(in srgb,#B9831C 8%,var(--paper))}
   </div>
 
   <div id="viewGrid">
+  <section class="mplan" id="mplan" aria-label="Ранковий план" hidden></section>
   <section class="top3" id="top3" aria-label="Топ-3 сьогодні"></section>
   <div class="now" id="nowPanel">
     <section class="now-card">
@@ -500,6 +515,7 @@ textarea.grat{background:color-mix(in srgb,#B9831C 8%,var(--paper))}
     <textarea id="dBad" placeholder="Напр.: термінова задача від керівника"></textarea>
     <label class="f" for="dNext">Фокус на завтра</label>
     <textarea id="dNext" placeholder="1–2 речі, з яких почну завтра"></textarea>
+    <div class="fhint">Кожна думка з нового рядка — зранку стане окремим пунктом плану</div>
     <label class="f" for="dGrat">🙏 За що я вдячний сьогодні</label>
     <textarea id="dGrat" class="grat" placeholder="Людина, момент, результат — навіть дрібниця"></textarea>
     <details class="week-view"><summary>Переглянути весь тиждень</summary><div id="weekJournal"></div></details>
@@ -970,7 +986,71 @@ function linksUI(t,container){
     a.textContent="🔗 "+(l.n?l.n+" · ":"")+hostOf(l.u); a.onclick=e=>e.stopPropagation(); w.appendChild(a); });
   container.appendChild(w);
 }
+/* ---------- morning plan from yesterday's "focus for tomorrow" ---------- */
+const MP_CATS=[["work",/переклад|тендер|керівник|бюджет|power\s*bi|excel|подкаст|фоп|звіт для|аналітик/i],
+  ["uni",/\b(екм|стр|гтк|еп|інс|мен|мтуфа|bd)\b|пар[аиу]|семінар|мкр|контрольн|домашк|презентац|тест|економетр|страхуван|менеджмент|інвестуван/i],
+  ["str",/тренуван|спортзал|\bзал\b|душ|сон\b|підйом|бан[яі]/i],
+  ["fin",/ринк|портфел|овдп|акці|модел|dcf|npv|anki|лекці/i],
+  ["trk",/фінтрекер|трекер|сайт|\b81\b/i],
+  ["rec",/друз|побачен|прогулян|собак|гр[ау]\b|рідн|відпоч/i],
+  ["ph",/телефон|соцмереж|instagram|youtube/i],
+  ["time",/план|задач/i]];
+const guessCat=s=>{for(const [c,re] of MP_CATS) if(re.test(s)) return c; return "other";};
+function mpLines(txt){
+  if(!txt) return [];
+  let parts=txt.split(/\n+/);
+  if(parts.length===1) parts=txt.split(/(?<=[.!?;])\s+/);
+  return parts.map(x=>x.replace(/^\s*(?:[-•*+]|\d+[.)])\s*/,"").replace(/[.;]+$/,"").trim()).filter(x=>x.length>=3).slice(0,8);
+}
+const normT=s=>s.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu," ").replace(/\s+/g," ").trim();
+function mpMatch(line){
+  const n=normT(line); if(n.length<5) return null;
+  return state.tasks.find(t=>{ if(t.done) return false; const m=normT(t.t); return m.length>=5&&(m.includes(n)||n.includes(m)); })||null;
+}
+function mpData(){
+  const y=new Date(); y.setDate(y.getDate()-1);
+  const txt=dayData(isoWeek(y),(y.getDay()+6)%7).next||"";
+  const k=todayStr(); state.mplan=state.mplan||{};
+  const old=new Date(); old.setDate(old.getDate()-35); Object.keys(state.mplan).forEach(d=>{ if(d<dayKey(old)||(!state.mplan[d].n&&d!==k)) delete state.mplan[d]; });
+  const st=state.mplan[k]=state.mplan[k]||{s:{}};
+  return {lines:mpLines(txt),k,st};
+}
+function renderMorningPlan(){
+  const box=$("mplan"); if(!box) return; box.innerHTML=""; box.hidden=true;
+  if(new Date().getHours()>=12) return;
+  const {lines,k,st}=mpData(); if(!lines.length||st.hidden) return;
+  st.n=lines.length;
+  const doneN=lines.filter((_,i)=>st.s[i]).length; if(doneN>=lines.length) return;
+  box.hidden=false;
+  const h=document.createElement("div"); h.className="mph";
+  h.innerHTML='<span class="mpt">🌙 Учора ввечері ти запланував</span><span>'+doneN+' з '+lines.length+' розібрано · <button type="button" class="reset">сховати</button></span>';
+  h.querySelector(".reset").onclick=()=>{st.hidden=1; save(true); renderMorningPlan();};
+  box.appendChild(h);
+  const mk=(line,cat)=>{ const t={id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),t:line,cat,imp:2,due:todayStr(),done:false}; state.tasks.push(t); return t; };
+  lines.forEach((line,i)=>{
+    const r=document.createElement("div"); const s=st.s[i];
+    if(s){ r.className="mpr done"; const lab={top:"🎯 у Топ-3",task:"+ задача",skip:"прибрано",exist:"🎯 наявна задача"}[s]||"";
+      r.innerHTML='<span class="mpx"></span><span class="mpl">'+lab+'</span>'; r.firstChild.textContent=line; box.appendChild(r); return; }
+    const ex=mpMatch(line);
+    r.className="mpr";
+    r.innerHTML='<span class="mpx"></span><select aria-label="Категорія"></select>'+(ex?'<button type="button" class="mpb ex" title="Поставити наявну задачу в Топ-3">📌 є задача</button>':'<button type="button" class="mpb top">🎯 у Топ-3</button><button type="button" class="mpb add">+ задача</button>')+'<button type="button" class="mpb x" aria-label="Прибрати пункт">×</button>';
+    r.firstChild.textContent=line;
+    const sel=r.querySelector("select"); CATS.forEach(c=>{const o=document.createElement("option");o.value=c.id;o.textContent=c.name;sel.appendChild(o);});
+    sel.value=ex?ex.cat:guessCat(line); if(ex) sel.disabled=true;
+    const fin=v=>{ st.s[i]=v; save(); renderTasks(); };
+    if(ex) r.querySelector(".ex").onclick=()=>{ if(!inTop3(ex)&&t3List().length>=3){showStatus("Топ-3 вже заповнено");return;} if(!inTop3(ex)) t3Toggle(ex); st.s[i]="exist"; save(); renderTasks(); };
+    else {
+      r.querySelector(".top").onclick=()=>{ const t=mk(line,sel.value); if(t3List().length<3){ state.top3=state.top3||{}; (state.top3[k]=state.top3[k]||[]).push(t.id); showStatus("Задачу створено і додано в Топ-3"); } else showStatus("Задачу створено. Топ-3 вже заповнено"); fin("top"); };
+      r.querySelector(".add").onclick=()=>{ mk(line,sel.value); showStatus("Задачу створено на сьогодні"); fin("task"); };
+    }
+    r.querySelector(".x").onclick=()=>fin("skip");
+    box.appendChild(r);
+  });
+}
+setInterval(()=>{ const b=$("mplan"); if(b&&!b.hidden&&new Date().getHours()>=12) renderMorningPlan(); },60000);
+
 function renderTop3(){
+  renderMorningPlan();
   const box=$("top3"); if(!box) return; box.innerHTML="";
   const k=todayStr(), tasks=t3Tasks(k), quick=qTasks(k), all=tasks.concat(quick), doneN=all.filter(t=>t.done).length;
   const head=document.createElement("div"); head.className="t3h";
@@ -1949,6 +2029,8 @@ function buildReport(){
       L.push("- Вода 2 л: "+c+"/"+nDays+" (у середньому "+Math.round(sum/nDays)+" мл на день)"); return; }
     let c=0;for(let i=0;i<nDays;i++){const d=new Date(weekStart);d.setDate(d.getDate()+i);if(rtDone(it.id,dayKey(d)))c++;}
     L.push("- "+it.t+": "+c+"/"+nDays+(isCurW?" (серія "+rtStreak(it.id)+" дн.)":""));});
+  if(state.mplan){let n=0,pr=0,tp=0;for(let i=0;i<nDays;i++){const d=new Date(weekStart);d.setDate(d.getDate()+i);const m=state.mplan[dayKey(d)];if(!m||!m.n)continue;n+=m.n;Object.values(m.s||{}).forEach(v=>{pr++;if(v==="top"||v==="exist")tp++;});}
+    if(n) L.push("- Ранковий план: розібрано "+pr+" з "+n+" пунктів, у Топ-3 потрапило "+tp);}
   if(state.top3){let tot=0,dn=0,days=0;for(let i=0;i<nDays;i++){const d=new Date(weekStart);d.setDate(d.getDate()+i);const ts=t3Tasks(dayKey(d));if(ts.length)days++;tot+=ts.length;dn+=ts.filter(t=>t.done).length;}
     if(tot) L.push("- Топ-3 дня: виконано "+dn+" з "+tot+" (днів з вибраним Топ-3: "+days+")");
     let qt=0,qd=0; for(let i=0;i<nDays;i++){const d=new Date(weekStart);d.setDate(d.getDate()+i);const qs=qTasks(dayKey(d));qt+=qs.length;qd+=qs.filter(t=>t.done).length;}
