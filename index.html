@@ -469,6 +469,22 @@ textarea.grat{background:color-mix(in srgb,#B9831C 8%,var(--paper))}
 .prjd{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--line);font-size:14px}
 .prjd span:first-child{flex:1;min-width:140px}
 .prjd .pm{font-size:12px;color:var(--muted)}
+.conflict{background:var(--sheet);border:1.5px solid #E2B93B;border-radius:14px;padding:12px 16px;margin-bottom:12px}
+.conflict[hidden]{display:none}
+.cfh{display:flex;gap:10px;align-items:flex-start}
+.cfh .cfi{font-size:18px;line-height:1.3}
+.cfh b{font-weight:600}
+.cfh p{margin:2px 0 0;font-size:14px;color:var(--muted)}
+.cfa{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 0 28px}
+.cfa .cf-dl{background:#FFF3C4;color:#5C4700;border-color:#E2B93B;font-weight:600}
+.bkh{font-size:12px;color:var(--muted);margin:10px 0 4px}
+.bkr{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line);font-size:14px;flex-wrap:wrap}
+.bkr .bkd{flex:1;min-width:150px}
+.bkr .bkm{font-size:12px;color:var(--muted)}
+.bkr .bkc{font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:2px 10px}
+#bkList .bkr.more{display:none}
+#bkList.all .bkr.more{display:flex}
+.hint.warn{color:#A88A1A}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 @media (min-width:900px){.wrap{padding-top:28px}}
 </style>
@@ -498,6 +514,7 @@ textarea.grat{background:color-mix(in srgb,#B9831C 8%,var(--paper))}
       <div class="cal-day" id="calDay"></div>
     </div>
   </header>
+  <div class="conflict" id="conflictBar" hidden role="alert"></div>
 
   <div class="tabs" role="tablist">
     <button role="tab" id="tabGrid" aria-selected="true">Сітка</button>
@@ -638,7 +655,10 @@ textarea.grat{background:color-mix(in srgb,#B9831C 8%,var(--paper))}
 
   <details class="card backup" id="xferCard">
     <summary>Резервна копія</summary>
-    <p class="hint">Синхронізація вже зберігає все в базі. Раз на місяць завантаж файл копії про всяк випадок. «Скопіювати / Вставити дані» потрібні лише для перенесення в іншу версію сітки.</p>
+    <p class="hint warn" id="protectNote" hidden></p>
+    <div class="bkh">Автокопії в хмарі · щодня · 14 днів</div>
+    <div id="bkList"></div>
+    <p class="hint">Ручні копії: файл на пристрій або перенесення в іншу версію сітки.</p>
     <div class="r" style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="xbtn" id="xCopy">Скопіювати мої дані</button>
       <button class="xbtn" id="xPasteOpen">Вставити дані</button>
@@ -2223,36 +2243,205 @@ const clearDirty=()=>{try{localStorage.removeItem(DIRTY)}catch(e){}};
 function setSync(kind){
   const dot=$("syncDot"), t=$("storeTxt"), b=$("acctBtn");
   dot.className="sync-dot"+(kind==="ok"?" ok":kind==="offline"?" off":"");
-  if(kind==="ok"){t.textContent="Синхронізовано · "+(session&&session.user.email||"");b.hidden=false;b.textContent="Вийти";}
+  if(kind==="ok"){const bs=(typeof getBase==="function")&&getBase(); t.textContent="Синхронізовано"+(!legacy&&bs&&bs.rev?" · версія "+bs.rev:"")+" · "+(session&&session.user.email||"");b.hidden=false;b.textContent="Вийти";}
   else if(kind==="offline"){t.textContent="Немає зв'язку. Зміни збережено тут і синхронізуються пізніше";b.hidden=true;}
   else if(kind==="signedout"){t.textContent="Ти не увійшов: дані лише на цьому пристрої";b.hidden=false;b.textContent="Увійти";}
   else {t.textContent="Синхронізацію не налаштовано: дані лише на цьому пристрої. Раз на тиждень роби резервну копію.";b.hidden=true;}
 }
+/* ---------- protected sync: versions, 3-way merge, conflicts ---------- */
+const BASE="sitka9x9-base", CONFLICT="sitka9x9-conflict";
+let legacy=false, backupsOff=false;
+const uid=()=>session&&session.user.id;
+function getBase(){ try{return JSON.parse(localStorage.getItem(BASE)||"null");}catch(e){return null;} }
+function setBase(rev,data){ try{localStorage.setItem(BASE,JSON.stringify({rev,data}));}catch(e){} }
+const clone=x=>x===undefined?undefined:JSON.parse(JSON.stringify(x));
+const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+const isObj=x=>!!x&&typeof x==="object"&&!Array.isArray(x);
+const arrById=a=>Array.isArray(a)&&a.every(x=>isObj(x)&&x.id!=null);
+function merge3(b,l,r,path,conf){
+  if(same(l,r)) return clone(r);
+  if(same(l,b)) return clone(r);
+  if(same(r,b)) return clone(l);
+  if(isObj(l)&&isObj(r)){
+    const out={}, bb=isObj(b)?b:{};
+    new Set([...Object.keys(bb),...Object.keys(l),...Object.keys(r)]).forEach(k=>{
+      const v=merge3(bb[k],l[k],r[k],path.concat(k),conf); if(v!==undefined) out[k]=v; });
+    return out;
+  }
+  if(arrById(l)&&arrById(r)&&(l.length||r.length)){
+    const m=a=>{const o={};(Array.isArray(a)?a:[]).forEach(x=>{if(isObj(x)&&x.id!=null)o[x.id]=x;});return o;};
+    const bm=m(b),lm=m(l),rm=m(r), order=r.map(x=>x.id); l.forEach(x=>{if(!order.includes(x.id))order.push(x.id);});
+    const out=[]; order.forEach(id=>{ const v=merge3(bm[id],lm[id],rm[id],path.concat({id}),conf); if(v!==undefined) out.push(v); });
+    return out;
+  }
+  conf.push({path,local:clone(l)}); return clone(r);
+}
+function setAtPath(obj,path,val){
+  let cur=obj;
+  for(let i=0;i<path.length-1;i++){
+    const seg=path[i], next=path[i+1];
+    let child=typeof seg==="object"?(Array.isArray(cur)?cur.find(x=>x&&x.id===seg.id):undefined):cur[seg];
+    if(child===undefined){ if(typeof seg==="object") return; child=typeof next==="object"?[]:{}; cur[seg]=child; }
+    cur=child;
+  }
+  const last=path[path.length-1];
+  if(typeof last==="object"){ if(!Array.isArray(cur)) return; const i=cur.findIndex(x=>x&&x.id===last.id);
+    if(val===undefined){ if(i>=0) cur.splice(i,1); } else if(i>=0) cur[i]=val; else cur.push(val); }
+  else { if(val===undefined) delete cur[last]; else cur[last]=val; }
+}
+function describePath(p){
+  const s0=p[0];
+  if(s0==="weekNotes"&&p[2]==="days"){ try{ const [y,w]=p[1].split("-W").map(Number); const d=new Date(y,0,4); const dow=(d.getDay()+6)%7; d.setDate(d.getDate()-dow+(w-1)*7+Number(p[3])); return "журнал "+fmt(d); }catch(e){ return "журнал"; } }
+  if(s0==="tasks"&&typeof p[1]==="object"){ const t=state.tasks.find(x=>x.id===p[1].id); return "задача «"+(t?t.t:"…")+"»"; }
+  if(s0==="ideas"&&typeof p[1]==="object"){ const t=(state.ideas||[]).find(x=>x.id===p[1].id); return "ідея «"+(t?t.t:"…")+"»"; }
+  if(s0==="projects"||s0==="proj") return "проєкт";
+  return ({notes:"нотатка до дії",checks:"відмітки сітки",routine:"рутина",top3:"Топ-3",quick:"швидкі задачі",goal:"ціль",pillarNotes:"нотатка опори",texts:"текст дії"})[s0]||String(s0);
+}
+function saveConflict(localSnap,items,kind){
+  const c={at:Date.now(),kind,local:localSnap,items:(items||[]).map(x=>({path:x.path,local:x.local}))};
+  try{localStorage.setItem(CONFLICT,JSON.stringify(c))}catch(e){}
+  renderConflict();
+}
+function downloadJSON(obj,name){
+  const blob=new Blob([JSON.stringify(obj,null,1)],{type:"application/json"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=name;
+  document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);
+}
+function renderConflict(){
+  const bar=$("conflictBar"); if(!bar) return; let c=null;
+  try{c=JSON.parse(localStorage.getItem(CONFLICT)||"null")}catch(e){}
+  if(!c){bar.hidden=true;bar.innerHTML="";return;}
+  bar.hidden=false;
+  const names=[...new Set(c.items.map(x=>describePath(x.path)))];
+  const txt=c.kind==="unknown"
+    ?"Цей пристрій мав зміни, які не вдалося звірити з хмарою. Показую актуальні дані з хмари, а копію цього пристрою збережено окремо."
+    :"Інший пристрій уже зберіг новіші дані. Зміни з цього пристрою додано автоматично, але в "+names.length+" "+pl(names.length,"місці","місцях","місцях")+" версії відрізнялись, і залишено варіант з хмари: "+(names.slice(0,4).join(", ")+(names.length>4?"…":"")).replace(/\.$/,"")+".";
+  bar.innerHTML='<div class="cfh"><span class="cfi" aria-hidden="true">⚠️</span><div><b>Інший пристрій уже зберіг новіші дані</b><p></p></div></div><div class="cfa"><button type="button" class="xbtn cf-dl">Завантажити мою копію</button>'+(c.kind==="unknown"?"":'<button type="button" class="xbtn cf-take">Взяти мій варіант</button>')+'<button type="button" class="xbtn cf-x">Закрити</button></div>';
+  bar.querySelector("p").textContent=txt;
+  bar.querySelector(".cf-dl").onclick=()=>downloadJSON(c.local,"sitka-device-copy-"+todayStr()+".json");
+  if(bar.querySelector(".cf-take")) bar.querySelector(".cf-take").onclick=()=>{
+    if(!confirm("Замінити варіант з хмари на варіант з цього пристрою у цих місцях: "+names.join(", ")+"?")) return;
+    c.items.forEach(x=>setAtPath(state,x.path,x.local));
+    try{localStorage.removeItem(CONFLICT)}catch(e){} save(); render(); renderConflict(); showStatus("Взято варіант з цього пристрою");
+  };
+  bar.querySelector(".cf-x").onclick=()=>{ try{localStorage.removeItem(CONFLICT)}catch(e){} renderConflict(); };
+}
+function adopt(remote,rev){
+  merge(remote); if(!Array.isArray(state.tasks)) state.tasks=seedTasks();
+  setBase(rev,clone(remote)); try{localStorage.setItem(LS,JSON.stringify(state))}catch(e){}
+  clearDirty(); render();
+}
+const errMsg=e=>((e&&e.message)||"")+" "+((e&&e.code)||"")+" "+((e&&e.details)||"");
+const isRevMissing=e=>/rev/i.test(errMsg(e))&&/column|schema cache|does not exist|PGRST204|42703/i.test(errMsg(e));
+const isStale=e=>/STALE_WRITE|P0001/.test(errMsg(e));
 async function push(){
   if(!sb||!session){pending=false;return;}
   if(pushing){clearTimeout(saveTimer);saveTimer=setTimeout(push,600);return;}
-  pushing=true; const ts=new Date().toISOString();
-  let error=null;
-  try{ ({error}=await sb.from("planner").upsert({user_id:session.user.id,data:JSON.parse(JSON.stringify(state)),updated_at:ts})); }catch(e){error=e;}
-  pushing=false; pending=false;
-  if(error){setSync("offline");return;}
-  lastRemoteTs=Date.parse(ts); clearDirty(); setSync("ok"); showStatus("Синхронізовано");
+  pushing=true; const ts=new Date().toISOString(), data=clone(state), base=getBase(), rev=((base&&base.rev)||0)+1;
+  let res;
+  try{
+    if(legacy) res=await sb.from("planner").upsert({user_id:uid(),data,updated_at:ts});
+    else res=await sb.from("planner").update({data,updated_at:ts,rev}).eq("user_id",uid()).select("rev");
+  }catch(e){res={error:e};}
+  pushing=false;
+  if(res.error){
+    pending=false;
+    if(!legacy&&isRevMissing(res.error)){ legacy=true; renderProtectNote(); return push(); }
+    if(!legacy&&isStale(res.error)){ await pull(true); return; }
+    setSync("offline"); return;
+  }
+  let newRev=legacy?0:rev;
+  if(!legacy&&(!res.data||!res.data.length)){
+    let ins; try{ ins=await sb.from("planner").insert({user_id:uid(),data,updated_at:ts,rev:1}); }catch(e){ins={error:e};}
+    if(ins.error){ pending=false; await pull(true); return; }
+    newRev=1;
+  }
+  setBase(newRev,data); lastRemoteTs=Date.parse(ts);
+  if(same(state,data)){ pending=false; clearDirty(); }
+  setSync("ok"); showStatus("Синхронізовано");
+  maybeBackup(data,newRev);
 }
 async function pull(force){
-  if(!sb||!session||pending||pushing) return;
-  let res; try{ res=await sb.from("planner").select("data,updated_at").eq("user_id",session.user.id).maybeSingle(); }catch(e){res={error:e};}
-  if(res.error){setSync("offline");return;}
-  if(!res.data){ await push(); return; }
-  if(isDirty()){ await push(); return; }
-  const rts=Date.parse(res.data.updated_at);
-  if(force||rts>lastRemoteTs){
-    const a=document.activeElement;
-    if(!force&&a&&(a.tagName==="TEXTAREA"||(a.tagName==="INPUT"&&a.type!=="checkbox"))){setSync("ok");return;}
-    lastRemoteTs=rts; merge(res.data.data); if(!Array.isArray(state.tasks))state.tasks=seedTasks();
-    try{localStorage.setItem(LS,JSON.stringify(state))}catch(e){}
-    render();
+  if(!sb||!session||pushing) return;
+  if(pending&&!force) return;
+  let res; try{ res=await sb.from("planner").select(legacy?"data,updated_at":"data,updated_at,rev").eq("user_id",uid()).maybeSingle(); }catch(e){res={error:e};}
+  if(res.error){ if(!legacy&&isRevMissing(res.error)){ legacy=true; renderProtectNote(); return pull(force); } setSync("offline"); return; }
+  if(!res.data){
+    if(legacy){ await push(); return; }
+    const data=clone(state); let ins; try{ ins=await sb.from("planner").insert({user_id:uid(),data,rev:1,updated_at:new Date().toISOString()}); }catch(e){ins={error:e};}
+    if(!ins.error){ setBase(1,data); clearDirty(); setSync("ok"); } else setSync("offline");
+    return;
   }
+  const a=document.activeElement, typing=!!a&&(a.tagName==="TEXTAREA"||(a.tagName==="INPUT"&&a.type!=="checkbox"&&a.type!=="range"));
+  const remote=res.data.data, dirty=isDirty();
+  if(legacy){
+    if(dirty){ await push(); return; }
+    const rts=Date.parse(res.data.updated_at);
+    if(force||rts>lastRemoteTs){ if(!force&&typing){setSync("ok");return;} lastRemoteTs=rts; adopt(remote,0); }
+    setSync("ok"); return;
+  }
+  const rrev=res.data.rev||0, base=getBase();
+  if(base&&rrev===base.rev){
+    if(dirty) await push(); else if(force&&!same(state,remote)) adopt(remote,rrev);
+    setSync("ok"); return;
+  }
+  if(!dirty){ if(typing&&!force){ setSync("ok"); return; } adopt(remote,rrev); setSync("ok"); return; }
+  const localSnap=clone(state);
+  if(!base){ saveConflict(localSnap,[],"unknown"); adopt(remote,rrev); setSync("ok"); return; }
+  const conf=[], merged=merge3(base.data,localSnap,remote,[],conf);
+  setBase(rrev,clone(remote)); merge(merged); if(!Array.isArray(state.tasks)) state.tasks=seedTasks();
+  try{localStorage.setItem(LS,JSON.stringify(state))}catch(e){}
+  render();
+  if(conf.length) saveConflict(localSnap,conf,"merge");
+  if(!same(state,remote)){ markDirty(); pending=true; await push(); } else clearDirty();
   setSync("ok");
+}
+/* daily cloud backups */
+function snapMeta(d){
+  const tasks=(d.tasks||[]).length; let jd=0;
+  Object.values(d.weekNotes||{}).forEach(w=>Object.values((w&&w.days)||{}).forEach(x=>{ if(x&&(x.good||x.bad||x.next||x.grat)) jd++; }));
+  return {tasks,journal:jd};
+}
+async function maybeBackup(data,rev){
+  if(legacy||backupsOff||!sb||!session) return;
+  let last=0; try{last=Number(localStorage.getItem("sitka9x9-bk-ts")||0)}catch(e){}
+  if(Date.now()-last<10*60*1000) return;
+  try{localStorage.setItem("sitka9x9-bk-ts",String(Date.now()))}catch(e){}
+  let r; try{ r=await sb.from("planner_backups").upsert({user_id:uid(),day:todayStr(),data,rev,meta:snapMeta(data),updated_at:new Date().toISOString()},{onConflict:"user_id,day"}); }catch(e){r={error:e};}
+  if(r.error){ backupsOff=true; renderProtectNote(); return; }
+  const old=new Date(); old.setDate(old.getDate()-14);
+  try{ await sb.from("planner_backups").delete().eq("user_id",uid()).lt("day",dayKey(old)); }catch(e){}
+}
+function renderProtectNote(){
+  const n=$("protectNote"); if(!n) return;
+  n.textContent=legacy?"⚠️ Захист версій ще не активний: виконай SQL у Supabase (крок 1 інструкції).":backupsOff?"⚠️ Автокопії стануть доступні після SQL у Supabase.":"";
+  n.hidden=!n.textContent;
+}
+async function loadBackups(){
+  const box=$("bkList"); if(!box) return;
+  if(!sb||!session){ box.innerHTML='<div class="empty">Автокопії доступні після входу.</div>'; return; }
+  box.innerHTML='<div class="empty">Завантаження…</div>';
+  let r; try{ r=await sb.from("planner_backups").select("day,rev,updated_at,meta").eq("user_id",uid()).order("day",{ascending:false}).limit(14); }catch(e){r={error:e};}
+  if(r.error){ backupsOff=true; renderProtectNote(); box.innerHTML='<div class="empty">Автокопії стануть доступні після SQL у Supabase.</div>'; return; }
+  const rows=r.data||[]; box.innerHTML="";
+  if(!rows.length){ box.innerHTML='<div class="empty">Перша автокопія з\'явиться після наступного збереження.</div>'; return; }
+  const today=todayStr();
+  rows.forEach((b,i)=>{
+    const d=new Date(b.day+"T00:00"), wd=["Нд","Пн","Вт","Ср","Чт","Пт","Сб"][d.getDay()];
+    const m=b.meta||{}, row=document.createElement("div"); row.className="bkr"+(i>=3?" more":"");
+    row.innerHTML='<span class="bkd"></span><span class="bkm">'+(m.tasks!=null?m.tasks+" "+pl(m.tasks,"задача","задачі","задач")+" · "+m.journal+" "+pl(m.journal,"день","дні","днів")+" журналу":"")+'</span>'+(b.day===today?'<span class="bkc">поточна</span>':'<button type="button" class="xbtn bk-r">Відновити</button>');
+    row.querySelector(".bkd").textContent=wd+", "+d.toLocaleDateString("uk-UA",{day:"numeric",month:"long"})+(b.day===today?" · сьогодні":"");
+    const btn=row.querySelector(".bk-r");
+    if(btn) btn.onclick=async()=>{
+      if(!confirm("Відновити дані зі знімка за "+row.querySelector(".bkd").textContent+"? Поточні дані теж залишаться в сьогоднішній автокопії.")) return;
+      let q; try{ q=await sb.from("planner_backups").select("data").eq("user_id",uid()).eq("day",b.day).maybeSingle(); }catch(e){q={error:e};}
+      if(q.error||!q.data){ showStatus("Не вдалося завантажити копію"); return; }
+      merge(q.data.data); if(!Array.isArray(state.tasks)) state.tasks=seedTasks(); save(); render(); showStatus("Дані відновлено");
+    };
+    box.appendChild(row);
+  });
+  if(rows.length>3){ const mb=document.createElement("button"); mb.type="button"; mb.className="linkbtn"; mb.textContent="ще "+(rows.length-3)+" "+pl(rows.length-3,"копія","копії","копій")+" ▾";
+    mb.onclick=()=>{ box.classList.add("all"); mb.remove(); }; box.appendChild(mb); }
 }
 function showAuth(){ $("auth").classList.add("open"); $("authMsg").textContent=""; }
 function hideAuth(){ $("auth").classList.remove("open"); }
@@ -2312,6 +2501,8 @@ async function initSync(){
 }
 setSync("local");
 initSync().catch(()=>setSync(session?"offline":"local"));
+$("xferCard").addEventListener("toggle",()=>{ if($("xferCard").open) loadBackups(); });
+renderConflict();
 
 /* ---------- offline app ---------- */
 if("serviceWorker" in navigator){window.addEventListener("load",()=>{navigator.serviceWorker.register("sw.js").catch(()=>{});});}
