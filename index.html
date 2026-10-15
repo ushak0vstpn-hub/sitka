@@ -533,6 +533,24 @@ textarea.grat{background:color-mix(in srgb,#B9831C 8%,var(--paper))}
 .onbnav .addbtn{margin-left:auto;background:var(--acc-soft);color:var(--acc-ink);border:1px solid var(--acc)}
 [data-field][hidden]{display:none!important}
 [hidden]{display:none!important}
+.authtabs{margin-bottom:12px;width:100%}.authtabs button{flex:1}
+.invok{font-size:13px;border-radius:10px;padding:8px 12px;margin-bottom:10px;background:color-mix(in srgb,#2F8A78 18%,var(--sheet));color:var(--ink)}
+.auth #authInvite{width:100%}
+.tips{background:var(--sheet);border:1.5px solid var(--acc);border-radius:14px;padding:12px 16px;margin-bottom:12px}
+.tph{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.tph b{font-weight:600}
+.tph .reset{border:0;background:transparent;color:var(--muted);text-decoration:underline;cursor:pointer;font-size:12px}
+.tpt{margin:8px 0;font-size:15px;line-height:1.5}
+.tpn{display:flex;align-items:center;gap:6px}
+.tpd{display:inline-flex;gap:4px}.tpd i{width:7px;height:7px;border-radius:50%;background:var(--line);display:inline-block}.tpd i.on{background:var(--acc)}
+.tpn .addbtn{margin-left:0;background:var(--acc-soft);color:var(--acc-ink);border:1px solid var(--acc)}
+.ivr{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--line)}
+.ivr code{font-size:14px;padding:4px 8px;border:1px solid var(--line);border-radius:8px}
+.ivr .ivu{flex:1;font-size:12px;color:var(--muted);min-width:120px}
+.ivr.off code{opacity:.5}
+.ivadd{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;padding-top:10px;border-top:1px solid var(--line)}
+.ivadd .setin{flex:1;min-width:150px;margin:0}
+.ivadd select{color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--paper);min-height:40px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 @media (min-width:900px){.wrap{padding-top:28px}}
 </style>
@@ -573,6 +591,7 @@ textarea.grat{background:color-mix(in srgb,#B9831C 8%,var(--paper))}
   </div>
 
   <div id="viewGrid">
+  <section class="tips" id="tipsCard" hidden aria-label="Підказки"></section>
   <section class="today-h" id="todayHead" hidden></section>
   <section class="mplan" id="mplan" aria-label="Ранковий план" hidden></section>
   <section class="top3" id="top3" aria-label="Топ-3 сьогодні"></section>
@@ -735,10 +754,13 @@ textarea.grat{background:color-mix(in srgb,#B9831C 8%,var(--paper))}
 
 <div class="auth" id="auth" role="dialog" aria-modal="true" aria-labelledby="authTitle">
   <div class="box">
-    <h2 id="authTitle">Вхід у Сітку 9×9</h2>
-    <p>Увійди з однаковою поштою на MacBook та iPhone, і дані синхронізуються між ними.</p>
+    <div class="seg authtabs" id="authTabs" role="group" aria-label="Вхід або реєстрація"><button type="button" data-m="in">Увійти</button><button type="button" data-m="up">Створити акаунт</button></div>
+    <h2 id="authTitle">Вхід</h2>
+    <p id="authLead"></p>
     <input type="email" id="authEmail" placeholder="Пошта" autocomplete="email" inputmode="email">
-    <input type="password" id="authPass" placeholder="Пароль (мінімум 6 символів)" autocomplete="current-password">
+    <input type="password" id="authPass" placeholder="Пароль (від 7 символів)" autocomplete="current-password">
+    <input type="text" id="authInvite" placeholder="Код запрошення" autocomplete="off" hidden>
+    <div class="invok" id="authInviteOk" hidden>✓ Код запрошення з посилання</div>
     <div class="row2">
       <button class="primary" id="authIn">Увійти</button>
       <button class="secondary" id="authUp">Створити акаунт</button>
@@ -1053,7 +1075,7 @@ function ensureSettings(){
   const used=(state.tasks||[]).length>0||Object.keys(state.checks||{}).length>0;
   const all={}; FEATURES.forEach(f=>all[f.k]=true);
   state.settings=used
-    ?{mode:"grid",onboarded:true,features:all,cats:[],accent:"yellow",fields:{time:true,dur:true,imp:true,rep:true},title:""}
+    ?{mode:"grid",onboarded:true,hasGrid:true,features:all,cats:[],accent:"yellow",fields:{time:true,dur:true,imp:true,rep:true},title:""}
     :{mode:"diary",onboarded:false,features:{top3:true,calendar:true,journal:false,routine:false,ideas:false,projects:false,heatmap:false,report:false,grid:false},
       cats:JSON.parse(JSON.stringify(DEFAULT_CATS)),accent:"yellow",fields:{time:true,dur:true,imp:true,rep:true},title:"Мій щоденник"};
   return true;
@@ -1261,8 +1283,8 @@ function renderSettings(){
   const changed=(re)=>{ save(); rebuildCats(); applyFeatures(); render(); if(re) renderSettings(); };
   const t=sec("Назва"); const ti=document.createElement("input"); ti.className="setin"; ti.value=s.title||""; ti.placeholder="Сітка 9×9"; ti.oninput=()=>{ s.title=ti.value; save(); applyFeatures(); }; t.appendChild(ti);
   const f=sec("Що показувати","Вимкнене ховається з екрана. Дані не зникають."); const fb=document.createElement("div"); f.appendChild(fb);
-  featureCards(fb,s.features,()=>{ if(s.mode==="diary"&&s.features.grid===true){} changed(true); },s.mode==="diary");
-  if(s.mode==="grid"||s.features.grid){ const m=sec("Головний екран"); const seg=document.createElement("div"); seg.className="seg";
+  featureCards(fb,s.features,()=>changed(true),!s.hasGrid);
+  if(s.hasGrid){ const m=sec("Головний екран"); const seg=document.createElement("div"); seg.className="seg";
     [["grid","Сітка"],["diary","Сьогодні (задачі)"]].forEach(([k,l])=>{const b=document.createElement("button");b.type="button";b.textContent=l;b.setAttribute("aria-pressed",s.mode===k);b.onclick=()=>{s.mode=k;changed(true);};seg.appendChild(b);}); m.appendChild(seg); }
   const c=sec("Мої категорії","Торкнись емодзі чи назви, щоб змінити. Колір — кружечки праворуч."); const cb=document.createElement("div"); c.appendChild(cb);
   if(!s.cats||!s.cats.length){ const p=document.createElement("p"); p.className="hint"; p.textContent="Зараз категорії — це опори сітки. Можна створити власні:"; cb.appendChild(p);
@@ -1271,6 +1293,8 @@ function renderSettings(){
   const fl=sec("Поля нової задачі","Які поля показувати у формі «Нова задача»."); const fw=document.createElement("div"); fw.className="chips";
   [["time","Час"],["dur","Тривалість"],["imp","Важливість"],["rep","Повтор"]].forEach(([k,l])=>{const b=document.createElement("button");b.type="button";b.textContent=l;b.setAttribute("aria-pressed",s.fields[k]!==false);b.onclick=()=>{s.fields[k]=s.fields[k]===false;changed(true);};fw.appendChild(b);}); fl.appendChild(fw);
   const a=sec("Колір акценту"); const ab=document.createElement("div"); a.appendChild(ab); accentPicker(ab,()=>{save();renderSettings();});
+  const tp=sec("Підказки"); const tb=document.createElement("button"); tb.type="button"; tb.className="xbtn"; tb.textContent="Показати підказки знову"; tb.onclick=()=>{ s.tips=0; save(); closeSettings(); showView("grid"); renderTips(); }; tp.appendChild(tb);
+  const iv=sec("Запросити","Створи код і надішли посилання. Зареєструватися можна лише з дійсним кодом."); const ivb=document.createElement("div"); iv.appendChild(ivb); renderInvites(ivb);
   const ai=sec("Інструкції для ШІ","Встав у інструкції проєкту в Claude або ChatGPT. Категорії підставляються твої.");
   const row=document.createElement("div"); row.className="report-actions";
   const b1=document.createElement("button"); b1.type="button"; b1.className="xbtn dark"; b1.textContent="Скопіювати промпт для задач"; b1.onclick=()=>copyText(tasksPrompt(),"Промпт для задач");
@@ -1290,14 +1314,14 @@ function renderOnb(){
   h.querySelector("p").textContent=["Обери, що показувати. Решту можна ввімкнути пізніше в налаштуваннях ⚙️.","Під них розкладатимуться задачі. Можна змінити назви, емодзі й кольори.","Обери колір акценту і як назвати свій простір."][onbStep];
   box.appendChild(h);
   const body=document.createElement("div"); box.appendChild(body);
-  if(onbStep===0) featureCards(body,s.features,()=>renderOnb(),s.mode==="diary");
+  if(onbStep===0) featureCards(body,s.features,()=>renderOnb(),!s.hasGrid);
   if(onbStep===1) catEditor(body,s.cats,()=>{rebuildCats(); renderOnb();});
   if(onbStep===2){ const ti=document.createElement("input"); ti.className="setin"; ti.value=s.title||""; ti.placeholder="Мій щоденник"; ti.oninput=()=>{s.title=ti.value;};
     const ab=document.createElement("div"); accentPicker(ab,()=>renderOnb()); body.append(ti,ab); }
   const nav=document.createElement("div"); nav.className="onbnav";
   if(onbStep>0){ const b=document.createElement("button"); b.type="button"; b.className="xbtn"; b.textContent="Назад"; b.onclick=()=>{onbStep--;renderOnb();}; nav.appendChild(b); }
   const n=document.createElement("button"); n.type="button"; n.className="addbtn"; n.textContent=onbStep<2?"Далі":"Готово";
-  n.onclick=()=>{ if(onbStep<2){onbStep++;renderOnb();return;} s.onboarded=true; $("onb").classList.remove("open"); save(); rebuildCats(); applyFeatures(); render(); showStatus("Готово! Додай першу задачу ✨"); setTimeout(()=>$("qaIn")&&$("qaIn").focus(),300); };
+  n.onclick=()=>{ if(onbStep<2){onbStep++;renderOnb();return;} s.onboarded=true; s.tips=0; $("onb").classList.remove("open"); save(); rebuildCats(); applyFeatures(); render(); showStatus("Готово! Додай першу задачу ✨"); setTimeout(()=>$("qaIn")&&$("qaIn").focus(),300); };
   nav.appendChild(n); box.appendChild(nav);
 }
 
@@ -2170,7 +2194,8 @@ function migrateV2(){
 
 function render(){
   if(ensureSettings()) setTimeout(()=>save(true),0);
-  rebuildCats(); applyAccent(); applyFeatures();
+  if(repairSettings()) setTimeout(()=>save(true),0);
+  rebuildCats(); applyAccent(); applyFeatures(); renderTips();
   if(migrateV2()) setTimeout(()=>save(true),0);
   if(migrateRoutineV2()) setTimeout(()=>save(true),0);
   const ws=weekStart, we=new Date(ws);we.setDate(we.getDate()+6);
@@ -2560,6 +2585,92 @@ function setSync(kind){
   else if(kind==="signedout"){t.textContent="Ти не увійшов: дані лише на цьому пристрої";b.hidden=false;b.textContent="Увійти";}
   else {t.textContent="Синхронізацію не налаштовано: дані лише на цьому пристрої. Раз на тиждень роби резервну копію.";b.hidden=true;}
 }
+/* ---------- account ownership of local data ---------- */
+const OWNER="sitka9x9-owner";
+function freshState(){ return {v:1,goal:"",texts:{},checks:{},notes:{},pillarNotes:{},weekNotes:{},proj:{},projHist:{},tasks:[]}; }
+function resetLocal(){
+  [LS,BASE,DIRTY,CONFLICT,"sitka9x9-bk-ts","sitka9x9-tf"].forEach(k=>{try{localStorage.removeItem(k)}catch(e){}});
+  state=freshState(); ensureRoutine(); pending=false; clearTimeout(saveTimer);
+}
+function checkOwner(){
+  if(!session) return; let o=null; try{o=localStorage.getItem(OWNER)}catch(e){}
+  if(o&&o!==session.user.id){ resetLocal(); renderConflict(); }
+  try{localStorage.setItem(OWNER,session.user.id)}catch(e){}
+}
+/* ---------- invites ---------- */
+let inviteFromUrl=null;
+try{ const q=new URLSearchParams(location.search).get("invite"); if(q) inviteFromUrl=q.trim(); }catch(e){}
+let authMode=inviteFromUrl?"up":"in";
+function renderAuthMode(){
+  const up=authMode==="up";
+  document.querySelectorAll("#authTabs button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.m===authMode));
+  $("authTitle").textContent=up?"Створити акаунт":"Вхід";
+  $("authLead").textContent=up?(inviteFromUrl?"Тебе запросили 💌 Створи акаунт — далі все налаштуєш під себе.":"Для реєстрації потрібен код запрошення."):"Увійди з однаковою поштою на всіх пристроях, і дані синхронізуються між ними.";
+  $("authInvite").hidden=!up||!!inviteFromUrl; $("authInviteOk").hidden=!up||!inviteFromUrl;
+  $("authIn").hidden=up; $("authUp").hidden=!up; $("authUp").className=up?"primary":"secondary";
+  $("authPass").autocomplete=up?"new-password":"current-password";
+  $("authMsg").textContent="";
+}
+function randCode(){ return "sitka-"+Math.random().toString(36).slice(2,6); }
+async function renderInvites(box){
+  box.innerHTML='<div class="empty">Завантаження…</div>';
+  if(!sb||!session){ box.innerHTML='<div class="empty">Запрошення доступні після входу.</div>'; return; }
+  let r; try{ r=await sb.from("invites").select("code,max_uses,uses,active,created_at").eq("owner",session.user.id).order("created_at",{ascending:false}); }catch(e){r={error:e};}
+  if(r.error){ box.innerHTML='<div class="empty">Запрошення стануть доступні після SQL у Supabase.</div>'; return; }
+  box.innerHTML="";
+  const link=c=>location.origin+location.pathname+"?invite="+encodeURIComponent(c);
+  (r.data||[]).forEach(iv=>{
+    const row=document.createElement("div"); row.className="ivr"+(iv.active&&iv.uses<iv.max_uses?"":" off");
+    row.innerHTML='<code></code><span class="ivu">використано '+iv.uses+' з '+iv.max_uses+(iv.active?"":" · вимкнено")+'</span><button type="button" class="xbtn dark iv-copy">Скопіювати посилання</button><button type="button" class="xbtn iv-tog">'+(iv.active?"Вимкнути":"Увімкнути")+'</button>';
+    row.querySelector("code").textContent=iv.code;
+    row.querySelector(".iv-copy").onclick=()=>copyText(link(iv.code),"Посилання-запрошення");
+    row.querySelector(".iv-tog").onclick=async()=>{ await sb.from("invites").update({active:!iv.active}).eq("code",iv.code); renderInvites(box); };
+    box.appendChild(row);
+  });
+  const add=document.createElement("div"); add.className="ivadd";
+  add.innerHTML='<input class="setin iv-code" aria-label="Код запрошення"><label class="fld"><span>Скільки разів</span><select class="iv-max"><option>1</option><option selected>3</option><option>5</option><option>10</option></select></label><button type="button" class="addbtn iv-new">Створити код</button>';
+  add.querySelector(".iv-code").value=randCode();
+  add.querySelector(".iv-new").onclick=async()=>{
+    const code=add.querySelector(".iv-code").value.trim().toLowerCase(); if(code.length<4){ showStatus("Код має бути від 4 символів"); return; }
+    let x; try{ x=await sb.from("invites").insert({code,max_uses:Number(add.querySelector(".iv-max").value)}); }catch(e){x={error:e};}
+    if(x.error){ showStatus(/duplicate|23505/.test(errMsg(x.error))?"Такий код уже існує":"Не вдалося створити код"); return; }
+    showStatus("Код створено"); renderInvites(box);
+  };
+  box.appendChild(add);
+}
+/* ---------- first-run tips ---------- */
+const TIPS=[
+ ["✍️","Пиши задачі звичайними словами: «завтра о 15:00 зідзвон з клієнтом #instagram !». Сайт сам поставить дату, час, мітку й важливість."],
+ ["🏷️","Категорію обирай кнопками під полем. Мітки з # групують задачі за клієнтами чи платформами — фільтр є у вкладці «Задачі»."],
+ ["🎯","Зранку обери Топ-3 — три головні справи дня. Ще два слоти ⚡ для швидких справ до 40 хв."],
+ ["📅","Задачі розкладені за днями: прострочені, сьогодні, завтра, тиждень. Торкнись назви задачі, щоб змінити її, додати нотатку, посилання чи повтор."],
+ ["⚙️","У налаштуваннях можна змінити категорії, кольори й назву, а також увімкнути журнал, рутину, ідеї та інше."],
+ ["🤖","Працюєш з Claude чи ChatGPT? ⚙️ → «Інструкції для ШІ» → скопіюй промпт. ШІ оформить задачі, а ти вставиш їх у «Задачі» → «Додати кілька задач одразу»."]];
+function renderTips(){
+  const box=$("tipsCard"); if(!box) return; const s=state.settings, i=s&&typeof s.tips==="number"?s.tips:-1;
+  if(i<0||i>=TIPS.length){ box.hidden=true; return; }
+  box.hidden=false;
+  box.innerHTML='<div class="tph"><b>💡 Як користуватись · '+(i+1)+' з '+TIPS.length+'</b><button type="button" class="reset tp-x">сховати</button></div><p class="tpt"><span class="tpe"></span> <span class="tpx"></span></p><div class="tpn"><span class="tpd">'+TIPS.map((_,j)=>'<i class="'+(j===i?"on":"")+'"></i>').join("")+'</span><span style="flex:1"></span>'+(i>0?'<button type="button" class="xbtn tp-prev">‹</button>':'')+'<button type="button" class="addbtn tp-next">'+(i<TIPS.length-1?"Далі ›":"Зрозуміло")+'</button></div>';
+  box.querySelector(".tpe").textContent=TIPS[i][0]; box.querySelector(".tpx").textContent=TIPS[i][1];
+  const set=v=>{ s.tips=v; save(); renderTips(); };
+  box.querySelector(".tp-x").onclick=()=>set(-1);
+  box.querySelector(".tp-next").onclick=()=>set(i<TIPS.length-1?i+1:-1);
+  if(box.querySelector(".tp-prev")) box.querySelector(".tp-prev").onclick=()=>set(i-1);
+}
+/* ---------- settings repair for grid owners ---------- */
+function repairSettings(){
+  const s=state.settings; if(!s||s.hasGrid) return false;
+  const gridData=Object.keys(state.checks||{}).length>0||(state.tasks||[]).some(t=>PILLARS.some(P=>P.id===t.cat));
+  if(!gridData) return false;
+  s.hasGrid=true;
+  if(s.mode==="diary"){
+    const ids=(s.cats||[]).map(c=>c.id).join(","), def=DEFAULT_CATS.map(c=>c.id).join(",");
+    if(ids===def) s.cats=[];
+    s.mode="grid"; FEATURES.forEach(f=>{ s.features[f.k]=true; }); if(s.title==="Мій щоденник") s.title=""; delete s.tips;
+  }
+  return true;
+}
+
 /* ---------- protected sync: versions, 3-way merge, conflicts ---------- */
 const BASE="sitka9x9-base", CONFLICT="sitka9x9-conflict";
 let legacy=false, backupsOff=false;
@@ -2764,20 +2875,24 @@ function authError(e){
   if(m.includes("invalid login"))return "Невірна пошта або пароль.";
   if(m.includes("not confirmed"))return "Пошту ще не підтверджено. Відкрий лист від Supabase і натисни посилання, потім увійди тут.";
   if(m.includes("already registered"))return "Такий акаунт уже є. Натисни «Увійти».";
-  if(m.includes("password"))return "Пароль має містити щонайменше 6 символів.";
-  if(m.includes("signups not allowed")||m.includes("signup is disabled"))return "Реєстрацію вимкнено. Увійди в наявний акаунт.";
+  if(m.includes("database error saving new user")||m.includes("invite"))return "Код запрошення невірний або вже використаний. Попроси нове посилання.";
+  if(m.includes("password"))return "Пароль закороткий: потрібно щонайменше 7 символів.";
+  if(m.includes("signups not allowed")||m.includes("signup is disabled"))return "Реєстрацію зараз закрито. Попроси автора увімкнути її.";
   if(m.includes("fetch")||m.includes("network"))return "Немає інтернету. Спробуй ще раз.";
   return "Помилка: "+(e&&e.message||"невідома");
 }
 async function afterSignIn(){
   hideAuth(); try{localStorage.removeItem("sitka9x9-skipauth")}catch(e){}
+  checkOwner();
+  if(inviteFromUrl){ try{ history.replaceState(null,"",location.pathname); }catch(e){} inviteFromUrl=null; }
   lastRemoteTs=0; await pull(true);
 }
 async function initSync(){
   if(!CFG.SUPABASE_URL||!CFG.SUPABASE_KEY||!window.supabase){ setSync("local"); syncResolved=true; maybeOnboard(); return; }
   try{ sb=window.supabase.createClient(CFG.SUPABASE_URL,CFG.SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}}); }
   catch(e){ setSync("local"); return; }
-  const {data}=await sb.auth.getSession(); session=data.session;
+  const {data}=await sb.auth.getSession(); session=data.session; checkOwner();
+  if(session&&inviteFromUrl){ try{ history.replaceState(null,"",location.pathname); }catch(e){} inviteFromUrl=null; }
   sb.auth.onAuthStateChange((ev,s)=>{ session=s; if(ev==="SIGNED_OUT") setSync("signedout"); });
   $("authIn").onclick=async()=>{
     const email=$("authEmail").value.trim(), password=$("authPass").value;
@@ -2787,11 +2902,14 @@ async function initSync(){
     if(error){authMsg(authError(error),true);return;}
     session=data.session; await afterSignIn();
   };
+  document.querySelectorAll("#authTabs button").forEach(b=>b.onclick=()=>{authMode=b.dataset.m;renderAuthMode();});
+  renderAuthMode();
   $("authUp").onclick=async()=>{
-    const email=$("authEmail").value.trim(), password=$("authPass").value;
-    if(!email||password.length<6){authMsg("Введи пошту і пароль від 6 символів.",true);return;}
+    const email=$("authEmail").value.trim(), password=$("authPass").value, invite=(inviteFromUrl||$("authInvite").value).trim().toLowerCase();
+    if(!email||password.length<7){authMsg("Введи пошту і пароль від 7 символів.",true);return;}
+    if(!invite){authMsg("Введи код запрошення.",true);return;}
     authMsg("Створюю акаунт…");
-    const {data,error}=await sb.auth.signUp({email,password,options:{emailRedirectTo:location.origin+location.pathname}});
+    const {data,error}=await sb.auth.signUp({email,password,options:{data:{invite},emailRedirectTo:location.origin+location.pathname}});
     if(error){authMsg(authError(error),true);return;}
     if(data.session){session=data.session;await afterSignIn();}
     else authMsg("Акаунт створено. Відкрий лист від Supabase, підтверди пошту і повернись сюди, щоб увійти.");
@@ -2799,7 +2917,9 @@ async function initSync(){
   $("authPass").onkeydown=e=>{if(e.key==="Enter")$("authIn").click();};
   $("authSkip").onclick=()=>{try{localStorage.setItem("sitka9x9-skipauth","1")}catch(e){} hideAuth(); setSync("signedout");};
   $("acctBtn").onclick=async()=>{
-    if(session){ if(!confirm("Вийти з акаунта? Дані на цьому пристрої залишаться."))return; clearTimeout(saveTimer); if(isDirty())await push(); await sb.auth.signOut(); session=null; setSync("signedout"); }
+    if(session){ if(!confirm("Вийти з акаунта? Твої дані збережені в хмарі, а з цього пристрою копію буде прибрано."))return;
+      clearTimeout(saveTimer); if(isDirty())await push(); await sb.auth.signOut(); session=null;
+      resetLocal(); try{localStorage.removeItem(OWNER)}catch(e){} render(); setSync("signedout"); authMode="in"; renderAuthMode(); showAuth(); }
     else showAuth();
   };
   document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")pull();});
