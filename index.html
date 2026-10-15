@@ -551,6 +551,7 @@ textarea.grat{background:color-mix(in srgb,#B9831C 8%,var(--paper))}
 .ivadd{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;padding-top:10px;border-top:1px solid var(--line)}
 .ivadd .setin{flex:1;min-width:150px;margin:0}
 .ivadd select{color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--paper);min-height:40px}
+.catsrc{margin-bottom:8px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 @media (min-width:900px){.wrap{padding-top:28px}}
 </style>
@@ -1077,7 +1078,7 @@ function ensureSettings(){
   state.settings=used
     ?{mode:"grid",onboarded:true,hasGrid:true,features:all,cats:[],accent:"yellow",fields:{time:true,dur:true,imp:true,rep:true},title:""}
     :{mode:"diary",onboarded:false,features:{top3:true,calendar:true,journal:false,routine:false,ideas:false,projects:false,heatmap:false,report:false,grid:false},
-      cats:JSON.parse(JSON.stringify(DEFAULT_CATS)),accent:"yellow",fields:{time:true,dur:true,imp:true,rep:true},title:"Мій щоденник"};
+      cats:[],accent:"yellow",fields:{time:true,dur:true,imp:true,rep:true},title:"Мій щоденник"};
   return true;
 }
 const S=()=>state.settings||{features:{},fields:{}};
@@ -1086,8 +1087,8 @@ const isDiary=()=>S().mode==="diary";
 let CATS=[];
 function rebuildCats(){
   const s=S(), own=(s.cats||[]).filter(c=>c&&c.id);
-  const base=own.length?own.map(c=>({id:c.id,name:c.name,c:c.c,e:c.e||""})):PILLARS.map(P=>({id:P.id,name:P.name,c:P.c,e:""}));
-  CATS=base.concat([{id:"other",name:"Інше",c:"#6B7785",e:own.length?"📌":""}]);
+  const base=own.length?own.map(c=>({id:c.id,name:c.name||"Без назви",c:c.c,e:c.e||""})):(s.hasGrid?PILLARS.map(P=>({id:P.id,name:P.name,c:P.c,e:""})):[]);
+  CATS=base.concat([{id:"other",name:"Інше",c:"#6B7785",e:own.length||!s.hasGrid?"📌":""}]);
   const sel=$("tCat"); if(sel){ const v=sel.value; sel.innerHTML=""; CATS.forEach(c=>{const o=document.createElement("option");o.value=c.id;o.textContent=catLabel(c);sel.appendChild(o);}); if(CATS.some(c=>c.id===v)) sel.value=v; }
 }
 const catLabel=c=>(c.e?c.e+" ":"")+c.name;
@@ -1211,9 +1212,9 @@ function catEditor(box,cats,onChange){
   cats.forEach((c,i)=>{
     const r=document.createElement("div"); r.className="cer"; r.style.setProperty("--c",c.c);
     r.innerHTML='<input class="ce-e" maxlength="4" aria-label="Емодзі"><input class="ce-n" aria-label="Назва категорії"><div class="ce-sw" role="group" aria-label="Колір"></div><button type="button" class="ix" aria-label="Видалити категорію">×</button>';
-    r.querySelector(".ce-e").value=c.e||""; r.querySelector(".ce-n").value=c.name;
+    r.querySelector(".ce-e").value=c.e||""; r.querySelector(".ce-n").value=c.name; r.querySelector(".ce-n").placeholder="Назва категорії";
     r.querySelector(".ce-e").oninput=e=>{c.e=e.target.value.trim(); onChange(false);};
-    r.querySelector(".ce-n").oninput=e=>{c.name=e.target.value.trim()||c.name; onChange(false);};
+    r.querySelector(".ce-n").oninput=e=>{c.name=e.target.value.trim(); onChange(false);};
     const sw=r.querySelector(".ce-sw");
     CAT_COLORS.forEach(col=>{ const s=document.createElement("button"); s.type="button"; s.className="sw"+(col===c.c?" on":""); s.style.background=col; s.setAttribute("aria-label","Колір "+col);
       s.onclick=()=>{c.c=col; onChange(true);}; sw.appendChild(s); });
@@ -1223,7 +1224,9 @@ function catEditor(box,cats,onChange){
     box.appendChild(r);
   });
   const add=document.createElement("button"); add.type="button"; add.className="xbtn"; add.textContent="+ категорія";
-  add.onclick=()=>{ cats.push({id:"c"+Date.now().toString(36),name:"Нова категорія",e:"✨",c:CAT_COLORS[cats.length%CAT_COLORS.length]}); onChange(true); };
+  add.onclick=()=>{ cats.push({id:"c"+Date.now().toString(36),name:"",e:"✨",c:CAT_COLORS[cats.length%CAT_COLORS.length]}); onChange(true);
+    setTimeout(()=>{ const ins=document.querySelectorAll(".cer .ce-n"); if(ins.length) ins[ins.length-1].focus(); },50); };
+  if(!cats.length){ const e=document.createElement("p"); e.className="hint"; e.textContent="Поки що категорій немає. Додай свої: наприклад, робота, навчання, дім — як тобі зручно."; box.appendChild(e); }
   box.appendChild(add);
 }
 function accentPicker(box,onChange){
@@ -1287,9 +1290,17 @@ function renderSettings(){
   if(s.hasGrid){ const m=sec("Головний екран"); const seg=document.createElement("div"); seg.className="seg";
     [["grid","Сітка"],["diary","Сьогодні (задачі)"]].forEach(([k,l])=>{const b=document.createElement("button");b.type="button";b.textContent=l;b.setAttribute("aria-pressed",s.mode===k);b.onclick=()=>{s.mode=k;changed(true);};seg.appendChild(b);}); m.appendChild(seg); }
   const c=sec("Мої категорії","Торкнись емодзі чи назви, щоб змінити. Колір — кружечки праворуч."); const cb=document.createElement("div"); c.appendChild(cb);
-  if(!s.cats||!s.cats.length){ const p=document.createElement("p"); p.className="hint"; p.textContent="Зараз категорії — це опори сітки. Можна створити власні:"; cb.appendChild(p);
-    const b=document.createElement("button"); b.type="button"; b.className="xbtn"; b.textContent="Створити власні категорії"; b.onclick=()=>{ s.cats=JSON.parse(JSON.stringify(DEFAULT_CATS)); changed(true); }; cb.appendChild(b); }
-  else catEditor(cb,s.cats,re=>{ save(); rebuildCats(); render(); if(re) renderSettings(); });
+  const own=(s.cats||[]).length>0;
+  if(s.hasGrid){
+    const seg=document.createElement("div"); seg.className="seg catsrc";
+    [["grid","Опори сітки"],["own","Власні"]].forEach(([k,l])=>{ const b=document.createElement("button"); b.type="button"; b.textContent=l; b.setAttribute("aria-pressed",(k==="own")===own);
+      b.onclick=()=>{ if(k==="grid"&&own){ s.catsSaved=s.cats; s.cats=[]; }
+        else if(k==="own"&&!own){ s.cats=(s.catsSaved&&s.catsSaved.length)?s.catsSaved:PILLARS.map(P=>({id:P.id,name:P.name,e:"",c:P.c})); delete s.catsSaved; }
+        changed(true); }; seg.appendChild(b); });
+    cb.appendChild(seg);
+    const p=document.createElement("p"); p.className="hint"; p.textContent=own?"Власні категорії. Задачі з опорами, яких тут немає, показуються як «Інше».":"Категорії задач — це твої 8 опор сітки з їхніми кольорами."; cb.appendChild(p);
+  }
+  if(own||!s.hasGrid){ const ed=document.createElement("div"); cb.appendChild(ed); catEditor(ed,s.cats=s.cats||[],re=>{ save(); rebuildCats(); render(); if(re) renderSettings(); }); }
   const fl=sec("Поля нової задачі","Які поля показувати у формі «Нова задача»."); const fw=document.createElement("div"); fw.className="chips";
   [["time","Час"],["dur","Тривалість"],["imp","Важливість"],["rep","Повтор"]].forEach(([k,l])=>{const b=document.createElement("button");b.type="button";b.textContent=l;b.setAttribute("aria-pressed",s.fields[k]!==false);b.onclick=()=>{s.fields[k]=s.fields[k]===false;changed(true);};fw.appendChild(b);}); fl.appendChild(fw);
   const a=sec("Колір акценту"); const ab=document.createElement("div"); a.appendChild(ab); accentPicker(ab,()=>{save();renderSettings();});
@@ -1315,7 +1326,7 @@ function renderOnb(){
   box.appendChild(h);
   const body=document.createElement("div"); box.appendChild(body);
   if(onbStep===0) featureCards(body,s.features,()=>renderOnb(),!s.hasGrid);
-  if(onbStep===1) catEditor(body,s.cats,()=>{rebuildCats(); renderOnb();});
+  if(onbStep===1) catEditor(body,s.cats=s.cats||[],re=>{rebuildCats(); if(re) renderOnb();});
   if(onbStep===2){ const ti=document.createElement("input"); ti.className="setin"; ti.value=s.title||""; ti.placeholder="Мій щоденник"; ti.oninput=()=>{s.title=ti.value;};
     const ab=document.createElement("div"); accentPicker(ab,()=>renderOnb()); body.append(ti,ab); }
   const nav=document.createElement("div"); nav.className="onbnav";
@@ -2659,7 +2670,14 @@ function renderTips(){
 }
 /* ---------- settings repair for grid owners ---------- */
 function repairSettings(){
-  const s=state.settings; if(!s||s.hasGrid) return false;
+  const s=state.settings; if(!s) return false;
+  if(s.hasGrid&&!s.catFix&&(s.cats||[]).length){
+    s.catFix=1; const ids=new Set(s.cats.map(c=>c.id)), open=(state.tasks||[]).filter(t=>!t.done);
+    const orphan=open.filter(t=>t.cat!=="other"&&!ids.has(t.cat)).length;
+    if(open.length&&orphan>open.length/2){ s.catsSaved=s.cats; s.cats=[]; }
+    return true;
+  }
+  if(s.hasGrid) return false;
   const gridData=Object.keys(state.checks||{}).length>0||(state.tasks||[]).some(t=>PILLARS.some(P=>P.id===t.cat));
   if(!gridData) return false;
   s.hasGrid=true;
