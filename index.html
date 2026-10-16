@@ -552,6 +552,14 @@ textarea.grat{background:color-mix(in srgb,#B9831C 8%,var(--paper))}
 .ivadd .setin{flex:1;min-width:150px;margin:0}
 .ivadd select{color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--paper);min-height:40px}
 .catsrc{margin-bottom:8px}
+.updbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--sheet);border:1.5px solid var(--acc);border-radius:14px;padding:10px 14px;margin-bottom:12px}
+.updbar .ut{flex:1;font-size:15px}
+.updbar .addbtn{margin-left:0;background:var(--acc-soft);color:var(--acc-ink);border:1px solid var(--acc)}
+.updbar .reset,.tph .ut2{border:0;background:transparent;color:var(--muted);font-size:13px;cursor:pointer}
+.updbar .reset{text-decoration:underline}
+ul.news{margin:8px 0;padding-left:20px;font-size:15px;line-height:1.55}
+.about-g{display:grid;grid-template-columns:140px 1fr;gap:6px 12px;font-size:14px}
+.about-g span{color:var(--muted)}.about-g b{font-weight:500;overflow-wrap:anywhere}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 @media (min-width:900px){.wrap{padding-top:28px}}
 </style>
@@ -582,6 +590,7 @@ textarea.grat{background:color-mix(in srgb,#B9831C 8%,var(--paper))}
       <div class="cal-day" id="calDay"></div>
     </div>
   </header>
+  <div class="updbar" id="updBar" hidden role="status"><span>✨</span><span class="ut">Доступна нова версія сайту</span><button type="button" class="addbtn" id="updGo">Оновити</button><button type="button" class="reset" id="updLater">пізніше</button></div>
   <div class="conflict" id="conflictBar" hidden role="alert"></div>
 
   <div class="tabs" role="tablist">
@@ -592,6 +601,7 @@ textarea.grat{background:color-mix(in srgb,#B9831C 8%,var(--paper))}
   </div>
 
   <div id="viewGrid">
+  <section class="tips" id="newsCard" hidden aria-label="Що нового"></section>
   <section class="tips" id="tipsCard" hidden aria-label="Підказки"></section>
   <section class="today-h" id="todayHead" hidden></section>
   <section class="mplan" id="mplan" aria-label="Ранковий план" hidden></section>
@@ -751,6 +761,7 @@ textarea.grat{background:color-mix(in srgb,#B9831C 8%,var(--paper))}
   <div class="top"><div class="row"><button class="back" id="setBack">‹ Назад</button><h3 id="setTitle">Налаштування</h3></div></div>
   <div class="body" id="setBody"></div>
 </div>
+<div class="auth outdated" id="outdated" role="alertdialog" aria-modal="true" aria-labelledby="odTitle"><div class="box" style="text-align:center"><div style="font-size:34px">🔄</div><h2 id="odTitle">Ця версія сайту застаріла</h2><p>Твої дані в безпеці. Онови сторінку, щоб працювати з актуальною версією.</p><button type="button" class="primary" id="odGo" style="width:100%">Оновити зараз</button></div></div>
 <div class="auth onb" id="onb" role="dialog" aria-modal="true" aria-label="Перше налаштування"><div class="box onbbox" id="onbBody"></div></div>
 
 <div class="auth" id="auth" role="dialog" aria-modal="true" aria-labelledby="authTitle">
@@ -792,7 +803,7 @@ textarea.grat{background:color-mix(in srgb,#B9831C 8%,var(--paper))}
 <script>
 (function(){
 /* Personal grid of the original owner. Used ONLY by the one-time migration to schema 2,
-   which copies it into that user's data. Never read directly by the UI. Remove after all devices reach schema 2. */
+   which copies it into that user's data. Never read directly by the UI. Kept ONE more release as a safety net for data not yet migrated; removed once the owner's data shows schema 3. */
 const LEGACY_GRID=[
  {id:"fin",name:"Фінанси",s:"Фінанси",c:"#2F6FB0",about:"Розвиток як фінансиста (теорія, моделі, ринки) і контроль власного портфеля.",a:[
   ["3 сесії по 30 хв на тему місяця (TVM → звітність → DCF → облігації → …)","Тема місяця","Черга тем: TVM → звітність → DCF → облігації → CAPM → деривативи → макро",1],
@@ -892,7 +903,15 @@ const wk=()=>isoWeek(weekStart);
 
 /* ---------- state ---------- */
 function ensureRoutine(){ if(!state.routine||!Array.isArray(state.routine.items)) state.routine={items:[],log:(state.routine&&state.routine.log)||{},water:{},v:2}; state.routine.log=state.routine.log||{}; }
+const APP_VERSION=29, APP_DATE="16.10.2026";
 const SCHEMA=3;
+/* what's new: "for" = all | grid | diary */
+const CHANGELOG=[
+ {v:29,date:"16.10.2026",items:[
+   {t:"Номер версії, стан синхронізації та «Що нового» в ⚙️ → «Про застосунок»",for:"all"},
+   {t:"Сайт сам підкаже, коли вийшла нова версія: достатньо натиснути «Оновити»",for:"all"},
+   {t:"Захист від застарілих версій на забутих пристроях",for:"all"},
+   {t:"Сітка тепер зберігається у твоїх даних, а не в коді сайту",for:"grid"}]}];
 let state={v:1,goal:"",texts:{},checks:{},notes:{},pillarNotes:{},weekNotes:{},proj:{},projHist:{},tasks:null};
 const LS="sitka9x9-state";
 let db=null, docRef=null, saveTimer=null, lastLocalWrite=0, pending=false;
@@ -900,12 +919,13 @@ let db=null, docRef=null, saveTimer=null, lastLocalWrite=0, pending=false;
 
 /* ---------- data schema: one place where stored data is ever changed by an update ----------
    Rules: (1) each step runs once per user, only upwards; (2) new users start at SCHEMA and never run old steps;
-   (3) render() never changes or saves data; (4) steps contain no personal content except LEGACY_GRID in step 2. */
+   (3) render() never changes or saves data; (4) steps contain no personal content. */
+const KNOWN_PILLAR_IDS=["fin","uni","work","str","rec","ph","trk","time"];   // ids only, used to recognise pre-schema grid data
 function newUserState(){
   return {v:1,schema:SCHEMA,goal:"",texts:{},checks:{},notes:{},pillarNotes:{},weekNotes:{},proj:{},projHist:{},tasks:[],ideas:[],projects:[],
     ideaSpaces:[{id:"gen",n:"Загальні",e:"💡"}],gridV:2,
     routine:{items:[],log:{},water:{},v:2},
-    account:{type:"diary",since:todayStr()},
+    account:{type:"diary",since:todayStr()}, seenVersion:APP_VERSION,
     settings:{mode:"diary",onboarded:false,features:{top3:true,calendar:true,journal:false,routine:false,ideas:false,projects:false,heatmap:false,report:false,grid:false},
       cats:[],accent:"yellow",fields:{time:true,dur:true,imp:true,rep:true},title:"Мій щоденник"}};
 }
@@ -922,7 +942,7 @@ function normalize(){
   const old=new Date(); old.setDate(old.getDate()-60); const lim=dayKey(old);
   ["top3","quick","mplan","daily","t3offer"].forEach(k=>{ const o=state[k]; if(o&&typeof o==="object") Object.keys(o).forEach(d=>{ if(d<lim) delete o[d]; }); });
 }
-function runMigrations(){
+function runMigrations(keepGrid){
   const from=state.schema||0; if(from>=SCHEMA){ normalize(); syncGrid(); return false; }
   if(from<1){                               // pre-schema data (created before 16.10.2026)
     if(!(state.gridV>=2)) state.gridV=2;
@@ -930,7 +950,7 @@ function runMigrations(){
   }
   if(from<2){                               // grid moves from code into the owner's data
     const st=state.settings||{};
-    if(st.hasGrid&&!state.grid) state.grid={pillars:JSON.parse(JSON.stringify(LEGACY_GRID))};
+    if(st.hasGrid&&!state.grid) state.grid=JSON.parse(JSON.stringify(keepGrid||{pillars:LEGACY_GRID}));   // prefer the grid already in the user's data
   }
   if(from<3){                               // explicit account facts instead of guessing
     if(!state.account) state.account={type:state.grid?"grid":"diary",since:todayStr()};
@@ -1321,6 +1341,7 @@ function renderSettings(){
   const box=$("setBody"); if(!box) return; const s=state.settings; box.innerHTML="";
   const sec=(title,hint)=>{ const d=document.createElement("section"); d.className="card setsec"; d.innerHTML='<h2></h2>'+(hint?'<p class="hint"></p>':''); d.querySelector("h2").textContent=title; if(hint) d.querySelector("p").textContent=hint; box.appendChild(d); return d; };
   const changed=(re)=>{ save(); rebuildCats(); applyFeatures(); render(); if(re) renderSettings(); };
+  const abs=sec("Про застосунок"); const abb=document.createElement("div"); abs.appendChild(abb); renderAbout(abb);
   const t=sec("Назва"); const ti=document.createElement("input"); ti.className="setin"; ti.value=s.title||""; ti.placeholder="Сітка 9×9"; ti.oninput=()=>{ s.title=ti.value; save(); applyFeatures(); }; t.appendChild(ti);
   const f=sec("Що показувати","Вимкнене ховається з екрана. Дані не зникають."); const fb=document.createElement("div"); f.appendChild(fb);
   featureCards(fb,s.features,()=>{seedRoutine();changed(true);},!hasGrid());
@@ -2181,7 +2202,7 @@ $("projAdd").onclick=()=>{ const w=$("projAddWrap"); if(w.firstChild){w.innerHTM
 /* ---------- render grid ---------- */
 
 function render(){
-  syncGrid(); rebuildCats(); applyAccent(); applyFeatures(); renderTips();
+  syncGrid(); rebuildCats(); applyAccent(); applyFeatures(); renderNews(); renderTips();
   const ws=weekStart, we=new Date(ws);we.setDate(we.getDate()+6);
   $("weekLbl").innerHTML="<b>Тиждень "+wk().split("-W")[1]+"</b>"+fmt(ws)+" – "+fmt(we);
   $("goalSub").textContent=isDiary()?"":state.goal;
@@ -2421,7 +2442,7 @@ function importData(raw){
   let obj; try{obj=JSON.parse(raw)}catch(e){alert("Не вдалося прочитати дані. Перевір, що скопіював текст повністю.");return false;}
   if(!obj||typeof obj!=="object"||!("checks" in obj)){alert("Це не схоже на дані сітки.");return false;}
   if(!confirm("Замінити поточні дані на імпортовані?"))return false;
-  merge(obj); runMigrations(); save(); render(); showStatus("Дані імпортовано"); return true;
+  const kg=state.grid; merge(obj); runMigrations(kg); save(); render(); showStatus("Дані імпортовано"); return true;
 }
 $("xCopy").onclick=async()=>{
   const txt=JSON.stringify(state); const ta=$("xText"); ta.hidden=false; ta.readOnly=true; ta.value=txt; $("xImport").hidden=true;
@@ -2652,7 +2673,7 @@ function repairSettings(){
     return true;
   }
   if(s.hasGrid) return false;
-  const gridData=Object.keys(state.checks||{}).length>0||(state.tasks||[]).some(t=>LEGACY_GRID.some(P=>P.id===t.cat));
+  const gridData=Object.keys(state.checks||{}).length>0||(state.tasks||[]).some(t=>KNOWN_PILLAR_IDS.includes(t.cat));
   if(!gridData) return false;
   s.hasGrid=true;
   if(s.mode==="diary"){
@@ -2661,6 +2682,52 @@ function repairSettings(){
     s.mode="grid"; FEATURES.forEach(f=>{ s.features[f.k]=true; }); if(s.title==="Мій щоденник") s.title=""; delete s.tips;
   }
   return true;
+}
+
+
+/* ---------- releases: what's new, update check, minimum version ---------- */
+var lastSyncAt=0, writesBlocked=false;
+function newsFor(v){ const grid=hasGrid(); const e=CHANGELOG.find(x=>x.v===v); if(!e) return null;
+  const items=e.items.filter(i=>i.for==="all"||(i.for==="grid"&&grid)||(i.for==="diary"&&!grid)); return items.length?{v:e.v,date:e.date,items}:null; }
+var newsForced=false;
+function renderNews(){
+  const box=$("newsCard"); if(!box) return; const seen=state.seenVersion||0;
+  const n=(seen<APP_VERSION||newsForced)?newsFor(APP_VERSION):null;
+  if(!n||!state.settings||!state.settings.onboarded){ box.hidden=true; return; }
+  box.hidden=false;
+  box.innerHTML='<div class="tph"><b>🎉 Що нового · версія '+n.v+'</b><span class="ut2">'+esc(n.date)+'</span></div><ul class="news"></ul><div class="tpn"><span style="flex:1"></span><button type="button" class="addbtn nw-ok">Зрозуміло</button></div>';
+  const ul=box.querySelector("ul"); n.items.forEach(i=>{ const li=document.createElement("li"); li.textContent=i.t; ul.appendChild(li); });
+  box.querySelector(".nw-ok").onclick=()=>{ newsForced=false; if((state.seenVersion||0)<APP_VERSION){ state.seenVersion=APP_VERSION; save(); } renderNews(); };
+}
+async function checkUpdate(manual){
+  try{
+    const r=await fetch("version.json?ts="+Date.now(),{cache:"no-store"}); if(!r.ok) throw 0;
+    const j=await r.json();
+    if(Number(j.version)>APP_VERSION){ $("updBar").hidden=false; if(manual) showStatus("Є нова версія "+j.version); }
+    else if(manual) showStatus("У тебе найновіша версія");
+  }catch(e){ if(manual) showStatus("Не вдалося перевірити оновлення"); }
+}
+async function hardReload(){
+  try{ if(window.caches){ const ks=await caches.keys(); await Promise.all(ks.map(k=>caches.delete(k))); } }catch(e){}
+  try{ const regs=await navigator.serviceWorker.getRegistrations(); await Promise.all(regs.map(r=>r.update())); }catch(e){}
+  location.reload();
+}
+async function checkMinVersion(){
+  if(!sb||!session) return;
+  let r; try{ r=await sb.from("app_config").select("value").eq("key","min_app").maybeSingle(); }catch(e){ return; }
+  if(r.error||!r.data) return;
+  const min=Number(r.data.value&&r.data.value.version!=null?r.data.value.version:r.data.value);
+  if(min>APP_VERSION){ writesBlocked=true; $("outdated").classList.add("open"); }
+}
+function renderAbout(box){
+  const bs=getBase&&getBase(), ago=lastSyncAt?Math.max(0,Math.round((Date.now()-lastSyncAt)/60000)):null;
+  box.innerHTML='<div class="about-g"><span>Версія сайту</span><b></b><span>Версія даних</span><b></b><span>Синхронізація</span><b></b><span>Акаунт</span><b></b></div><div class="report-actions" style="margin-top:10px"><button type="button" class="xbtn ab-news">Що нового</button><button type="button" class="xbtn ab-upd">Перевірити оновлення</button></div>';
+  const v=box.querySelectorAll(".about-g b");
+  v[0].textContent=APP_VERSION+" · "+APP_DATE; v[1].textContent="схема "+(state.schema||"—");
+  v[2].textContent=!sb?"лише на цьому пристрої":!session?"не виконано вхід":(legacy?"без захисту версій":(bs&&bs.rev?"версія "+bs.rev:"—"))+(ago!=null?" · "+(ago<1?"щойно":ago+" хв тому"):"");
+  v[3].textContent=session?session.user.email:"—";
+  box.querySelector(".ab-news").onclick=()=>{ newsForced=true; closeSettings(); showView("grid"); renderNews(); window.scrollTo({top:0,behavior:"smooth"}); };
+  box.querySelector(".ab-upd").onclick=()=>checkUpdate(true);
 }
 
 /* ---------- protected sync: versions, 3-way merge, conflicts ---------- */
@@ -2742,7 +2809,7 @@ function renderConflict(){
   bar.querySelector(".cf-x").onclick=()=>{ try{localStorage.removeItem(CONFLICT)}catch(e){} renderConflict(); };
 }
 function adopt(remote,rev){
-  merge(remote); const ch=runMigrations();
+  const kg=state.grid; merge(remote); const ch=runMigrations(kg);
   setBase(rev,clone(remote)); try{localStorage.setItem(LS,JSON.stringify(state))}catch(e){}
   clearDirty(); render();
   if(ch) save(true);            // migrated data is sent back once, as a normal versioned change
@@ -2751,7 +2818,7 @@ const errMsg=e=>((e&&e.message)||"")+" "+((e&&e.code)||"")+" "+((e&&e.details)||
 const isRevMissing=e=>/rev/i.test(errMsg(e))&&/column|schema cache|does not exist|PGRST204|42703/i.test(errMsg(e));
 const isStale=e=>/STALE_WRITE|P0001/.test(errMsg(e));
 async function push(){
-  if(!sb||!session){pending=false;return;}
+  if(!sb||!session||writesBlocked){pending=false;return;}
   if(pushing){clearTimeout(saveTimer);saveTimer=setTimeout(push,600);return;}
   pushing=true; const ts=new Date().toISOString(), data=clone(state), base=getBase(), rev=((base&&base.rev)||0)+1;
   let res;
@@ -2772,12 +2839,13 @@ async function push(){
     if(ins.error){ pending=false; await pull(true); return; }
     newRev=1;
   }
-  setBase(newRev,data); lastRemoteTs=Date.parse(ts);
+  setBase(newRev,data); lastRemoteTs=Date.parse(ts); lastSyncAt=Date.now();
   if(same(state,data)){ pending=false; clearDirty(); }
   setSync("ok"); showStatus("Синхронізовано");
   maybeBackup(data,newRev);
 }
-async function pull(force){ await pullInner(force); if(!$("syncDot").classList.contains("off")){ syncResolved=true; maybeOnboard(); } }
+var minChecked=false;
+async function pull(force){ if(!minChecked&&session){ minChecked=true; checkMinVersion(); } await pullInner(force); if(!$("syncDot").classList.contains("off")) lastSyncAt=Date.now(); if(!$("syncDot").classList.contains("off")){ syncResolved=true; maybeOnboard(); } }
 async function pullInner(force){
   if(!sb||!session||pushing) return;
   if(pending&&!force) return;
@@ -2806,7 +2874,7 @@ async function pullInner(force){
   const localSnap=clone(state);
   if(!base){ saveConflict(localSnap,[],"unknown"); adopt(remote,rrev); setSync("ok"); return; }
   const conf=[], merged=merge3(base.data,localSnap,remote,[],conf);
-  setBase(rrev,clone(remote)); merge(merged); runMigrations();
+  const kg=state.grid; setBase(rrev,clone(remote)); merge(merged); runMigrations(kg);
   try{localStorage.setItem(LS,JSON.stringify(state))}catch(e){}
   render();
   if(conf.length) saveConflict(localSnap,conf,"merge");
@@ -2853,7 +2921,7 @@ async function loadBackups(){
       if(!confirm("Відновити дані зі знімка за "+row.querySelector(".bkd").textContent+"? Поточні дані теж залишаться в сьогоднішній автокопії.")) return;
       let q; try{ q=await sb.from("planner_backups").select("data").eq("user_id",uid()).eq("day",b.day).maybeSingle(); }catch(e){q={error:e};}
       if(q.error||!q.data){ showStatus("Не вдалося завантажити копію"); return; }
-      merge(q.data.data); runMigrations(); save(); render(); showStatus("Дані відновлено");
+      const kg=state.grid; merge(q.data.data); runMigrations(kg); save(); render(); showStatus("Дані відновлено");
     };
     box.appendChild(row);
   });
@@ -2928,6 +2996,9 @@ async function initSync(){
 setSync("local");
 initSync().catch(()=>setSync(session?"offline":"local"));
 $("gearBtn").onclick=openSettings; $("setBack").onclick=closeSettings;
+$("updGo").onclick=hardReload; $("odGo").onclick=hardReload; $("updLater").onclick=()=>{ $("updBar").hidden=true; };
+setTimeout(()=>checkUpdate(false),4000); setInterval(()=>checkUpdate(false),30*60*1000);
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") checkUpdate(false); });
 $("xferCard").addEventListener("toggle",()=>{ if($("xferCard").open) loadBackups(); });
 renderConflict();
 

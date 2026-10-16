@@ -1,5 +1,5 @@
 // Офлайн-режим. Після змін у файлах збільш номер версії, щоб телефон підтягнув оновлення.
-const VERSION = "sitka-v28";
+const VERSION = "sitka-v29";
 const SHELL = ["./", "./index.html", "./config.js", "./manifest.webmanifest",
   "./icons/icon-192.png", "./icons/icon-512.png", "./icons/apple-touch-icon.png"];
 
@@ -20,6 +20,8 @@ self.addEventListener("fetch", e => {
       .catch(() => caches.match("./index.html")));
     return;
   }
+  // version.json: лише мережа, щоб сайт бачив нові версії
+  if (url.origin === location.origin && url.pathname.endsWith("/version.json")) { e.respondWith(fetch(req, {cache: "no-store"})); return; }
   // config.js: спершу мережа, щоб зміни ключів підхоплювались одразу
   if (url.origin === location.origin && url.pathname.endsWith("/config.js")) {
     e.respondWith(fetch(req).then(r => { const c = r.clone(); caches.open(VERSION).then(x => x.put(req, c)); return r; })
