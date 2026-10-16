@@ -560,6 +560,15 @@ textarea.grat{background:color-mix(in srgb,#B9831C 8%,var(--paper))}
 ul.news{margin:8px 0;padding-left:20px;font-size:15px;line-height:1.55}
 .about-g{display:grid;grid-template-columns:140px 1fr;gap:6px 12px;font-size:14px}
 .about-g span{color:var(--muted)}.about-g b{font-weight:500;overflow-wrap:anywhere}
+.xbtn.danger{border-color:#C0413A;color:#C0413A}
+.ac-pwf,.ac-delf{margin-top:10px;display:grid;gap:6px;max-width:420px}
+.ac-pwf .setin,.ac-delf .setin{margin:0}
+.ac-pwf .addbtn{margin-left:0;justify-self:start}
+.ac-del{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px;padding-top:10px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+.ac-del span{flex:1;min-width:180px}
+.dg-h{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:14px}
+.dg-h .dg-d{color:var(--muted);font-size:13px}
+.dg-log{margin-top:6px;font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:10px;padding:8px 10px;line-height:1.6}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 @media (min-width:900px){.wrap{padding-top:28px}}
 </style>
@@ -771,12 +780,16 @@ ul.news{margin:8px 0;padding-left:20px;font-size:15px;line-height:1.55}
     <p id="authLead"></p>
     <input type="email" id="authEmail" placeholder="Пошта" autocomplete="email" inputmode="email">
     <input type="password" id="authPass" placeholder="Пароль (від 7 символів)" autocomplete="current-password">
+    <input type="password" id="authPass2" placeholder="Повтори пароль" autocomplete="new-password" hidden>
     <input type="text" id="authInvite" placeholder="Код запрошення" autocomplete="off" hidden>
     <div class="invok" id="authInviteOk" hidden>✓ Код запрошення з посилання</div>
     <div class="row2">
       <button class="primary" id="authIn">Увійти</button>
       <button class="secondary" id="authUp">Створити акаунт</button>
+      <button class="primary" id="authReset" hidden>Надіслати посилання</button>
+      <button class="primary" id="authNewPw" hidden>Зберегти і увійти</button>
     </div>
+    <button class="skip" id="authForgot" type="button">Забули пароль?</button>
     <div class="msg" id="authMsg" role="status"></div>
     <button class="skip" id="authSkip">Поки що без входу (дані лише на цьому пристрої)</button>
   </div>
@@ -802,82 +815,6 @@ ul.news{margin:8px 0;padding-left:20px;font-size:15px;line-height:1.55}
 
 <script>
 (function(){
-/* Personal grid of the original owner. Used ONLY by the one-time migration to schema 2,
-   which copies it into that user's data. Never read directly by the UI. Kept ONE more release as a safety net for data not yet migrated; removed once the owner's data shows schema 3. */
-const LEGACY_GRID=[
- {id:"fin",name:"Фінанси",s:"Фінанси",c:"#2F6FB0",about:"Розвиток як фінансиста (теорія, моделі, ринки) і контроль власного портфеля.",a:[
-  ["3 сесії по 30 хв на тему місяця (TVM → звітність → DCF → облігації → …)","Тема місяця","Черга тем: TVM → звітність → DCF → облігації → CAPM → деривативи → макро",1],
-  ["Одна модель в Excel за чергою: NPV/IRR → ОВДП → DCF → CAPM","Модель Excel","30–60 хв, таблиця рахує формулами, а не вручну",1],
-  ["Неділя: пояснити тему тижня за 5 хв (метод Фейнмана)","Фейнман","Простими словами вголос або письмово; де запнувся — там прогалина"],
-  ["Неділя: зведення: ставка НБУ, інфляція, курс + 3 головні новини тижня","Макро тижня","Після цього попросити Claude зробити огляд тижня і звірити"],
-  ["Розібрати одну компанію: 3 ключові показники зі звітності за 30 хв","Компанія","Наприклад, виручка, маржа, борг + 1 висновок"],
-  ["20 нових карток Anki з термінів тижня","Anki 20","Терміни з пар, курсів і новин тижня"],
-  ["Одна довга лекція чи подкаст (Damodaran, Odd Lots)","Лекція","Короткі щоденні подкасти не рахуються, вони в рутині"],
-  ["Неділя: огляд портфеля (ОВДП, Inzur REIT, акції): зміни, новини, 1 висновок","Мій портфель","Лише спостереження, рішення раз на місяць під час внеску"]]},
- {id:"uni",name:"Університет",s:"Універ",c:"#7556B3",about:"Засвоювати матеріал через практику й не залишати роботи на останній день.",a:[
-  ["Практика: тема тижня на даних від ШІ або реальних (OpenBudget)","Практика","ШІ пояснює → дає дані → роблю сам → ШІ перевіряє; реальні дані раз на місяць",1],
-  ["Великі роботи й презентації починаю за 3+ дні до дедлайну","Старт за 3 дні","Перший крок — 25 хв, щоб розібрати, що вимагають",1],
-  ["2 блоки глибокої роботи по 90 хв, спершу ЕКМ і СТР","Глибока робота","Телефон в іншій кімнаті"],
-  ["Неділя: зібрати дедлайни всіх 8 предметів і внести в задачі","Дедлайни","У назві задачі скорочення предмета: «ЕКМ: …»"],
-  ["Після пояснення ШІ розв'язати 1 задачу самостійно","Без ШІ","ШІ лише перевіряє результат"],
-  ["Огляд пройденого за тиждень, 45 хв","Огляд пар","По кожному предмету 1–2 речення: що зрозумів, що ні"],
-  ["Хоча б 1 питання викладачу чи одногрупникам по складній темі","Питання","На парі, на консультації або в чаті"],
-  ["Розібрати помилки з повернутого тесту чи роботи","Розбір помилок","Якщо нічого не повернули — повторити найслабшу тему"]]},
- {id:"work",name:"Робота",s:"Робота",c:"#2F8A78",about:"Аналіз видатків місцевих бюджетів, робота з даними (OpenBudget, Spending, Prozorro, Excel) і виконання головної задачі.",a:[
-  ["Головна робоча задача: тижневий план виконано","Головна задача","Зараз це переклад 500 рядків, прогрес у «Робочих проєктах»",1],
-  ["Курс «Основи бюджетної системи»: +10% за тиждень","Бюджет +10%","2–3 сесії по 30–40 хв",1],
-  ["Курс Excel або Power BI: 2 сесії по 45 хв","Excel / BI","Один курс на тиждень, не обидва"],
-  ["Розібрати видатки одного місцевого бюджету (OpenBudget, Spending, Prozorro)","Видатки","30–45 хв: куди йдуть гроші + 1 висновок"],
-  ["Застосувати 1 новий прийом Excel у робочій задачі","Прийом Excel","З курсу або знайдений під задачу"],
-  ["Прочитати 1 аналітику про бюджети (свій центр, Мінфін, CEDOS)","Аналітика","Записати 1 думку, корисну для роботи"],
-  ["Монотонну роботу чергувати: 50 хв, потім інша задача","Чергування","Проти нудьги й головного болю на перекладі"],
-  ["П'ятниця: записати досягнення тижня (для CV)","Досягнення","1–3 пункти з цифрами"]]},
- {id:"str",name:"Енергія",s:"Енергія",c:"#C0413A",about:"Сон, їжа й тіло — база, без якої не працює решта.",a:[
-  ["3 тренування за планом тренера (план Б: 30 хв, 2 базові вправи)","3 тренування","Внести в календар у неділю",1],
-  ["Підйом в один час (±30 хв) 5 днів із 7","Підйом","Обрати одну годину між 7:00 і 8:00",1],
-  ["Відбій до 00:30 5 вечорів із 7","Відбій","Коли стане стабільно, зсунути до 00:00"],
-  ["30 хв до сну без екранів 4 вечори з 7","Без екранів","Книга, душ, розмова"],
-  ["3+ прийоми їжі з білком 5 днів із 7","Їжа 3+","У бізнес-ланчі обирати м'ясо, рибу чи яйця"],
-  ["Баня 1 раз на тиждень","Баня","Не встиг — не страшно, це не ядро"],
-  ["Перерва від екрана 5 хв щогодини 4 з 5 робочих днів","Перерви","Встати, вода, вікно"],
-  ["8000+ кроків 5 днів із 7","Кроки","Вигул собаки зараховується"]]},
- {id:"rec",name:"Відпочинок",s:"Відпо­чинок",c:"#C9A227",about:"Свідомий відпочинок, стосунки й близькі — заплановані, а не «якщо залишиться час».",a:[
-  ["Один вечір на тиждень без справ, запланований заздалегідь","Вільний вечір","Обрати день у неділю під час планування",1],
-  ["Побачення: вибратися кудись разом, можна спонтанно","Побачення","Навіть коротко, головне — не вдома",1],
-  ["Зробити щось приємне для партнера(-ки)","Приємне","Дрібниця теж рахується"],
-  ["Зустріч з друзями наживо (рибалка, прогулянка, гра)","Друзі","Дзвінок не рахується"],
-  ["3 прогулянки з собакою без телефону","Прогулянка","Телефон лишити вдома або в кишені беззвучно"],
-  ["1+ год з рідними без телефону","Рідні","Вечеря, розмова, спільна справа"],
-  ["Ігри (приставка, шахи) запланованим блоком після роботи, а не між задачами","Ігри в плані","Гра як нагорода, без докорів сумління"],
-  ["Біг на доріжці для задоволення, 20–30 хв","Біг","Без плану й темпу"]]},
- {id:"ph",name:"Фокус",s:"Фокус",c:"#56646F",about:"Робота без відволікань — телефон, месенджери, відео й ігри не розривають увагу.",a:[
-  ["5+ блоків по 50 хв без телефону, ігор і відео (музика без слів можна)","Блоки фокусу","Перед блоком закрити вкладки з відео й іграми",1],
-  ["Соцмережі разом з YouTube Shorts у межах 30 хв 5 днів із 7","Ліміт 30 хв","Перевіряти за статистикою екрана",1],
-  ["Неділя: записати статистику екрана й поставити ціль на тиждень","Статистика","Середній час + соцмережі окремо"],
-  ["Соцмережі лише у 2 вікна, 13:00 і 20:00, 4 дні з 7","2 вікна","Поза вікнами не відкривати"],
-  ["Книга: 2 сесії по 15 хв, телефон в іншій кімнаті","Книга","Тренування уваги, а не швидкість читання"],
-  ["Месенджери пакетами: 3–4 перевірки на день (староста й керівник — одразу)","Месенджери","Термінову справу старости записати 1 рядком у журнал"],
-  ["Перша година після пробудження без соцмереж 5 днів із 7","Ранок без соц","Месенджери за потреби можна"],
-  ["Неділя: записати, що найбільше відволікало, і 1 зміну на тиждень","Розбір","2 рядки"]]},
- {id:"trk",name:"Свої проєкти",s:"Проєкти",c:"#A9487A",about:"Фінтрекер (модель щомісячних внесків в активи) і сайт 81.",a:[
-  ["2 сесії по 60 хв над фінтрекером","Фінтрекер","Зараз це переробка з нуля",1],
-  ["Закрити 1 конкретний крок проєкту","Крок тижня","Можна маленький, на 20 хв",1],
-  ["Сайт 81: одне покращення або виправлення","Сайт 81","З переліку ідей"],
-  ["Неділя: переглянути ідеї й обрати фокус тижня","Ідеї","10 хв"],
-  ["Журнал проєкту: 3 рядки про те, що зроблено і що далі","Журнал","Після кожної сесії або раз на тиждень"],
-  ["Записати 1 незручність, помічену під час користування","Незручність","У трекері або на сайті 81"],
-  ["Перевірити, що синхронізація й дані 81 працюють","Перевірка","5 хв"],
-  ["Прибрати 1 зайве: аркуш, колонку чи функцію","Спрощення","Якщо не знаєш, навіщо воно, — прибрати"]]},
- {id:"time",name:"Система часу",s:"Час",c:"#7A6440",about:"Планувати реалістично й тримати всі задачі під контролем.",a:[
-  ["Неділя: 30 хв планування тижня, 20% часу лишаю як буфер","План тижня","Спершу пари, робота й тренування, потім ★ дії",1],
-  ["Тайм-блоки в календарі для ★ дій сітки","Тайм-блоки","Тільки ★, не всі дії",1],
-  ["Неділя: надіслати «Звіт для Claude»","Звіт","У чат «Звіти: [місяць рік]»"],
-  ["П'ятниця: 15 хв міні-огляд того, що не встигаю","П'ятниця","Перенести або скоротити до вихідних"],
-  ["Чистка задач: прострочені й без дедлайну чи тривалості","Чистка задач","Дописати дату й тривалість, перенести або видалити"],
-  ["Перевірити, що години задач на тиждень ≤ вільного часу","Навантаження","Якщо більше — одразу перенести"],
-  ["Звірити план і факт часу для 3 задач","Оцінка часу","Вчить точніше ставити тривалість"],
-  ["Відмітити сітку й рутину до неділі 21:00","Відмітки","Перед звітом"]]}
-];
 let PILLARS=[];            // current user's grid (from state.grid), empty for users without a grid
 let CORE_TOTAL=0;
 function syncGrid(){ PILLARS=(state.grid&&Array.isArray(state.grid.pillars))?state.grid.pillars:[]; CORE_TOTAL=PILLARS.reduce((n,P)=>n+P.a.filter(a=>a[3]).length,0); }
@@ -903,10 +840,15 @@ const wk=()=>isoWeek(weekStart);
 
 /* ---------- state ---------- */
 function ensureRoutine(){ if(!state.routine||!Array.isArray(state.routine.items)) state.routine={items:[],log:(state.routine&&state.routine.log)||{},water:{},v:2}; state.routine.log=state.routine.log||{}; }
-const APP_VERSION=29, APP_DATE="16.10.2026";
+const APP_VERSION=30, APP_DATE="17.10.2026";
 const SCHEMA=3;
 /* what's new: "for" = all | grid | diary */
 const CHANGELOG=[
+ {v:30,date:"17.10.2026",items:[
+   {t:"«Забули пароль?» на екрані входу: посилання для нового пароля приходить на пошту",for:"all"},
+   {t:"⚙️ → «Акаунт»: зміна пароля, вихід на всіх пристроях, завантаження всіх даних, видалення акаунта",for:"all"},
+   {t:"⚙️ → «Діагностика»: якщо щось не працює, скопіюй її й надішли — так швидше знайти причину",for:"all"},
+   {t:"Архів: давні виконані задачі й старий журнал переносяться в архів раз на місяць, карта активності зберігається",for:"all"}]},
  {v:29,date:"16.10.2026",items:[
    {t:"Номер версії, стан синхронізації та «Що нового» в ⚙️ → «Про застосунок»",for:"all"},
    {t:"Сайт сам підкаже, коли вийшла нова версія: достатньо натиснути «Оновити»",for:"all"},
@@ -950,7 +892,7 @@ function runMigrations(keepGrid){
   }
   if(from<2){                               // grid moves from code into the owner's data
     const st=state.settings||{};
-    if(st.hasGrid&&!state.grid) state.grid=JSON.parse(JSON.stringify(keepGrid||{pillars:LEGACY_GRID}));   // prefer the grid already in the user's data
+    if(st.hasGrid&&!state.grid&&keepGrid) state.grid=JSON.parse(JSON.stringify(keepGrid));   // old backups reuse the grid already in the user's data
   }
   if(from<3){                               // explicit account facts instead of guessing
     if(!state.account) state.account={type:state.grid?"grid":"diary",since:todayStr()};
@@ -1342,6 +1284,7 @@ function renderSettings(){
   const sec=(title,hint)=>{ const d=document.createElement("section"); d.className="card setsec"; d.innerHTML='<h2></h2>'+(hint?'<p class="hint"></p>':''); d.querySelector("h2").textContent=title; if(hint) d.querySelector("p").textContent=hint; box.appendChild(d); return d; };
   const changed=(re)=>{ save(); rebuildCats(); applyFeatures(); render(); if(re) renderSettings(); };
   const abs=sec("Про застосунок"); const abb=document.createElement("div"); abs.appendChild(abb); renderAbout(abb);
+  const acs=sec("Акаунт"); const acb=document.createElement("div"); acs.appendChild(acb); renderAccount(acb);
   const t=sec("Назва"); const ti=document.createElement("input"); ti.className="setin"; ti.value=s.title||""; ti.placeholder="Сітка 9×9"; ti.oninput=()=>{ s.title=ti.value; save(); applyFeatures(); }; t.appendChild(ti);
   const f=sec("Що показувати","Вимкнене ховається з екрана. Дані не зникають."); const fb=document.createElement("div"); f.appendChild(fb);
   featureCards(fb,s.features,()=>{seedRoutine();changed(true);},!hasGrid());
@@ -1363,6 +1306,8 @@ function renderSettings(){
   [["time","Час"],["dur","Тривалість"],["imp","Важливість"],["rep","Повтор"]].forEach(([k,l])=>{const b=document.createElement("button");b.type="button";b.textContent=l;b.setAttribute("aria-pressed",s.fields[k]!==false);b.onclick=()=>{s.fields[k]=s.fields[k]===false;changed(true);};fw.appendChild(b);}); fl.appendChild(fw);
   const a=sec("Колір акценту"); const ab=document.createElement("div"); a.appendChild(ab); accentPicker(ab,()=>{save();renderSettings();});
   const tp=sec("Підказки"); const tb=document.createElement("button"); tb.type="button"; tb.className="xbtn"; tb.textContent="Показати підказки знову"; tb.onclick=()=>{ s.tips=0; save(); closeSettings(); showView("grid"); renderTips(); }; tp.appendChild(tb);
+  const dgs=sec("Діагностика","Якщо щось не працює, скопіюй діагностику й надішли автору. Твоїх задач і нотаток у ній немає."); const dgb=document.createElement("div"); dgs.appendChild(dgb); renderDiag(dgb);
+  const ars=sec("Архів"); const arb=document.createElement("div"); ars.appendChild(arb); renderArchive(arb);
   const iv=sec("Запросити","Створи код і надішли посилання. Зареєструватися можна лише з дійсним кодом."); const ivb=document.createElement("div"); iv.appendChild(ivb); renderInvites(ivb);
   const ai=sec("Інструкції для ШІ","Встав у інструкції проєкту в Claude або ChatGPT. Категорії підставляються твої.");
   const row=document.createElement("div"); row.className="report-actions";
@@ -2256,8 +2201,10 @@ function dayActivity(d){
   const tasks=state.tasks.filter(t=>t.done&&t.doneAt>=from.getTime()&&t.doneAt<to).length;
   const rt=state.routine?(state.routine.items||[]).filter(it=>rtDone(it.id,k)).length:0;
   const grid=state.gridLog&&state.gridLog[k]?Object.keys(state.gridLog[k]).length:0;
-  const jn=dayHas(isoWeek(d),(d.getDay()+6)%7)?1:0;
-  return {tasks,rt,grid,jn,total:tasks+rt+grid+jn};
+  const ar=(state.activity&&state.activity[k])||{};
+  const tasksAll=tasks+(ar.t||0);
+  const jn=(dayHas(isoWeek(d),(d.getDay()+6)%7)||ar.j)?1:0;
+  return {tasks:tasksAll,rt,grid,jn,total:tasksAll+rt+grid+jn};
 }
 const hmLevel=n=>n===0?0:n<=2?1:n<=5?2:n<=8?3:4;
 function hmStreaks(){
@@ -2442,6 +2389,7 @@ function importData(raw){
   let obj; try{obj=JSON.parse(raw)}catch(e){alert("Не вдалося прочитати дані. Перевір, що скопіював текст повністю.");return false;}
   if(!obj||typeof obj!=="object"||!("checks" in obj)){alert("Це не схоже на дані сітки.");return false;}
   if(!confirm("Замінити поточні дані на імпортовані?"))return false;
+  if(!obj.schema&&obj.settings&&obj.settings.hasGrid&&!state.grid){ alert("Ця копія створена до 16.10.2026 і не містить самої сітки. Спершу увійди в акаунт, дочекайся синхронізації, а потім відновлюй копію."); return false; }
   const kg=state.grid; merge(obj); runMigrations(kg); save(); render(); showStatus("Дані імпортовано"); return true;
 }
 $("xCopy").onclick=async()=>{
@@ -2587,7 +2535,7 @@ function setSync(kind){
   const dot=$("syncDot"), t=$("storeTxt"), b=$("acctBtn");
   dot.className="sync-dot"+(kind==="ok"?" ok":kind==="offline"?" off":"");
   if(kind==="ok"){const bs=(typeof getBase==="function")&&getBase(); t.textContent="Синхронізовано"+(!legacy&&bs&&bs.rev?" · версія "+bs.rev:"")+" · "+(session&&session.user.email||"");b.hidden=false;b.textContent="Вийти";}
-  else if(kind==="offline"){t.textContent="Немає зв'язку. Зміни збережено тут і синхронізуються пізніше";b.hidden=true;}
+  else if(kind==="offline"){logErr("sync","Немає зв'язку");t.textContent="Немає зв'язку. Зміни збережено тут і синхронізуються пізніше";b.hidden=true;}
   else if(kind==="signedout"){t.textContent="Ти не увійшов: дані лише на цьому пристрої";b.hidden=false;b.textContent="Увійти";}
   else {t.textContent="Синхронізацію не налаштовано: дані лише на цьому пристрої. Раз на тиждень роби резервну копію.";b.hidden=true;}
 }
@@ -2608,7 +2556,18 @@ let inviteFromUrl=null;
 try{ const q=new URLSearchParams(location.search).get("invite"); if(q) inviteFromUrl=q.trim(); }catch(e){}
 let authMode=inviteFromUrl?"up":"in";
 function renderAuthMode(){
-  const up=authMode==="up";
+  const up=authMode==="up", rs=authMode==="reset", np=authMode==="newpass";
+  $("authTabs").hidden=rs||np; $("authForgot").hidden=authMode!=="in"; $("authSkip").hidden=rs||np;
+  $("authEmail").hidden=np; $("authPass").hidden=rs; $("authPass2").hidden=!np;
+  $("authReset").hidden=!rs; $("authNewPw").hidden=!np;
+  if(rs||np){
+    $("authTitle").textContent=rs?"Відновлення пароля":"Новий пароль";
+    $("authLead").textContent=rs?"Введи пошту акаунта — надішлемо посилання для нового пароля.":"Придумай новий пароль від 7 символів.";
+    $("authPass").placeholder=np?"Новий пароль (від 7 символів)":"Пароль (від 7 символів)"; $("authPass").autocomplete="new-password";
+    $("authInvite").hidden=true; $("authInviteOk").hidden=true; $("authIn").hidden=true; $("authUp").hidden=true;
+    $("authMsg").textContent=""; return;
+  }
+  $("authPass").placeholder="Пароль (від 7 символів)";
   document.querySelectorAll("#authTabs button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.m===authMode));
   $("authTitle").textContent=up?"Створити акаунт":"Вхід";
   $("authLead").textContent=up?(inviteFromUrl?"Тебе запросили 💌 Створи акаунт — далі все налаштуєш під себе.":"Для реєстрації потрібен код запрошення."):"Увійди з однаковою поштою на всіх пристроях, і дані синхронізуються між ними.";
@@ -2684,6 +2643,138 @@ function repairSettings(){
   return true;
 }
 
+
+/* ---------- diagnostics: local error log (no personal content) ---------- */
+const ERRLOG="sitka9x9-errlog";
+function logErr(area,msg){
+  try{ const L=JSON.parse(localStorage.getItem(ERRLOG)||"[]"); L.push({t:Date.now(),a:area,m:String(msg||"").slice(0,160)}); while(L.length>30) L.shift(); localStorage.setItem(ERRLOG,JSON.stringify(L)); }catch(e){}
+}
+window.addEventListener("error",e=>logErr("js",(e.message||"")+" @"+(e.lineno||"")));
+window.addEventListener("unhandledrejection",e=>logErr("js",(e.reason&&e.reason.message)||e.reason));
+function deviceLabel(){
+  const u=navigator.userAgent; const dev=/iPhone/.test(u)?"iPhone":/iPad/.test(u)?"iPad":/Android/.test(u)?"Android":/Mac/.test(u)?"Mac":/Windows/.test(u)?"Windows":"інший";
+  const br=/Edg\//.test(u)?"Edge":/Chrome\//.test(u)?"Chrome":/Safari\//.test(u)?"Safari":/Firefox\//.test(u)?"Firefox":"браузер";
+  const pwa=(window.matchMedia&&matchMedia("(display-mode: standalone)").matches)||navigator.standalone?" · застосунок":"";
+  return dev+" · "+br+pwa;
+}
+function renderDiag(box){
+  let L=[]; try{L=JSON.parse(localStorage.getItem(ERRLOG)||"[]")}catch(e){}
+  const week=L.filter(x=>Date.now()-x.t<7*864e5);
+  box.innerHTML='<div class="dg-h"><span>Помилок за 7 днів: <b>'+week.length+'</b></span><span class="dg-d"></span></div><div class="dg-log"></div><div class="report-actions" style="margin-top:8px"><button type="button" class="xbtn dg-copy">Скопіювати діагностику</button>'+(L.length?'<button type="button" class="xbtn dg-clr">Очистити журнал</button>':'')+'</div>';
+  box.querySelector(".dg-d").textContent=deviceLabel()+" · v"+APP_VERSION;
+  const lg=box.querySelector(".dg-log");
+  if(!L.length) lg.textContent="Помилок не зафіксовано.";
+  else L.slice(-10).reverse().forEach(x=>{ const d=new Date(x.t); const r=document.createElement("div"); r.textContent=d.toLocaleDateString("uk-UA",{day:"2-digit",month:"2-digit"})+" "+d.toLocaleTimeString("uk-UA",{hour:"2-digit",minute:"2-digit"})+" · "+x.a+" · "+x.m; lg.appendChild(r); });
+  box.querySelector(".dg-copy").onclick=()=>{
+    const bs=getBase&&getBase();
+    const txt=["Діагностика сайту 81","Версія сайту: "+APP_VERSION+" ("+APP_DATE+")","Версія даних: схема "+(state.schema||"—"),
+      "Пристрій: "+deviceLabel(),"Онлайн: "+(navigator.onLine?"так":"ні"),"Синхронізація: "+(!sb?"не налаштована":!session?"не виконано вхід":(legacy?"без захисту версій":"версія "+(bs&&bs.rev||"—")))+(lastSyncAt?" · "+new Date(lastSyncAt).toLocaleString("uk-UA"):""),
+      "Режим: "+(hasGrid()?"сітка":"щоденник")+" · задач: "+state.tasks.length+" · розмір даних: "+Math.round(JSON.stringify(state).length/1024)+" КБ",
+      "Помилки (останні 10):"].concat(L.slice(-10).map(x=>"  "+new Date(x.t).toLocaleString("uk-UA")+" · "+x.a+" · "+x.m)).join("\n");
+    copyText(txt,"Діагностику");
+  };
+  const c=box.querySelector(".dg-clr"); if(c) c.onclick=()=>{ try{localStorage.removeItem(ERRLOG)}catch(e){} renderDiag(box); };
+}
+/* ---------- account: profile, password, sign out everywhere, export, delete ---------- */
+async function loadProfile(){
+  if(!sb||!session) return null;
+  try{ const r=await sb.from("profiles").select("plan,created_at").eq("user_id",session.user.id).maybeSingle(); return r.error?null:r.data; }catch(e){ return null; }
+}
+async function exportAll(){
+  const out={exportedAt:new Date().toISOString(),app:APP_VERSION,data:clone(state),archive:[]};
+  if(sb&&session){ try{ const r=await sb.from("planner_archive").select("id,kind,data,created_at").eq("user_id",session.user.id); if(!r.error) out.archive=r.data||[]; }catch(e){} }
+  downloadJSON(out,"sitka-all-my-data-"+todayStr()+".json");
+}
+async function renderAccount(box){
+  if(!sb||!session){ box.innerHTML='<p class="hint">Розділ доступний після входу в акаунт.</p>'; return; }
+  const pr=await loadProfile();
+  const plan=pr?({free:"Безкоштовний",pro:"Платний"}[pr.plan]||pr.plan):"—";
+  const since=pr&&pr.created_at?new Date(pr.created_at).toLocaleDateString("uk-UA"):(state.account&&state.account.since?new Date(state.account.since+"T00:00").toLocaleDateString("uk-UA"):"—");
+  box.innerHTML='<div class="about-g"><span>Пошта</span><b class="ac-mail"></b><span>Тариф</span><b>'+esc(plan)+'</b><span>З нами з</span><b>'+esc(since)+'</b></div>'+
+   '<div class="report-actions" style="margin-top:10px"><button type="button" class="xbtn ac-pw">Змінити пароль</button><button type="button" class="xbtn ac-all">Вийти на всіх пристроях</button><button type="button" class="xbtn ac-exp">Завантажити всі мої дані</button></div>'+
+   '<div class="ac-pwf" hidden><input type="password" class="setin ac-p1" placeholder="Новий пароль (від 7 символів)" autocomplete="new-password"><input type="password" class="setin ac-p2" placeholder="Повтори пароль" autocomplete="new-password"><button type="button" class="addbtn ac-pws">Зберегти пароль</button></div>'+
+   '<div class="ac-del"><span>Видалення акаунта стирає всі дані назавжди, разом з автокопіями й архівом.</span><button type="button" class="xbtn danger ac-d">Видалити акаунт…</button></div>'+
+   '<div class="ac-delf" hidden><p class="hint">Спершу збережи копію: «Завантажити всі мої дані». Щоб підтвердити, введи слово ВИДАЛИТИ.</p><input type="text" class="setin ac-dw" placeholder="ВИДАЛИТИ" autocomplete="off"><button type="button" class="xbtn danger ac-dgo">Видалити назавжди</button></div>';
+  box.querySelector(".ac-mail").textContent=session.user.email;
+  box.querySelector(".ac-pw").onclick=()=>{ const f=box.querySelector(".ac-pwf"); f.hidden=!f.hidden; if(!f.hidden) box.querySelector(".ac-p1").focus(); };
+  box.querySelector(".ac-pws").onclick=async()=>{
+    const a=box.querySelector(".ac-p1").value, b=box.querySelector(".ac-p2").value;
+    if(a.length<7){ showStatus("Пароль має бути від 7 символів"); return; } if(a!==b){ showStatus("Паролі не збігаються"); return; }
+    const {error}=await sb.auth.updateUser({password:a});
+    if(error){ logErr("auth",error.message); showStatus("Не вдалося змінити пароль"); return; }
+    box.querySelector(".ac-pwf").hidden=true; box.querySelector(".ac-p1").value=box.querySelector(".ac-p2").value=""; showStatus("Пароль змінено");
+  };
+  box.querySelector(".ac-all").onclick=async()=>{
+    if(!confirm("Вийти з акаунта на всіх пристроях? Дані залишаться в хмарі.")) return;
+    clearTimeout(saveTimer); if(isDirty()) await push();
+    try{ await sb.auth.signOut({scope:"global"}); }catch(e){ logErr("auth",e.message); }
+    session=null; resetLocal(); try{localStorage.removeItem(OWNER)}catch(e){} closeSettings(); render(); setSync("signedout"); authMode="in"; renderAuthMode(); showAuth();
+  };
+  box.querySelector(".ac-exp").onclick=exportAll;
+  box.querySelector(".ac-d").onclick=()=>{ const f=box.querySelector(".ac-delf"); f.hidden=!f.hidden; };
+  box.querySelector(".ac-dgo").onclick=async()=>{
+    if(box.querySelector(".ac-dw").value.trim()!=="ВИДАЛИТИ"){ showStatus("Введи слово ВИДАЛИТИ"); return; }
+    const {error}=await sb.rpc("delete_my_account");
+    if(error){ logErr("account",error.message); showStatus("Не вдалося видалити акаунт"); return; }
+    try{ await sb.auth.signOut(); }catch(e){}
+    session=null; resetLocal(); try{localStorage.removeItem(OWNER)}catch(e){} closeSettings(); render(); setSync("signedout"); authMode="in"; renderAuthMode(); showAuth(); authMsg("Акаунт і всі дані видалено.");
+  };
+}
+/* ---------- archive: done tasks > 90 days, journal weeks > 180 days ---------- */
+const ARCH_TASK_DAYS=90, ARCH_WEEK_DAYS=180;
+let archiveBusy=false, archiveOff=false;
+function weekMonday(w){ const [y,n]=w.split("-W").map(Number); const d=new Date(y,0,4); d.setDate(d.getDate()-((d.getDay()+6)%7)+(n-1)*7); d.setHours(0,0,0,0); return d; }
+async function archiveMaybe(force){
+  if(archiveBusy||archiveOff||legacy||writesBlocked||!sb||!session) return;
+  const month=todayStr().slice(0,7); if(!force&&state.archive&&state.archive.lastRun===month) return;
+  const now=Date.now(), tCut=now-ARCH_TASK_DAYS*864e5, wCut=now-ARCH_WEEK_DAYS*864e5;
+  const oldTasks=state.tasks.filter(t=>t.done&&t.doneAt&&t.doneAt<tCut);
+  const oldWeeks=Object.keys(state.weekNotes||{}).filter(w=>/^\d{4}-W\d{2}$/.test(w)&&weekMonday(w).getTime()+7*864e5<wCut);
+  if(!oldTasks.length&&!oldWeeks.length){ state.archive=Object.assign({},state.archive,{lastRun:month}); save(true); return; }
+  archiveBusy=true;
+  try{
+    const groups={}; oldTasks.forEach(t=>{ const m=dayKey(new Date(t.doneAt)).slice(0,7); (groups["tasks-"+m]=groups["tasks-"+m]||[]).push(t); });
+    for(const id of Object.keys(groups)){
+      const ex=await sb.from("planner_archive").select("data").eq("user_id",session.user.id).eq("id",id).maybeSingle();
+      if(ex.error) throw ex.error;
+      const prev=(ex.data&&ex.data.data&&ex.data.data.tasks)||[], ids=new Set(groups[id].map(t=>t.id));
+      const merged=prev.filter(t=>!ids.has(t.id)).concat(groups[id]);
+      const w=await sb.from("planner_archive").upsert({user_id:session.user.id,id,kind:"tasks",data:{tasks:merged}},{onConflict:"user_id,id"});
+      if(w.error) throw w.error;
+    }
+    for(const wk of oldWeeks){
+      const w=await sb.from("planner_archive").upsert({user_id:session.user.id,id:"journal-"+wk,kind:"journal",data:{week:wk,notes:state.weekNotes[wk]}},{onConflict:"user_id,id"});
+      if(w.error) throw w.error;
+    }
+    // only now, after every write succeeded: keep activity counts, remove from the main document
+    state.activity=state.activity||{};
+    oldTasks.forEach(t=>{ const k=dayKey(new Date(t.doneAt)); const a=state.activity[k]=state.activity[k]||{}; a.t=(a.t||0)+1; });
+    oldWeeks.forEach(wk=>{ const days=(state.weekNotes[wk]||{}).days||{}; Object.keys(days).forEach(i=>{ const x=days[i]; if(x&&(x.good||x.bad||x.next||x.grat)){ const d=weekMonday(wk); d.setDate(d.getDate()+Number(i)); const a=state.activity[dayKey(d)]=state.activity[dayKey(d)]||{}; a.j=1; } }); });
+    const gone=new Set(oldTasks.map(t=>t.id)); state.tasks=state.tasks.filter(t=>!gone.has(t.id));
+    oldWeeks.forEach(wk=>delete state.weekNotes[wk]);
+    const A=state.archive||{}; state.archive={lastRun:month,tasks:(A.tasks||0)+oldTasks.length,weeks:(A.weeks||0)+oldWeeks.length};
+    save(); render();
+  }catch(e){ logErr("archive",e&&e.message); if(/relation|does not exist|42P01/.test((e&&e.message)||"")) archiveOff=true; }
+  archiveBusy=false;
+}
+function renderArchive(box){
+  const A=state.archive||{}, kb=Math.round(JSON.stringify(state).length/1024);
+  box.innerHTML='<p style="margin:0 0 4px"></p><p class="hint" style="margin:0"></p><div class="report-actions" style="margin-top:8px"><button type="button" class="xbtn ar-dl">Завантажити архів</button></div>';
+  box.querySelector("p").textContent="В архіві: "+(A.tasks||0)+" "+pl(A.tasks||0,"виконана задача","виконані задачі","виконаних задач")+" (старші за "+ARCH_TASK_DAYS+" днів) · "+(A.weeks||0)+" "+pl(A.weeks||0,"тиждень","тижні","тижнів")+" журналу (старші за 6 місяців)";
+  box.querySelector(".hint").textContent="Основні дані: "+kb+" КБ · архівується автоматично раз на місяць · карта активності зберігається"+(archiveOff?" · ⚠️ архів стане доступний після SQL":"");
+  box.querySelector(".ar-dl").onclick=async()=>{
+    if(!sb||!session){ showStatus("Потрібен вхід в акаунт"); return; }
+    const r=await sb.from("planner_archive").select("id,kind,data,created_at").eq("user_id",session.user.id);
+    if(r.error){ showStatus("Архів недоступний"); return; }
+    downloadJSON({exportedAt:new Date().toISOString(),archive:r.data||[]},"sitka-archive-"+todayStr()+".json");
+  };
+}
+/* ---------- password recovery ---------- */
+let recoveryMode=/type=recovery/.test(location.hash);
+let recoveryError=null; try{ const h=new URLSearchParams(location.hash.slice(1)); if(h.get("error_description")) recoveryError=h.get("error_description"); }catch(e){}
+function showNewPassword(){
+  authMode="newpass"; renderAuthMode(); showAuth();
+}
 
 /* ---------- releases: what's new, update check, minimum version ---------- */
 var lastSyncAt=0, writesBlocked=false;
@@ -2845,7 +2936,7 @@ async function push(){
   maybeBackup(data,newRev);
 }
 var minChecked=false;
-async function pull(force){ if(!minChecked&&session){ minChecked=true; checkMinVersion(); } await pullInner(force); if(!$("syncDot").classList.contains("off")) lastSyncAt=Date.now(); if(!$("syncDot").classList.contains("off")){ syncResolved=true; maybeOnboard(); } }
+async function pull(force){ if(!minChecked&&session){ minChecked=true; checkMinVersion(); setTimeout(()=>archiveMaybe(false),8000); } await pullInner(force); if(!$("syncDot").classList.contains("off")) lastSyncAt=Date.now(); if(!$("syncDot").classList.contains("off")){ syncResolved=true; maybeOnboard(); } }
 async function pullInner(force){
   if(!sb||!session||pushing) return;
   if(pending&&!force) return;
@@ -2931,7 +3022,7 @@ async function loadBackups(){
 function showAuth(){ $("auth").classList.add("open"); $("authMsg").textContent=""; }
 function hideAuth(){ $("auth").classList.remove("open"); }
 function authMsg(t,err){const m=$("authMsg");m.textContent=t;m.className="msg"+(err?" err":"");}
-function authError(e){
+function authError(e){ logErr("auth",e&&e.message);
   const m=(e&&e.message||"").toLowerCase();
   if(m.includes("invalid login"))return "Невірна пошта або пароль.";
   if(m.includes("not confirmed"))return "Пошту ще не підтверджено. Відкрий лист від Supabase і натисни посилання, потім увійди тут.";
@@ -2954,7 +3045,7 @@ async function initSync(){
   catch(e){ setSync("local"); return; }
   const {data}=await sb.auth.getSession(); session=data.session; checkOwner();
   if(session&&inviteFromUrl){ try{ history.replaceState(null,"",location.pathname); }catch(e){} inviteFromUrl=null; }
-  sb.auth.onAuthStateChange((ev,s)=>{ session=s; if(ev==="SIGNED_OUT") setSync("signedout"); });
+  sb.auth.onAuthStateChange((ev,s)=>{ session=s; if(ev==="SIGNED_OUT") setSync("signedout"); if(ev==="PASSWORD_RECOVERY"){ recoveryMode=true; showNewPassword(); } });
   $("authIn").onclick=async()=>{
     const email=$("authEmail").value.trim(), password=$("authPass").value;
     if(!email||!password){authMsg("Введи пошту і пароль.",true);return;}
@@ -2975,7 +3066,23 @@ async function initSync(){
     if(data.session){session=data.session;await afterSignIn();}
     else authMsg("Акаунт створено. Відкрий лист від Supabase, підтверди пошту і повернись сюди, щоб увійти.");
   };
-  $("authPass").onkeydown=e=>{if(e.key==="Enter")$("authIn").click();};
+  $("authPass").onkeydown=e=>{if(e.key==="Enter"){ if(authMode==="in")$("authIn").click(); else if(authMode==="up")$("authUp").click(); }};
+  $("authForgot").onclick=()=>{ authMode="reset"; renderAuthMode(); $("authEmail").focus(); };
+  $("authReset").onclick=async()=>{
+    const email=$("authEmail").value.trim(); if(!email){authMsg("Введи пошту.",true);return;}
+    authMsg("Надсилаю…");
+    const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
+    if(error){ logErr("auth",error.message); authMsg(/rate|limit/i.test(error.message)?"Забагато спроб. Спробуй через годину.":"Не вдалося надіслати лист. Спробуй пізніше.",true); return; }
+    authMsg("✓ Якщо такий акаунт існує, лист уже в дорозі. Перевір пошту й папку «Спам».");
+  };
+  $("authNewPw").onclick=async()=>{
+    const a=$("authPass").value, b=$("authPass2").value;
+    if(a.length<7){authMsg("Пароль має бути від 7 символів.",true);return;} if(a!==b){authMsg("Паролі не збігаються.",true);return;}
+    const {error}=await sb.auth.updateUser({password:a});
+    if(error){ logErr("auth",error.message); authMsg("Посилання застаріло. Запроси нове через «Забули пароль?».",true); return; }
+    recoveryMode=false; try{ history.replaceState(null,"",location.pathname); }catch(e){}
+    authMode="in"; renderAuthMode(); showStatus("Пароль змінено"); await afterSignIn();
+  };
   $("authSkip").onclick=()=>{try{localStorage.setItem("sitka9x9-skipauth","1")}catch(e){} hideAuth(); setSync("signedout");};
   $("acctBtn").onclick=async()=>{
     if(session){ if(!confirm("Вийти з акаунта? Твої дані збережені в хмарі, а з цього пристрою копію буде прибрано."))return;
@@ -2987,6 +3094,8 @@ async function initSync(){
   window.addEventListener("focus",()=>pull());
   window.addEventListener("online",()=>{isDirty()?push():pull();});
   setInterval(()=>{if(document.visibilityState==="visible")pull();},20000);
+  if(recoveryError){ authMode="reset"; renderAuthMode(); showAuth(); authMsg("Посилання недійсне або застаріло. Запроси нове.",true); try{ history.replaceState(null,"",location.pathname); }catch(e){} setSync("signedout"); return; }
+  if(recoveryMode&&session){ showNewPassword(); setSync("signedout"); return; }
   if(!session){
     let skip=false; try{skip=localStorage.getItem("sitka9x9-skipauth")==="1"}catch(e){}
     if(!skip) showAuth(); setSync("signedout"); syncResolved=!!skip; maybeOnboard(); return;
