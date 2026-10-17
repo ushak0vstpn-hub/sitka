@@ -837,6 +837,9 @@ ul.news{margin:8px 0;padding-left:20px;font-size:15px;line-height:1.55}
 
 <script>
 (function(){
+const emptyAct=()=>["","","",0];
+function shortFrom(t){ const w=String(t||"").trim().split(/\s+/); let out=""; for(const x of w){ if((out+" "+x).trim().length>14) break; out=(out+" "+x).trim(); } return (out||w[0]||"").slice(0,14); }
+const isEmptyAct=a=>!a||!String(a[0]||"").trim()||String(a[0]).trim()==="—";
 let PILLARS=[];            // current user's grid (from state.grid), empty for users without a grid
 let CORE_TOTAL=0;
 function syncGrid(){ PILLARS=(state.grid&&Array.isArray(state.grid.pillars))?state.grid.pillars:[]; CORE_TOTAL=PILLARS.reduce((n,P)=>n+P.a.filter(a=>a[3]).length,0); }
@@ -862,10 +865,12 @@ const wk=()=>isoWeek(weekStart);
 
 /* ---------- state ---------- */
 function ensureRoutine(){ if(!state.routine||!Array.isArray(state.routine.items)) state.routine={items:[],log:(state.routine&&state.routine.log)||{},water:{},v:2}; state.routine.log=state.routine.log||{}; }
-const APP_VERSION=32, APP_DATE="18.10.2026";
+const APP_VERSION=33, APP_DATE="18.10.2026";
 const SCHEMA=4;
 /* what's new: "for" = all | grid | diary */
 const CHANGELOG=[
+ {v:33,date:"18.10.2026",items:[
+   {t:"Виправлено: на пристроях зі збереженими даними сайт міг зупинятися на «Завантаження…»",for:"all"}]},
  {v:32,date:"18.10.2026",items:[
    {t:"Тепер можна створити свою сітку 9×9: ⚙️ → «Моя сітка» — з ШІ за промптом або вручну",for:"diary"},
    {t:"Редактор сітки: ⚙️ → «Моя сітка» — ціль, опори, кольори, дії, ядро ★ і підказки",for:"grid"},
@@ -2433,9 +2438,6 @@ $("xCopy").onclick=async()=>{
 $("xPasteOpen").onclick=()=>{const ta=$("xText");ta.hidden=false;ta.readOnly=false;ta.value="";ta.placeholder="Встав сюди скопійовані дані";$("xImport").hidden=false;ta.focus();};
 $("xImport").onclick=()=>{if(importData($("xText").value)){$("xText").hidden=true;$("xImport").hidden=true;}};
 
-if(bootFresh) state=newUserState();
-runMigrations();
-render();
 
 
 $("xFile").onclick=()=>{
@@ -2678,9 +2680,6 @@ function repairSettings(){
 
 /* ---------- personal grid: create (AI spec / manual) and edit ---------- */
 const GRID_COLORS=["#2F6FB0","#7556B3","#2F8A78","#C0413A","#C9A227","#56646F","#A9487A","#7A6440"];
-const emptyAct=()=>["","","",0];
-function shortFrom(t){ const w=String(t||"").trim().split(/\s+/); let out=""; for(const x of w){ if((out+" "+x).trim().length>14) break; out=(out+" "+x).trim(); } return (out||w[0]||"").slice(0,14); }
-const isEmptyAct=a=>!a||!String(a[0]||"").trim()||String(a[0]).trim()==="—";
 function blankGrid(){ return {pillars:Array.from({length:8},(_,i)=>({id:"p"+(i+1),name:"Опора "+(i+1),s:"Опора "+(i+1),c:GRID_COLORS[i],about:"",a:Array.from({length:8},emptyAct)}))}; }
 function parseGridSpec(txt){
   const out={goal:"",pillars:[],routine:[],tasks:[],warn:[]}; let cur=null, sect=null;
@@ -2963,12 +2962,14 @@ function showNewPassword(){
 
 /* ---------- releases: what's new, update check, minimum version ---------- */
 var lastSyncAt=0, writesBlocked=false;
-function newsFor(v){ const grid=hasGrid(); const e=CHANGELOG.find(x=>x.v===v); if(!e) return null;
-  const items=e.items.filter(i=>i.for==="all"||(i.for==="grid"&&grid)||(i.for==="diary"&&!grid)); return items.length?{v:e.v,date:e.date,items}:null; }
+function newsFor(v,since){ const grid=hasGrid(); const from=since==null?v-1:since;
+  const es=CHANGELOG.filter(x=>x.v<=v&&x.v>from); if(!es.length) return null;
+  const items=[].concat(...es.map(e=>e.items)).filter(i=>i.for==="all"||(i.for==="grid"&&grid)||(i.for==="diary"&&!grid));
+  return items.length?{v,date:es[0].date,items}:null; }
 var newsForced=false;
 function renderNews(){
   const box=$("newsCard"); if(!box) return; const seen=state.seenVersion||0;
-  const n=(seen<APP_VERSION||newsForced)?newsFor(APP_VERSION):null;
+  const n=(seen<APP_VERSION||newsForced)?newsFor(APP_VERSION,newsForced?APP_VERSION-1:Math.max(seen,APP_VERSION-5)):null;
   if(!n||!state.settings||!state.settings.onboarded){ box.hidden=true; return; }
   box.hidden=false;
   box.innerHTML='<div class="tph"><b>🎉 Що нового · версія '+n.v+'</b><span class="ut2">'+esc(n.date)+'</span></div><ul class="news"></ul><div class="tpn"><span style="flex:1"></span><button type="button" class="addbtn nw-ok">Зрозуміло</button></div>';
@@ -3289,6 +3290,10 @@ async function initSync(){
   }
   await pull(true);
 }
+/* ---------- boot: runs only after every definition above exists ---------- */
+if(bootFresh) state=newUserState();
+runMigrations();
+render();
 setSync("local");
 initSync().catch(()=>setSync(session?"offline":"local"));
 $("gearBtn").onclick=openSettings; $("setBack").onclick=closeSettings;
