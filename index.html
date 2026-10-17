@@ -840,10 +840,12 @@ const wk=()=>isoWeek(weekStart);
 
 /* ---------- state ---------- */
 function ensureRoutine(){ if(!state.routine||!Array.isArray(state.routine.items)) state.routine={items:[],log:(state.routine&&state.routine.log)||{},water:{},v:2}; state.routine.log=state.routine.log||{}; }
-const APP_VERSION=30, APP_DATE="17.10.2026";
+const APP_VERSION=31, APP_DATE="17.10.2026";
 const SCHEMA=3;
 /* what's new: "for" = all | grid | diary */
 const CHANGELOG=[
+ {v:31,date:"17.10.2026",items:[
+   {t:"Зрозуміліші підказки під час зміни пароля: сайт пояснює, що саме пішло не так, і форма лишається відкритою",for:"all"}]},
  {v:30,date:"17.10.2026",items:[
    {t:"«Забули пароль?» на екрані входу: посилання для нового пароля приходить на пошту",for:"all"},
    {t:"⚙️ → «Акаунт»: зміна пароля, вихід на всіх пристроях, завантаження всіх даних, видалення акаунта",for:"all"},
@@ -2701,7 +2703,7 @@ async function renderAccount(box){
     const a=box.querySelector(".ac-p1").value, b=box.querySelector(".ac-p2").value;
     if(a.length<7){ showStatus("Пароль має бути від 7 символів"); return; } if(a!==b){ showStatus("Паролі не збігаються"); return; }
     const {error}=await sb.auth.updateUser({password:a});
-    if(error){ logErr("auth",error.message); showStatus("Не вдалося змінити пароль"); return; }
+    if(error){ logErr("auth",error.message); showStatus(pwError(error)); return; }
     box.querySelector(".ac-pwf").hidden=true; box.querySelector(".ac-p1").value=box.querySelector(".ac-p2").value=""; showStatus("Пароль змінено");
   };
   box.querySelector(".ac-all").onclick=async()=>{
@@ -2770,8 +2772,27 @@ function renderArchive(box){
   };
 }
 /* ---------- password recovery ---------- */
+function pwError(e){
+  const m=((e&&e.message)||"").toLowerCase();
+  if(m.includes("different from the old"))return "Новий пароль має відрізнятися від старого.";
+  if(m.includes("weak")||m.includes("at least")||m.includes("characters")||m.includes("short"))return "Пароль закороткий або надто простий: потрібно щонайменше 7 символів.";
+  if(m.includes("session")||m.includes("jwt")||m.includes("expired")||m.includes("not authenticated"))return "Сесія відновлення завершилась. Запроси нове посилання через «Забули пароль?».";
+  if(m.includes("fetch")||m.includes("network"))return "Немає інтернету. Спробуй ще раз.";
+  return "Не вдалося зберегти пароль. Спробуй ще раз.";
+}
+function resetError(e){
+  const m=(e&&e.message)||""; const sec=m.match(/after (\d+) seconds?/i);
+  if(sec) return "Лист щойно надіслано. Наступний можна запросити через "+sec[1]+" с.";
+  if(/rate|limit/i.test(m)) return "Забагато запитів. Спробуй трохи пізніше.";
+  if(/fetch|network/i.test(m)) return "Немає інтернету. Спробуй ще раз.";
+  return "Не вдалося надіслати лист. Спробуй пізніше.";
+}
+function linkError(code,desc){
+  if(code==="otp_expired"||/invalid or has expired/i.test(desc||"")) return "Це посилання вже використане або застаріло. Якщо ти запитував кілька листів — дійсне лише посилання з найновішого. Запроси нове нижче.";
+  return "Посилання не спрацювало. Запроси нове нижче.";
+}
 let recoveryMode=/type=recovery/.test(location.hash);
-let recoveryError=null; try{ const h=new URLSearchParams(location.hash.slice(1)); if(h.get("error_description")) recoveryError=h.get("error_description"); }catch(e){}
+let recoveryError=null; try{ const h=new URLSearchParams(location.hash.slice(1)); if(h.get("error_description")||h.get("error_code")) recoveryError=linkError(h.get("error_code"),h.get("error_description")); }catch(e){}
 function showNewPassword(){
   authMode="newpass"; renderAuthMode(); showAuth();
 }
@@ -3067,19 +3088,21 @@ async function initSync(){
     else authMsg("Акаунт створено. Відкрий лист від Supabase, підтверди пошту і повернись сюди, щоб увійти.");
   };
   $("authPass").onkeydown=e=>{if(e.key==="Enter"){ if(authMode==="in")$("authIn").click(); else if(authMode==="up")$("authUp").click(); }};
-  $("authForgot").onclick=()=>{ authMode="reset"; renderAuthMode(); $("authEmail").focus(); };
+  $("authForgot").onclick=()=>{ recoveryMode=false; authMode="reset"; renderAuthMode(); $("authEmail").focus(); };
   $("authReset").onclick=async()=>{
     const email=$("authEmail").value.trim(); if(!email){authMsg("Введи пошту.",true);return;}
     authMsg("Надсилаю…");
     const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
-    if(error){ logErr("auth",error.message); authMsg(/rate|limit/i.test(error.message)?"Забагато спроб. Спробуй через годину.":"Не вдалося надіслати лист. Спробуй пізніше.",true); return; }
+    if(error){ logErr("auth",error.message); authMsg(resetError(error),true); return; }
     authMsg("✓ Якщо такий акаунт існує, лист уже в дорозі. Перевір пошту й папку «Спам».");
   };
   $("authNewPw").onclick=async()=>{
     const a=$("authPass").value, b=$("authPass2").value;
     if(a.length<7){authMsg("Пароль має бути від 7 символів.",true);return;} if(a!==b){authMsg("Паролі не збігаються.",true);return;}
     const {error}=await sb.auth.updateUser({password:a});
-    if(error){ logErr("auth",error.message); authMsg("Посилання застаріло. Запроси нове через «Забули пароль?».",true); return; }
+    if(error){ logErr("auth",error.message); const msg=pwError(error); authMsg(msg,true);
+      if(/сесія/i.test(msg)){ $("authForgot").hidden=false; } else { $("authPass").value=""; $("authPass2").value=""; $("authPass").focus(); }
+      return; }
     recoveryMode=false; try{ history.replaceState(null,"",location.pathname); }catch(e){}
     authMode="in"; renderAuthMode(); showStatus("Пароль змінено"); await afterSignIn();
   };
@@ -3094,7 +3117,7 @@ async function initSync(){
   window.addEventListener("focus",()=>pull());
   window.addEventListener("online",()=>{isDirty()?push():pull();});
   setInterval(()=>{if(document.visibilityState==="visible")pull();},20000);
-  if(recoveryError){ authMode="reset"; renderAuthMode(); showAuth(); authMsg("Посилання недійсне або застаріло. Запроси нове.",true); try{ history.replaceState(null,"",location.pathname); }catch(e){} setSync("signedout"); return; }
+  if(recoveryError){ authMode="reset"; renderAuthMode(); showAuth(); authMsg(recoveryError,true); try{ history.replaceState(null,"",location.pathname); }catch(e){} setSync("signedout"); return; }
   if(recoveryMode&&session){ showNewPassword(); setSync("signedout"); return; }
   if(!session){
     let skip=false; try{skip=localStorage.getItem("sitka9x9-skipauth")==="1"}catch(e){}
