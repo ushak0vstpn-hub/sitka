@@ -569,6 +569,28 @@ ul.news{margin:8px 0;padding-left:20px;font-size:15px;line-height:1.55}
 .dg-h{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:14px}
 .dg-h .dg-d{color:var(--muted);font-size:13px}
 .dg-log{margin-top:6px;font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:10px;padding:8px 10px;line-height:1.6}
+.cell.act.empty{color:var(--muted);opacity:.55;font-size:1.3em}
+.gs-spec{width:100%;min-height:120px;margin-top:10px;font-family:ui-monospace,Menlo,monospace;font-size:12px}
+.gs-prev{margin-top:8px;display:grid;gap:4px;font-size:14px}
+.gs-ok{color:#2F8A78;font-weight:600}.gs-warn{color:#A88A1A;font-size:13px}.gs-extra{color:var(--muted);font-size:13px}
+.gs-cats{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px;font-size:13px;color:var(--muted)}
+.gs-cats .gs-go{margin-left:auto;background:var(--acc-soft);color:var(--acc-ink);border:1px solid var(--acc)}
+.gs-goal{margin-bottom:6px}
+.gp{border-top:1px solid var(--line)}
+.gp-h{display:flex;align-items:center;gap:10px;width:100%;border:0;background:transparent;color:var(--ink);padding:10px 0;cursor:pointer;font-size:15px;text-align:left}
+.gp-h i{width:12px;height:12px;border-radius:50%;background:var(--c);flex:0 0 12px}
+.gp-n{flex:1}.gp-m{font-size:12px;color:var(--muted)}.gp-ch{color:var(--muted)}
+.gp.open .gp-n{font-weight:600}
+.gp-b{display:grid;gap:8px;padding:0 0 12px 22px}
+.gp-f{display:flex;gap:8px;flex-wrap:wrap}.gp-f .gp-name{flex:2;min-width:150px;margin:0}.gp-f .gp-s{flex:1;min-width:110px;margin:0}
+.gp-b .gp-about{margin:0}
+.ga{display:grid;grid-template-columns:32px 1fr 110px;gap:6px;align-items:center}
+.ga .ga-h{grid-column:2/4;font-size:13px}
+.ga input{border:1px solid var(--line);border-radius:8px;padding:7px 9px;background:var(--paper);color:var(--ink);font-size:14px;min-width:0}
+.ga-star{border:0;background:transparent;font-size:20px;cursor:pointer;color:var(--muted);height:32px}
+.ga-star.on{color:var(--acc)}
+.gs-rep summary{cursor:pointer;margin-top:12px;font-size:14px;color:var(--muted)}
+@media (max-width:520px){.ga{grid-template-columns:30px 1fr}.ga .ga-s{grid-column:2}.ga .ga-h{grid-column:2}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 @media (min-width:900px){.wrap{padding-top:28px}}
 </style>
@@ -819,7 +841,7 @@ let PILLARS=[];            // current user's grid (from state.grid), empty for u
 let CORE_TOTAL=0;
 function syncGrid(){ PILLARS=(state.grid&&Array.isArray(state.grid.pillars))?state.grid.pillars:[]; CORE_TOTAL=PILLARS.reduce((n,P)=>n+P.a.filter(a=>a[3]).length,0); }
 const hasGrid=()=>PILLARS.length>0;
-const isCore=(p,i)=>!!PILLARS[p].a[i][3];
+const isCore=(p,i)=>!!PILLARS[p].a[i][3]&&!isEmptyAct(PILLARS[p].a[i]);
 const coreCount=(p,w)=>PILLARS[p].a.reduce((n,a,i)=>n+(a[3]&&isDone(p,i,w)?1:0),0);
 const DEFAULT_GOAL="Фінансист, який встигає";
 const BLOCK_POS=[0,1,2,3,5,6,7,8]; // blocks around the center
@@ -840,10 +862,14 @@ const wk=()=>isoWeek(weekStart);
 
 /* ---------- state ---------- */
 function ensureRoutine(){ if(!state.routine||!Array.isArray(state.routine.items)) state.routine={items:[],log:(state.routine&&state.routine.log)||{},water:{},v:2}; state.routine.log=state.routine.log||{}; }
-const APP_VERSION=31, APP_DATE="17.10.2026";
-const SCHEMA=3;
+const APP_VERSION=32, APP_DATE="18.10.2026";
+const SCHEMA=4;
 /* what's new: "for" = all | grid | diary */
 const CHANGELOG=[
+ {v:32,date:"18.10.2026",items:[
+   {t:"Тепер можна створити свою сітку 9×9: ⚙️ → «Моя сітка» — з ШІ за промптом або вручну",for:"diary"},
+   {t:"Редактор сітки: ⚙️ → «Моя сітка» — ціль, опори, кольори, дії, ядро ★ і підказки",for:"grid"},
+   {t:"Кількість дій ядра ★ в опорі вирішуєш ти (рекомендація — 2)",for:"grid"}]},
  {v:31,date:"17.10.2026",items:[
    {t:"Зрозуміліші підказки під час зміни пароля: сайт пояснює, що саме пішло не так, і форма лишається відкритою",for:"all"}]},
  {v:30,date:"17.10.2026",items:[
@@ -899,6 +925,12 @@ function runMigrations(keepGrid){
   if(from<3){                               // explicit account facts instead of guessing
     if(!state.account) state.account={type:state.grid?"grid":"diary",since:todayStr()};
   }
+  if(from<4){                               // custom action wording moves into the grid; texts overrides retired
+    if(state.grid&&Array.isArray(state.grid.pillars)){
+      state.grid.pillars.forEach(P=>(P.a||[]).forEach((a,i)=>{ const k=P.id+"."+i; if(state.texts&&state.texts[k]) a[0]=state.texts[k]; if(state.texts&&state.texts[k+"s"]) a[1]=state.texts[k+"s"]; }));
+    }
+    state.texts={};
+  }
   state.schema=SCHEMA;            // deterministic: two devices migrating the same data produce identical results
   normalize(); syncGrid();
   return true;
@@ -920,8 +952,8 @@ function save(silent){
 }
 
 const key=(p,i)=>p+"."+i;
-const text=(p,i)=>state.texts[key(PILLARS[p].id,i)]||PILLARS[p].a[i][0];
-const short=(p,i)=>state.texts[key(PILLARS[p].id,i)+"s"]||PILLARS[p].a[i][1];
+const text=(p,i)=>(state.texts&&state.texts[key(PILLARS[p].id,i)])||PILLARS[p].a[i][0];
+const short=(p,i)=>(state.texts&&state.texts[key(PILLARS[p].id,i)+"s"])||PILLARS[p].a[i][1]||PILLARS[p].a[i][0];
 const isDone=(p,i,w=wk())=>!!(state.checks[w]&&state.checks[w][key(PILLARS[p].id,i)]);
 function logGrid(w,k,v){
   state.gridLog=state.gridLog||{}; const id=w+"|"+k, d=todayStr();
@@ -1105,7 +1137,7 @@ function seedRoutine(){
 }
 function applyFeatures(){
   const diary=isDiary(), show=(id,v)=>{const el=typeof id==="string"?$(id):id; if(el) el.hidden=!v;};
-  const g=feat("grid")&&!diary;
+  const g=feat("grid")&&hasGrid();
   show("mandala",g); show("gridMeta",g); show("gridBar",g); show("gridHint",g);
   show("top3",feat("top3")); if(!feat("top3")) show("mplan",false);
   show("journalCard",feat("journal")); show("heatCard",feat("heatmap")); show("claudeCard",feat("report"));
@@ -1201,8 +1233,8 @@ function featureCards(box,feats,onChange,diaryNew){
     const soon=f.k==="grid"&&diaryNew;
     const on=soon?false:feats[f.k]!==false;
     const b=document.createElement("button"); b.type="button"; b.className="fcard"+(on?" on":"")+(soon?" soon":""); b.disabled=soon;
-    b.innerHTML='<span class="fe"></span><b></b><small></small><span class="fst">'+(soon?"згодом":on?"✓ так":"не зараз")+'</span>';
-    b.querySelector(".fe").textContent=f.e; b.querySelector("b").textContent=f.n; b.querySelector("small").textContent=soon?"коли створиш сітку з ШІ":f.d;
+    b.innerHTML='<span class="fe"></span><b></b><small></small><span class="fst">'+(soon?"немає сітки":on?"✓ так":"не зараз")+'</span>';
+    b.querySelector(".fe").textContent=f.e; b.querySelector("b").textContent=f.n; b.querySelector("small").textContent=soon?"спершу створи сітку: ⚙️ → «Моя сітка»":f.d;
     b.setAttribute("aria-pressed",on);
     b.onclick=()=>{ feats[f.k]=!(feats[f.k]!==false); onChange(); };
     box.appendChild(b);
@@ -1286,6 +1318,7 @@ function renderSettings(){
   const sec=(title,hint)=>{ const d=document.createElement("section"); d.className="card setsec"; d.innerHTML='<h2></h2>'+(hint?'<p class="hint"></p>':''); d.querySelector("h2").textContent=title; if(hint) d.querySelector("p").textContent=hint; box.appendChild(d); return d; };
   const changed=(re)=>{ save(); rebuildCats(); applyFeatures(); render(); if(re) renderSettings(); };
   const abs=sec("Про застосунок"); const abb=document.createElement("div"); abs.appendChild(abb); renderAbout(abb);
+  const gss=sec("Моя сітка"); const gsb=document.createElement("div"); gss.appendChild(gsb); renderGridSettings(gsb);
   const acs=sec("Акаунт"); const acb=document.createElement("div"); acs.appendChild(acb); renderAccount(acb);
   const t=sec("Назва"); const ti=document.createElement("input"); ti.className="setin"; ti.value=s.title||""; ti.placeholder="Сітка 9×9"; ti.oninput=()=>{ s.title=ti.value; save(); applyFeatures(); }; t.appendChild(ti);
   const f=sec("Що показувати","Вимкнене ховається з екрана. Дані не зникають."); const fb=document.createElement("div"); f.appendChild(fb);
@@ -2178,6 +2211,7 @@ function render(){
         if(c===4){el.className="cell pillar";el.innerHTML=esc(PILLARS[p].s)+"<small>★"+coreCount(p,wk())+"/2 · "+pillarCount(p,wk())+"/8</small>";el.onclick=()=>openPillar(p);el.setAttribute("aria-label","Відкрити опору "+PILLARS[p].name);}
         else{
           const i=ai++; const done=isDone(p,i);
+          if(isEmptyAct(PILLARS[p].a[i])){ el.className="cell act empty"; el.textContent="+"; el.title="Порожня дія — додай у ⚙️ → «Моя сітка»"; el.setAttribute("aria-label","Порожня дія"); el.onclick=()=>{ gridOpenP=p; openSettings(); }; blk.appendChild(el); continue; }
           el.className="cell act"+(done?" done":"")+(isCore(p,i)?" core":"")+(state.notes[key(PILLARS[p].id,i)]?" has-note":"");
           el.textContent=short(p,i); el.title=text(p,i);
           el.setAttribute("aria-pressed",done); el.setAttribute("aria-label",text(p,i));
@@ -2299,11 +2333,7 @@ function renderSheet(){
       const t=row.querySelector(".t"); if(t.querySelector("input"))return;
       t.innerHTML='<input aria-label="Текст дії"><input aria-label="Коротка назва в сітці" style="margin-top:6px" placeholder="Коротка назва для сітки">';
       const [a,b]=t.querySelectorAll("input"); a.value=text(p,i); b.value=short(p,i); a.focus();
-      const commit=()=>{
-        if(a.value.trim()&&a.value.trim()!==P.a[i][0])state.texts[k]=a.value.trim();else delete state.texts[k];
-        if(b.value.trim()&&b.value.trim()!==P.a[i][1])state.texts[k+"s"]=b.value.trim();else delete state.texts[k+"s"];
-        save();
-      };
+      const commit=()=>{ if(a.value.trim()) P.a[i][0]=a.value.trim(); if(b.value.trim()) P.a[i][1]=b.value.trim(); save(); };
       a.oninput=commit;b.oninput=commit;
     };
     box.appendChild(row);
@@ -2645,6 +2675,140 @@ function repairSettings(){
   return true;
 }
 
+
+/* ---------- personal grid: create (AI spec / manual) and edit ---------- */
+const GRID_COLORS=["#2F6FB0","#7556B3","#2F8A78","#C0413A","#C9A227","#56646F","#A9487A","#7A6440"];
+const emptyAct=()=>["","","",0];
+function shortFrom(t){ const w=String(t||"").trim().split(/\s+/); let out=""; for(const x of w){ if((out+" "+x).trim().length>14) break; out=(out+" "+x).trim(); } return (out||w[0]||"").slice(0,14); }
+const isEmptyAct=a=>!a||!String(a[0]||"").trim()||String(a[0]).trim()==="—";
+function blankGrid(){ return {pillars:Array.from({length:8},(_,i)=>({id:"p"+(i+1),name:"Опора "+(i+1),s:"Опора "+(i+1),c:GRID_COLORS[i],about:"",a:Array.from({length:8},emptyAct)}))}; }
+function parseGridSpec(txt){
+  const out={goal:"",pillars:[],routine:[],tasks:[],warn:[]}; let cur=null, sect=null;
+  txt.replace(/\r/g,"").split("\n").forEach(raw=>{
+    const line=raw.replace(/\s+$/,""); const t=line.trim(); if(!t||/^```/.test(t)) return;
+    let m;
+    if((m=t.match(/^Центральна ціль\s*:\s*(.+)$/i))){ out.goal=m[1].trim(); sect=null; return; }
+    if((m=t.match(/^ОПОРА\s*(\d+)\s*[·•:-]\s*(.+)$/i))){
+      const bits=m[2].split(/\s*[·•]\s*/); const name=bits[0].trim(); const s=(bits[1]||name).replace(/\(.*?\)/g,"").trim().slice(0,14);
+      cur={name,s,about:"",a:[]}; out.pillars.push(cur); sect="p"; return; }
+    if(/^РУТИНА\s*:?$/i.test(t)){ sect="r"; cur=null; return; }
+    if(/^(СТАРТОВІ )?ЗАДАЧІ\s*:?$/i.test(t)||/^У ЗАДАЧІ\s*:?$/i.test(t)){ sect="t"; cur=null; return; }
+    if(/^(У РУТИНУ)\s*:?$/i.test(t)){ sect="r"; cur=null; return; }
+    if(/^[А-ЯІЇЄҐA-Z ]{4,}:\s*$/.test(t)){ sect=null; cur=null; return; }        // any other section header
+    if(sect==="p"&&cur){
+      if((m=t.match(/^Про що\s*:\s*(.+)$/i))){ cur.about=m[1].trim(); return; }
+      if((m=t.match(/^(★)?\s*(\d+)\.\s*(.*)$/))){
+        const parts=m[3].split("|").map(x=>x.trim()); const text=parts[0]||"";
+        if(!text||text==="—"){ cur.a.push(emptyAct()); return; }
+        let short=parts[1]||shortFrom(text), hint="";
+        parts.slice(2).forEach(x=>{ if(/^було\s*:/i.test(x)) return; const h=x.replace(/^нотатка\s*:\s*/i,""); if(h&&!hint) hint=h; });
+        cur.a.push([text,short.slice(0,20),hint,m[1]?1:0]); }
+      return; }
+    if(sect==="r"&&(m=t.match(/^[-•*]\s*(.+)$/))){ out.routine.push(m[1].trim()); return; }
+    if(sect==="t"&&/^\[/.test(t)){ out.tasks.push(t); return; }
+  });
+  if(!out.pillars.length) out.warn.push("Не знайдено жодної опори. Перевір, що текст починається з «СПЕЦИФІКАЦІЯ СІТКИ» і містить рядки «ОПОРА 1 · …».");
+  if(out.pillars.length&&out.pillars.length!==8) out.warn.push("Опор: "+out.pillars.length+" замість 8. Відсутні буде створено порожніми.");
+  out.pillars.forEach(P=>{ const n=P.a.filter(a=>!isEmptyAct(a)).length; if(n<8) out.warn.push("«"+P.name+"»: "+n+" "+pl(n,"дія","дії","дій")+" з 8 — решту можна дописати пізніше."); });
+  return out;
+}
+function gridFromSpec(sp){
+  const g=blankGrid();
+  sp.pillars.slice(0,8).forEach((P,i)=>{ const G=g.pillars[i]; G.name=P.name; G.s=P.s||P.name; G.about=P.about||""; P.a.slice(0,8).forEach((a,j)=>G.a[j]=a); });
+  return g;
+}
+function applyNewGrid(g,goal,usePillarsAsCats){
+  state.grid=g; if(goal) state.goal=goal;
+  const s=state.settings; s.features=s.features||{}; s.features.grid=true;
+  if(usePillarsAsCats){ if((s.cats||[]).length) s.catsSaved=s.cats; s.cats=[]; }
+  syncGrid(); rebuildCats();
+}
+let gridSpecDraft=null, gridOpenP=-1, gridRenderTimer=null;
+const gridChanged=()=>{ save(); clearTimeout(gridRenderTimer); gridRenderTimer=setTimeout(()=>{ syncGrid(); render(); },400); };
+function renderGridSettings(box){
+  box.innerHTML="";
+  if(!hasGrid()){
+    const intro=document.createElement("p"); intro.className="hint"; intro.textContent="Ціль у центрі, 8 опор навколо і по 8 щотижневих дій у кожній. Рекомендація: 2 дії ядра ★ на опору — так легше тримати фокус."; box.appendChild(intro);
+    const cards=document.createElement("div"); cards.className="fcards";
+    cards.innerHTML='<button type="button" class="fcard on gs-ai"><span class="fe">🤖</span><b>Створити з ШІ</b><small>Скопіюй промпт → обговори з Claude чи ChatGPT → встав специфікацію нижче</small></button><button type="button" class="fcard gs-man"><span class="fe">✍️</span><b>Заповнити вручну</b><small>Порожня сітка: заповнюєш опори й дії сам, можна поступово</small></button>';
+    box.appendChild(cards);
+    cards.querySelector(".gs-ai").onclick=()=>{ copyText(GRID_PROMPT,"Промпт для створення сітки"); box.querySelector(".gs-spec").focus(); };
+    cards.querySelector(".gs-man").onclick=()=>{ if(!confirm("Створити порожню сітку з 8 опорами?")) return; applyNewGrid(blankGrid(),"",false); gridOpenP=0; save(); render(); renderGridSettings(box); };
+    const ta=document.createElement("textarea"); ta.className="gs-spec"; ta.placeholder="Встав сюди «СПЕЦИФІКАЦІЯ СІТКИ …» від ШІ"; box.appendChild(ta);
+    const pv=document.createElement("div"); pv.className="gs-prev"; box.appendChild(pv);
+    ta.oninput=()=>{ gridSpecDraft=ta.value.trim()?parseGridSpec(ta.value):null; renderSpecPreview(pv,box); };
+    return;
+  }
+  const g=state.grid;
+  const goal=document.createElement("label"); goal.className="fld gs-goal"; goal.innerHTML='<span>Центральна ціль</span><input class="setin">';
+  const gi=goal.querySelector("input"); gi.value=state.goal||""; gi.oninput=()=>{ state.goal=gi.value; gridChanged(); }; box.appendChild(goal);
+  const rec=document.createElement("p"); rec.className="hint"; rec.textContent="Рекомендація: 2 дії ядра ★ на опору — фокус на них допомагає рости. Але кількість вирішуєш ти."; box.appendChild(rec);
+  g.pillars.forEach((P,pi)=>{
+    const filled=P.a.filter(a=>!isEmptyAct(a)).length, cores=P.a.filter(a=>!isEmptyAct(a)&&a[3]).length;
+    const row=document.createElement("div"); row.className="gp"+(gridOpenP===pi?" open":""); row.style.setProperty("--c",P.c);
+    row.innerHTML='<button type="button" class="gp-h"><i></i><span class="gp-n"></span><span class="gp-m">'+filled+' '+pl(filled,"дія","дії","дій")+' · ★'+cores+'</span><span class="gp-ch">'+(gridOpenP===pi?"▾":"▸")+'</span></button>';
+    row.querySelector(".gp-n").textContent=P.name||("Опора "+(pi+1));
+    row.querySelector(".gp-h").onclick=()=>{ gridOpenP=gridOpenP===pi?-1:pi; renderGridSettings(box); };
+    if(gridOpenP===pi){
+      const body=document.createElement("div"); body.className="gp-b";
+      body.innerHTML='<div class="gp-f"><input class="setin gp-name" aria-label="Назва опори" placeholder="Назва опори"><input class="setin gp-s" aria-label="Коротка назва" placeholder="Коротко (до 10)" maxlength="12"></div><input class="setin gp-about" aria-label="Про що" placeholder="Про що ця опора (одне речення)"><div class="ce-sw gp-sw" role="group" aria-label="Колір опори"></div><div class="gp-acts"></div>';
+      const n=body.querySelector(".gp-name"), s=body.querySelector(".gp-s"), ab=body.querySelector(".gp-about");
+      n.value=P.name; s.value=P.s; ab.value=P.about||"";
+      n.oninput=()=>{ P.name=n.value; row.querySelector(".gp-n").textContent=P.name; gridChanged(); };
+      s.oninput=()=>{ P.s=s.value; gridChanged(); }; ab.oninput=()=>{ P.about=ab.value; gridChanged(); };
+      const sw=body.querySelector(".gp-sw");
+      [...new Set(GRID_COLORS.concat(CAT_COLORS))].forEach(col=>{ const b=document.createElement("button"); b.type="button"; b.className="sw"+(col===P.c?" on":""); b.style.background=col; b.setAttribute("aria-label","Колір "+col);
+        b.onclick=()=>{ P.c=col; gridChanged(); renderGridSettings(box); }; sw.appendChild(b); });
+      const acts=body.querySelector(".gp-acts");
+      P.a.forEach((a,ai)=>{
+        const r=document.createElement("div"); r.className="ga";
+        r.innerHTML='<button type="button" class="ga-star" aria-label="Ядро"></button><input class="ga-t" placeholder="Дія '+(ai+1)+': щотижнева, можна відмітити так/ні"><input class="ga-s" placeholder="Клітинка" maxlength="20"><input class="ga-h" placeholder="Підказка (необов\'язково)">';
+        const st=r.querySelector(".ga-star"), t=r.querySelector(".ga-t"), sh=r.querySelector(".ga-s"), h=r.querySelector(".ga-h");
+        const paint=()=>{ st.textContent=a[3]?"★":"☆"; st.classList.toggle("on",!!a[3]); st.setAttribute("aria-pressed",!!a[3]); };
+        t.value=isEmptyAct(a)?"":a[0]; sh.value=a[1]||""; h.value=a[2]||""; paint();
+        st.onclick=()=>{ a[3]=a[3]?0:1; paint(); gridChanged(); const c=P.a.filter(x=>!isEmptyAct(x)&&x[3]).length; row.querySelector(".gp-m").textContent=P.a.filter(x=>!isEmptyAct(x)).length+" дій · ★"+c; };
+        t.oninput=()=>{ a[0]=t.value; if(!sh.value.trim()&&t.value.trim()){ a[1]=shortFrom(t.value); } gridChanged(); };
+        sh.oninput=()=>{ a[1]=sh.value; gridChanged(); }; h.oninput=()=>{ a[2]=h.value; gridChanged(); };
+        acts.appendChild(r);
+      });
+      row.appendChild(body);
+    }
+    box.appendChild(row);
+  });
+  const rep=document.createElement("details"); rep.className="gs-rep"; rep.innerHTML='<summary>Замінити сітку новою специфікацією від ШІ</summary><p class="hint">Тексти опор і дій заміняться новими. Відмітки минулих тижнів лишаються за місцем клітинки (опора N, дія M).</p><textarea class="gs-spec"></textarea><div class="gs-prev"></div>';
+  const ta2=rep.querySelector("textarea"), pv2=rep.querySelector(".gs-prev"); ta2.placeholder="Встав «СПЕЦИФІКАЦІЯ СІТКИ …»";
+  ta2.oninput=()=>{ gridSpecDraft=ta2.value.trim()?parseGridSpec(ta2.value):null; renderSpecPreview(pv2,box,true); };
+  box.appendChild(rep);
+}
+function renderSpecPreview(pv,box,replacing){
+  pv.innerHTML=""; const sp=gridSpecDraft; if(!sp) return;
+  const acts=sp.pillars.reduce((n,P)=>n+P.a.filter(a=>!isEmptyAct(a)).length,0), cores=sp.pillars.reduce((n,P)=>n+P.a.filter(a=>!isEmptyAct(a)&&a[3]).length,0);
+  const ok=document.createElement("div"); ok.className="gs-ok";
+  ok.textContent=sp.pillars.length?("✓ "+Math.min(8,sp.pillars.length)+" опор · "+acts+" "+pl(acts,"дія","дії","дій")+" · "+cores+" ядро ★"+(sp.goal?" · ціль: «"+sp.goal+"»":"")):"";
+  pv.appendChild(ok);
+  sp.warn.forEach(w=>{ const d=document.createElement("div"); d.className="gs-warn"; d.textContent="⚠ "+w; pv.appendChild(d); });
+  if(sp.routine.length||sp.tasks.length){ const d=document.createElement("div"); d.className="gs-extra"; d.textContent="+ "+sp.routine.length+" "+pl(sp.routine.length,"пункт","пункти","пунктів")+" рутини · "+sp.tasks.length+" "+pl(sp.tasks.length,"стартова задача","стартові задачі","стартових задач"); pv.appendChild(d); }
+  if(!sp.pillars.length) return;
+  let usePillars=!replacing&&!(state.settings.cats||[]).length;
+  const cs=document.createElement("div"); cs.className="gs-cats";
+  if(!replacing){
+    cs.innerHTML='<span>Категорії задач:</span><div class="seg"><button type="button" data-v="1">Опори сітки</button><button type="button" data-v="0">Залишити мої</button></div>';
+    const paint=()=>cs.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",(b.dataset.v==="1")===usePillars)); paint();
+    cs.querySelectorAll("button").forEach(b=>b.onclick=()=>{ usePillars=b.dataset.v==="1"; paint(); });
+  }
+  const go=document.createElement("button"); go.type="button"; go.className="addbtn gs-go"; go.textContent=replacing?"Замінити сітку":"Створити сітку";
+  go.onclick=()=>{
+    if(replacing&&!confirm("Замінити тексти опор і дій новою специфікацією?")) return;
+    const g=gridFromSpec(sp);
+    if(replacing){ g.pillars.forEach((P,i)=>{ const old=state.grid.pillars[i]; if(old){ P.id=old.id; P.c=old.c; } }); state.grid=g; if(sp.goal) state.goal=sp.goal; syncGrid(); rebuildCats(); }
+    else applyNewGrid(g,sp.goal,usePillars);
+    sp.routine.forEach(t=>{ if(!state.routine.items.some(it=>it.t.toLowerCase()===t.toLowerCase())) state.routine.items.push({id:"r"+Math.random().toString(36).slice(2,8),t}); });
+    if(sp.tasks.length){ $("bulkText").value=sp.tasks.join("\n"); $("bulkAdd").click(); }
+    gridSpecDraft=null; gridOpenP=-1; save(); render(); renderGridSettings(box);
+    showStatus(replacing?"Сітку оновлено":"Сітку створено 🎉");
+  };
+  cs.appendChild(go); pv.appendChild(cs);
+}
 
 /* ---------- diagnostics: local error log (no personal content) ---------- */
 const ERRLOG="sitka9x9-errlog";
