@@ -591,6 +591,13 @@ ul.news{margin:8px 0;padding-left:20px;font-size:15px;line-height:1.55}
 .ga-star.on{color:var(--acc)}
 .gs-rep summary{cursor:pointer;margin-top:12px;font-size:14px;color:var(--muted)}
 @media (max-width:520px){.ga{grid-template-columns:30px 1fr}.ga .ga-s{grid-column:2}.ga .ga-h{grid-column:2}}
+.tno{display:inline-block;font-family:ui-monospace,Menlo,monospace;font-size:.78em;font-weight:500;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:0 5px;margin-right:6px;vertical-align:1px;line-height:1.5}
+.tno.rep{border-style:dashed}
+.ino{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--muted)}
+.iarch{margin-top:10px;border-top:1px solid var(--line);padding-top:8px}
+.iarch summary{cursor:pointer;font-size:14px;color:var(--muted)}
+.iar{display:flex;gap:10px;align-items:baseline;padding:6px 0;font-size:14px;color:var(--muted)}
+.iar .iat{flex:1;text-decoration:line-through}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 @media (min-width:900px){.wrap{padding-top:28px}}
 </style>
@@ -840,6 +847,29 @@ ul.news{margin:8px 0;padding-left:20px;font-size:15px;line-height:1.55}
 const emptyAct=()=>["","","",0];
 function shortFrom(t){ const w=String(t||"").trim().split(/\s+/); let out=""; for(const x of w){ if((out+" "+x).trim().length>14) break; out=(out+" "+x).trim(); } return (out||w[0]||"").slice(0,14); }
 const isEmptyAct=a=>!a||!String(a[0]||"").trim()||String(a[0]).trim()==="—";
+/* stable numbers: tasks #N (repeating series share one number, shown as ↻N), ideas №N */
+function numberAll(){
+  const before=JSON.stringify([state.seq,(state.tasks||[]).map(t=>t.no),(state.ideas||[]).map(x=>x.no)]);
+  state.seq=state.seq||{task:0,idea:0};
+  const T=state.tasks||[], prev={};
+  T.forEach(t=>{ if(t.nextId) prev[t.nextId]=t; });
+  let max=state.seq.task||0; T.forEach(t=>{ if(t.no>max) max=t.no; });
+  const rootOf=t=>{ let x=t,g=0; while(prev[x.id]&&g++<1000) x=prev[x.id]; return x.id; };
+  const owner={};
+  T.forEach(t=>{
+    const p=prev[t.id];
+    if(p&&p.no){ t.no=p.no; }
+    else { const r=rootOf(t); if(!t.no||(owner[t.no]&&owner[t.no]!==r)) t.no=++max; }
+    if(!owner[t.no]) owner[t.no]=rootOf(t);
+  });
+  state.seq.task=max;
+  const I=state.ideas||[]; let mi=state.seq.idea||0; I.forEach(x=>{ if(x.no>mi) mi=x.no; });
+  const seenI={}; I.forEach(x=>{ if(!x.no||seenI[x.no]) x.no=++mi; seenI[x.no]=1; });
+  state.seq.idea=mi;
+  return before!==JSON.stringify([state.seq,(state.tasks||[]).map(t=>t.no),(state.ideas||[]).map(x=>x.no)]);
+}
+const tnoLabel=t=>t&&t.no?((t.rep?"↻":"#")+t.no):"";
+function tnoChip(t){ const s=document.createElement("span"); s.className="tno"+(t.rep?" rep":""); s.textContent=tnoLabel(t); s.title=t.rep?"Повторювана задача: номер спільний для всієї серії":"Номер задачі"; return s; }
 let PILLARS=[];            // current user's grid (from state.grid), empty for users without a grid
 let CORE_TOTAL=0;
 function syncGrid(){ PILLARS=(state.grid&&Array.isArray(state.grid.pillars))?state.grid.pillars:[]; CORE_TOTAL=PILLARS.reduce((n,P)=>n+P.a.filter(a=>a[3]).length,0); }
@@ -865,10 +895,14 @@ const wk=()=>isoWeek(weekStart);
 
 /* ---------- state ---------- */
 function ensureRoutine(){ if(!state.routine||!Array.isArray(state.routine.items)) state.routine={items:[],log:(state.routine&&state.routine.log)||{},water:{},v:2}; state.routine.log=state.routine.log||{}; }
-const APP_VERSION=33, APP_DATE="18.10.2026";
-const SCHEMA=4;
+const APP_VERSION=34, APP_DATE="18.10.2026";
+const SCHEMA=5;
 /* what's new: "for" = all | grid | diary */
 const CHANGELOG=[
+ {v:34,date:"18.10.2026",items:[
+   {t:"У кожної задачі тепер є номер #N. Повторювані мають один номер на всю серію: ↻N",for:"all"},
+   {t:"Номери задач є у звіті для ШІ — так легше домовлятися: «перенеси #47»",for:"all"},
+   {t:"Ідеї отримують номер №N, а виконані переїжджають в «Архів ідей»",for:"all"}]},
  {v:33,date:"18.10.2026",items:[
    {t:"Виправлено: на пристроях зі збереженими даними сайт міг зупинятися на «Завантаження…»",for:"all"}]},
  {v:32,date:"18.10.2026",items:[
@@ -918,7 +952,7 @@ function normalize(){
   ["top3","quick","mplan","daily","t3offer"].forEach(k=>{ const o=state[k]; if(o&&typeof o==="object") Object.keys(o).forEach(d=>{ if(d<lim) delete o[d]; }); });
 }
 function runMigrations(keepGrid){
-  const from=state.schema||0; if(from>=SCHEMA){ normalize(); syncGrid(); return false; }
+  const from=state.schema||0; if(from>=SCHEMA){ normalize(); syncGrid(); return numberAll(); }   // numbering also resolves duplicates after merges
   if(from<1){                               // pre-schema data (created before 16.10.2026)
     if(!(state.gridV>=2)) state.gridV=2;
     ensureSettings(); repairSettings(); migrateRoutineV2(); migrateJournal();
@@ -936,6 +970,7 @@ function runMigrations(keepGrid){
     }
     state.texts={};
   }
+  if(from<5){ numberAll(); }               // stable numbers for tasks and ideas (array order = creation order)
   state.schema=SCHEMA;            // deterministic: two devices migrating the same data produce identical results
   normalize(); syncGrid();
   return true;
@@ -948,6 +983,7 @@ try{ const raw=localStorage.getItem(LS); if(raw) merge(JSON.parse(raw)); else bo
 
 function showStatus(t){const s=$("status");s.textContent=t;s.classList.add("show");clearTimeout(showStatus.t);showStatus.t=setTimeout(()=>s.classList.remove("show"),1400)}
 function save(silent){
+  numberAll();
   try{localStorage.setItem(LS,JSON.stringify(state))}catch(e){}
   if(sb&&session){
     markDirty(); pending=true; clearTimeout(saveTimer); saveTimer=setTimeout(push,800);
@@ -1602,7 +1638,7 @@ function renderTop3(){
     const c=document.createElement("div");
     const cat=catOf(t.cat); c.className="t3c "+(isQ?"quick ":"")+(t.done?"done":dlClass(t)); c.style.setProperty("--c",cat.c);
     c.innerHTML='<button class="tc" aria-pressed="'+t.done+'" aria-label="Виконано">'+(t.done?"✓":"")+'</button><div class="t3b"><div class="t3n">'+label+' '+(t.done?"готово":(t.due?dueLabel(t):(isQ?"":"без дедлайну")))+'</div><div class="t3x"></div><div class="t3m"><span class="cn"></span>'+(t.dur?" · "+durLabel(t.dur):"")+'</div></div><button class="t3rm" aria-label="Прибрати">×</button>';
-    c.querySelector(".t3x").textContent=t.t; c.querySelector(".cn").textContent=catLabel(cat);
+    c.querySelector(".t3x").textContent=t.t; if(t.no) c.querySelector(".t3x").prepend(tnoChip(t)); c.querySelector(".cn").textContent=catLabel(cat);
     progUI(t,c.querySelector(".t3b"),c.querySelector(".t3m")); linksUI(t,c.querySelector(".t3b"));
     c.querySelector(".t3x").onclick=()=>openTaskInList(t);
     c.querySelector(".tc").onclick=()=>setTaskDone(t,!t.done);
@@ -1632,7 +1668,7 @@ function renderTop3(){
     cand.slice(0,10).forEach(t=>{
       const b=document.createElement("button"); b.type="button"; b.className="t3opt "+dlClass(t); b.style.setProperty("--c",catOf(t.cat).c);
       b.innerHTML='<span class="t3on"></span><span class="t3om"></span>';
-      b.firstChild.textContent=t.t; b.lastChild.innerHTML=esc(catOf(t.cat).name)+(t.due?" · "+dueLabel(t):"")+(t.dur?" · "+durLabel(t.dur):"");
+      b.firstChild.textContent=t.t; if(t.no) b.firstChild.prepend(tnoChip(t)); b.lastChild.innerHTML=esc(catOf(t.cat).name)+(t.due?" · "+dueLabel(t):"")+(t.dur?" · "+durLabel(t.dur):"");
       b.onclick=()=>t3Picking==="quick"?qToggle(t):t3Toggle(t); pk.appendChild(b);
     });
     const cl=document.createElement("button"); cl.type="button"; cl.className="linkbtn"; cl.textContent="закрити"; cl.onclick=()=>{t3Picking=null;renderTop3();};
@@ -1724,7 +1760,7 @@ function taskRow(t){
     '<div class="tb"><div class="tt" title="Торкнись, щоб змінити"></div><div class="tm"><span class="cat"></span>'+
     (t.imp===3?"<span>важливо</span>":t.imp===1?"<span>дрібниця</span>":"")+'<span>'+dueLabel(t)+'</span>'+durChip(t)+repChip(t)+ideaMeta(t)+'</div></div>'+
     (t.done?'':pin(t))+'<button class="te" aria-label="Редагувати задачу" title="Редагувати">✎</button><button class="tx" aria-label="Видалити">×</button>';
-  r.querySelector(".tt").textContent=t.t; r.querySelector(".cat").textContent=catLabel(c);
+  r.querySelector(".tt").textContent=t.t; if(t.no) r.querySelector(".tt").prepend(tnoChip(t)); r.querySelector(".cat").textContent=catLabel(c);
   if(t.tags&&t.tags.length){ const tm=r.querySelector(".tm"); t.tags.forEach(g=>{const x=document.createElement("span"); x.className="tagc"; x.textContent="#"+g; tm.appendChild(x);}); }
   r.dataset.id=t.id;
   progUI(t,r.querySelector(".tb"),r.querySelector(".tm")); linksUI(t,r.querySelector(".tb"));
@@ -1811,7 +1847,7 @@ function renderNowTasks(open){
   open.slice(0,12).forEach((t,i)=>{
     const c=catOf(t.cat); const r=document.createElement("div"); r.className="nt-row "+dlClass(t)+(i===0?" top":""); r.style.setProperty("--c",c.c);
     r.innerHTML='<button class="tc" aria-label="Виконано"></button><div class="nb"><div class="nn"></div><div class="nm"><span class="cn"></span>'+(t.due?" · "+dueLabel(t):"")+repChip(t)+ideaMeta(t)+'</div></div>'+durChip(t)+pin(t);
-    r.querySelector(".nn").textContent=t.t; r.querySelector(".cn").textContent=catLabel(c);
+    r.querySelector(".nn").textContent=t.t; if(t.no) r.querySelector(".nn").prepend(tnoChip(t)); r.querySelector(".cn").textContent=catLabel(c);
     if(t.prog&&hasProg(t)){ const pb=document.createElement("div"); pb.className="pg mini"; pb.innerHTML='<div class="pgbar"><i style="width:'+t.prog+'%"></i></div><span class="pgv">'+t.prog+'%</span>'; r.querySelector(".nb").appendChild(pb); }
     linksUI(t,r.querySelector(".nb"));
     noteUI(t,r.querySelector(".nb"),r.querySelector(".nm"));
@@ -1894,7 +1930,7 @@ function renderIdeas(){
     b.onclick=()=>{iFilter=k;renderIdeas();}; f.appendChild(b);
   });
   const order={new:0,wip:1,done:2};
-  const list=inSp.filter(x=>iFilter==="all"||x.status===iFilter).sort((a,b)=>order[a.status]-order[b.status]||(b.created||"").localeCompare(a.created||""));
+  const list=inSp.filter(x=>iFilter==="all"?x.status!=="done":x.status===iFilter).sort((a,b)=>order[a.status]-order[b.status]||(b.created||"").localeCompare(a.created||""));
   const box=$("iList"); box.innerHTML="";
   if(!list.length) box.innerHTML='<div class="empty">Тут поки порожньо.</div>';
   list.forEach(it=>{
@@ -1902,7 +1938,7 @@ function renderIdeas(){
     const [y,m,d]=(it.created||todayStr()).split("-");
     r.innerHTML='<button class="st '+it.status+'" aria-label="Статус: '+IST[it.status]+'. Змінити"></button><div class="ib"><div class="it" title="Торкнись, щоб змінити"></div><div class="im"><span>'+d+"."+m+'</span><span class="spn"></span><span class="tg"></span></div></div><button class="ix" aria-label="Видалити ідею">×</button>';
     r.querySelector(".st").textContent=IST[it.status];
-    r.querySelector(".it").textContent=it.t;
+    r.querySelector(".it").textContent=it.t; if(it.no){ const nb=document.createElement("span"); nb.className="ino"; nb.textContent="№"+it.no; r.querySelector(".im").prepend(nb); }
     r.querySelector(".spn").textContent=spLabel(spaceOf(it.space)); r.querySelector(".tg").textContent=it.tag||"";
     r.querySelector(".st").onclick=()=>{it.status=INEXT[it.status]; save(); renderIdeas(); renderTasks();};
     r.querySelector(".it").onclick=()=>{
@@ -1915,6 +1951,19 @@ function renderIdeas(){
     noteUI(it,r.querySelector(".ib"),r.querySelector(".im"));
     box.appendChild(r);
   });
+  const arch=inSp.filter(x=>x.status==="done");
+  if(iFilter==="all"&&arch.length){
+    const det=document.createElement("details"); det.className="iarch";
+    det.innerHTML='<summary>Архів ідей · '+arch.length+' '+pl(arch.length,"зроблена","зроблені","зроблених")+'</summary>';
+    arch.slice().sort((a,b)=>(b.no||0)-(a.no||0)).forEach(it=>{
+      const r=document.createElement("div"); r.className="iar";
+      r.innerHTML='<span class="ino"></span><span class="iat"></span><button type="button" class="linkbtn">повернути</button>';
+      r.querySelector(".ino").textContent=it.no?"№"+it.no:""; r.querySelector(".iat").textContent=it.t;
+      r.querySelector("button").onclick=()=>{ it.status="wip"; save(); renderIdeas(); };
+      det.appendChild(r);
+    });
+    box.appendChild(det);
+  }
 }
 (function initIdeas(){
   const sel=$("iTag"); ITAGS.forEach(t=>{const o=document.createElement("option");o.value=t;o.textContent=t;sel.appendChild(o);});
@@ -1934,7 +1983,7 @@ function renderIdeas(){
       [["new","Нові"],["wip","В роботі"],["done","Зроблено"]].forEach(([k,l])=>{
         let xs=inS.filter(x=>x.status===k); if(k==="done") xs=xs.slice(-5);
         if(!xs.length) return; L.push(""); L.push("## "+l);
-        xs.forEach(x=>{const [y,m,d]=(x.created||"").split("-"); L.push("- "+(x.tag?"["+x.tag+"] ":"")+x.t+(d?" ("+d+"."+m+")":"")); if(x.note) L.push("  Нотатка: "+x.note.replace(/\n+/g," / "));});
+        xs.forEach(x=>{const [y,m,d]=(x.created||"").split("-"); L.push("- "+(x.no?"№"+x.no+" ":"")+(x.tag?"["+x.tag+"] ":"")+x.t+(d?" ("+d+"."+m+")":"")); if(x.note) L.push("  Нотатка: "+x.note.replace(/\n+/g," / "));});
       });
     });
     L.push(""); L.push(iSpace==="81"?"Подивись мої ідеї для 81: що варто зробити першим, що можна об'єднати, і як реалізувати 1–2 найкорисніші.":"Подивись ці ідеї: що варто зробити першим, що можна об'єднати, і з чого почати.");
@@ -2472,11 +2521,11 @@ function buildReport(){
   L.push(""); L.push("## Відкриті задачі (за пріоритетом)");
   const open=sortedOpen(); if(!open.length) L.push("- немає");
   open.forEach((t,i)=>{const d=daysTo(t.due);
-    L.push((i+1)+". ["+catOf(t.cat).name+"] "+t.t+(t.due?" · дедлайн "+t.due+(t.time?" "+t.time:"")+(d<0?" (прострочено)":""):"")+" · "+(t.imp===3?"важливо":t.imp===1?"дрібниця":"звичайно")+(t.dur?" · ~"+durLabel(t.dur):"")+(t.rep?" · повтор: "+repLabel(t.rep):"")+(t.prog?" · прогрес "+t.prog+"%":"")+" · група: "+QUADS[quadrant(t)][0]); if(t.note) L.push("   Нотатка: "+t.note.replace(/\n+/g," / ")); if(t.links) L.push("   Посилання: "+t.links.map(l=>(l.n?l.n+" — ":"")+l.u).join("; "));});
+    L.push((i+1)+". "+(t.no?tnoLabel(t)+" ":"")+"["+catOf(t.cat).name+"] "+t.t+(t.due?" · дедлайн "+t.due+(t.time?" "+t.time:"")+(d<0?" (прострочено)":""):"")+" · "+(t.imp===3?"важливо":t.imp===1?"дрібниця":"звичайно")+(t.dur?" · ~"+durLabel(t.dur):"")+(t.rep?" · повтор: "+repLabel(t.rep):"")+(t.prog?" · прогрес "+t.prog+"%":"")+" · група: "+QUADS[quadrant(t)][0]); if(t.note) L.push("   Нотатка: "+t.note.replace(/\n+/g," / ")); if(t.links) L.push("   Посилання: "+t.links.map(l=>(l.n?l.n+" — ":"")+l.u).join("; "));});
   const from=Date.parse(ws), to=from+7*864e5;
   const doneW=state.tasks.filter(t=>t.done&&t.doneAt>=from&&t.doneAt<to);
   L.push(""); L.push("## Виконані задачі цього тижня");
-  if(!doneW.length) L.push("- немає"); doneW.forEach(t=>{L.push("- ["+catOf(t.cat).name+"] "+t.t); if(t.note) L.push("  Нотатка: "+t.note.replace(/\n+/g," / "));});
+  if(!doneW.length) L.push("- немає"); doneW.forEach(t=>{L.push("- "+(t.no?tnoLabel(t)+" ":"")+"["+catOf(t.cat).name+"] "+t.t); if(t.note) L.push("  Нотатка: "+t.note.replace(/\n+/g," / "));});
   const wn=state.weekNotes[w]||{};
   L.push(""); L.push("## Журнал тижня");
   let anyDay=false;
@@ -2812,7 +2861,9 @@ function renderSpecPreview(pv,box,replacing){
 /* ---------- diagnostics: local error log (no personal content) ---------- */
 const ERRLOG="sitka9x9-errlog";
 function logErr(area,msg){
-  try{ const L=JSON.parse(localStorage.getItem(ERRLOG)||"[]"); L.push({t:Date.now(),a:area,m:String(msg||"").slice(0,160)}); while(L.length>30) L.shift(); localStorage.setItem(ERRLOG,JSON.stringify(L)); }catch(e){}
+  try{ const L=JSON.parse(localStorage.getItem(ERRLOG)||"[]"); const m=String(msg||"").slice(0,160), last=L[L.length-1];
+    if(last&&last.a===area&&last.m===m&&Date.now()-last.t<5*60*1000){ last.n=(last.n||1)+1; last.t=Date.now(); localStorage.setItem(ERRLOG,JSON.stringify(L)); return; }
+    L.push({t:Date.now(),a:area,m}); while(L.length>30) L.shift(); localStorage.setItem(ERRLOG,JSON.stringify(L)); }catch(e){}
 }
 window.addEventListener("error",e=>logErr("js",(e.message||"")+" @"+(e.lineno||"")));
 window.addEventListener("unhandledrejection",e=>logErr("js",(e.reason&&e.reason.message)||e.reason));
@@ -2829,7 +2880,7 @@ function renderDiag(box){
   box.querySelector(".dg-d").textContent=deviceLabel()+" · v"+APP_VERSION;
   const lg=box.querySelector(".dg-log");
   if(!L.length) lg.textContent="Помилок не зафіксовано.";
-  else L.slice(-10).reverse().forEach(x=>{ const d=new Date(x.t); const r=document.createElement("div"); r.textContent=d.toLocaleDateString("uk-UA",{day:"2-digit",month:"2-digit"})+" "+d.toLocaleTimeString("uk-UA",{hour:"2-digit",minute:"2-digit"})+" · "+x.a+" · "+x.m; lg.appendChild(r); });
+  else L.slice(-10).reverse().forEach(x=>{ const d=new Date(x.t); const r=document.createElement("div"); r.textContent=d.toLocaleDateString("uk-UA",{day:"2-digit",month:"2-digit"})+" "+d.toLocaleTimeString("uk-UA",{hour:"2-digit",minute:"2-digit"})+" · "+x.a+" · "+x.m+(x.n>1?" ×"+x.n:""); lg.appendChild(r); });
   box.querySelector(".dg-copy").onclick=()=>{
     const bs=getBase&&getBase();
     const txt=["Діагностика сайту 81","Версія сайту: "+APP_VERSION+" ("+APP_DATE+")","Версія даних: схема "+(state.schema||"—"),
