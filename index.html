@@ -420,6 +420,33 @@ textarea.grat{background:color-mix(in srgb,#B9831C 8%,var(--paper))}
 .wbtn.plus{background:var(--acc-soft,#FFF3C4);color:var(--acc-ink,#5C4700);border-color:var(--acc,#E2B93B);font-weight:600}
 .rt-row.auto{cursor:pointer}
 .rt-row .ro{cursor:default}
+.sleep-row{cursor:pointer}
+.sleep-panel{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:4px 0 8px;background:var(--paper)}
+.sleep-panel .sp-h,.sleep-panel .sp-t{font-weight:600;font-size:14px;margin-bottom:6px}
+.sleep-panel .sp-t small{font-weight:400;color:var(--muted);margin-left:6px;font-size:12px}
+.sp-btns{display:flex;gap:6px}
+.sbtn{flex:1;position:relative;border:1px solid var(--line);background:var(--sheet);color:var(--ink);border-radius:10px;padding:8px 4px;font:inherit;font-size:12px;text-align:center;cursor:pointer;display:flex;flex-direction:column;gap:2px;align-items:center}
+.sbtn b{font-size:16px;font-weight:600}
+.sbtn.ok{background:var(--acc-soft);border-color:var(--acc);color:var(--acc-ink)}
+.sbtn input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+.sp-kv,.sp-kv2{display:grid;grid-template-columns:1fr auto;gap:3px 10px;font-size:13px;margin-top:8px}
+.sp-kv span,.sp-kv2 span{color:var(--muted)}
+.sp-sec{margin-top:12px;border-top:1px solid var(--grid);padding-top:10px}
+.sp-cfg{display:flex;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-bottom:6px}
+.sp-cfg label{display:flex;flex-direction:column;gap:2px}
+.sp-cfg input,.sp-cfg select{border:1px solid var(--line);border-radius:8px;padding:5px 6px;background:var(--sheet);color:var(--ink);font:inherit;font-size:14px}
+.sp-opt{display:flex;justify-content:space-between;padding:7px 10px;border-radius:10px;margin-top:5px;background:var(--sheet);font-size:14px}
+.sp-opt.best{background:var(--acc-soft);color:var(--acc-ink);font-weight:600}
+.sp-plot{position:relative;display:flex;gap:6px;align-items:flex-end;height:92px}
+.sp-line{position:absolute;left:0;right:0;border-top:1px dashed var(--muted);opacity:.6}
+.sp-c{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:stretch;height:100%;text-align:center}
+.sp-v{font-size:11px;margin-bottom:2px}
+.sp-b{border-radius:5px 5px 0 0;background:var(--grid)}
+.sp-b.ok{background:var(--acc)}.sp-b.mid{background:color-mix(in srgb,var(--acc) 45%,var(--sheet))}.sp-b.low{background:#C0413A}.sp-b.none{background:var(--grid)}
+.sp-lbl{display:flex;gap:6px;font-size:11px;color:var(--muted);text-align:center;margin-top:3px}
+.sp-lbl span{flex:1}
+.sp-note{font-size:12px;color:var(--muted);margin:10px 0 0}
+.act-text .sleephint{font-size:12px;color:var(--acc-ink);background:var(--acc-soft);border-radius:6px;padding:2px 7px;margin-top:4px;display:inline-block}
 .rt-row.auto .rsub{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .dots3{display:inline-flex;gap:3px}.dots3 i{width:9px;height:9px;border-radius:50%;border:1.5px solid var(--line);display:inline-block}.dots3 i.f{background:#2F8A78;border-color:#2F8A78}
 .autotag{font-size:11px;padding:1px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
@@ -895,10 +922,14 @@ const wk=()=>isoWeek(weekStart);
 
 /* ---------- state ---------- */
 function ensureRoutine(){ if(!state.routine||!Array.isArray(state.routine.items)) state.routine={items:[],log:(state.routine&&state.routine.log)||{},water:{},v:2}; state.routine.log=state.routine.log||{}; }
-const APP_VERSION=34, APP_DATE="18.10.2026";
+const APP_VERSION=35, APP_DATE="22.10.2026";
 const SCHEMA=5;
 /* what's new: "for" = all | grid | diary */
 const CHANGELOG=[
+ {v:35,date:"22.10.2026",items:[
+   {t:"Сон: у «Рутині» записуй, коли ліг, будильник і коли встав. Тап по порожній кнопці ставить поточний час, а торкнувшись заповненої, час можна виправити",for:"grid"},
+   {t:"Калькулятор «Коли лягати» і сон за 7 днів: середній сон, стабільність підйому й відбою",for:"grid"},
+   {t:"Під діями «Підйом» і «Відбій» в опорі «Енергія» з'явилась підказка за журналом сну. Галочку, як і раніше, ставиш сам",for:"grid"}]},
  {v:34,date:"18.10.2026",items:[
    {t:"У кожної задачі тепер є номер #N. Повторювані мають один номер на всю серію: ↻N",for:"all"},
    {t:"Номери задач є у звіті для ШІ — так легше домовлятися: «перенеси #47»",for:"all"},
@@ -947,9 +978,11 @@ function normalize(){
   if(!Array.isArray(state.ideaSpaces)||!state.ideaSpaces.length) state.ideaSpaces=[{id:"gen",n:"Загальні",e:"💡"}];
   if(!state.routine||!Array.isArray(state.routine.items)) state.routine={items:[],log:{},water:{},v:2};
   state.routine.log=state.routine.log||{}; state.routine.water=state.routine.water||{};
+  if(!state.routine.sleep||typeof state.routine.sleep!=="object") state.routine.sleep={};
   // housekeeping: drop day-keyed records older than 60 days
   const old=new Date(); old.setDate(old.getDate()-60); const lim=dayKey(old);
   ["top3","quick","mplan","daily","t3offer"].forEach(k=>{ const o=state[k]; if(o&&typeof o==="object") Object.keys(o).forEach(d=>{ if(d<lim) delete o[d]; }); });
+  Object.keys(state.routine.sleep).forEach(d=>{ if(d<lim) delete state.routine.sleep[d]; });
 }
 function runMigrations(keepGrid){
   const from=state.schema||0; if(from>=SCHEMA){ normalize(); syncGrid(); return numberAll(); }   // numbering also resolves duplicates after merges
@@ -1136,6 +1169,7 @@ const FEATURES=[
  {k:"projects",e:"📊",n:"Проєкти",d:"прогрес великих справ"},
  {k:"heatmap",e:"🟩",n:"Карта активності",d:"твої дні кольорами"},
  {k:"report",e:"🤖",n:"Звіт для ШІ",d:"тиждень для Claude чи ChatGPT"},
+ {k:"sleep",e:"🌙",n:"Сон",d:"ліг, будильник, встав (потрібна Рутина)",off:true},
  {k:"grid",e:"🔲",n:"Сітка 9×9",d:"цілі й звички за опорами"}
 ];
 const ACCENTS=[["yellow","Жовтий","#E2B93B"],["rose","Рожевий","#D9668F"],["lilac","Бузковий","#8E6CCF"],["mint","М'ятний","#3BA88F"],["sky","Блакитний","#4A90D9"],["red","Червоний","#D2544B"]];
@@ -1157,6 +1191,7 @@ function ensureSettings(){
 const S=()=>state.settings||{features:{},fields:{}};
 const feat=k=>{const s=S(); return !s.features||s.features[k]!==false;};
 const isDiary=()=>S().mode==="diary";
+const sleepOn=()=>{const f=S().features||{}; return f.sleep===true||(f.sleep===undefined&&S().mode==="grid");};   // off by default for the diary mode
 let CATS=[];
 function rebuildCats(){
   const s=S(), own=(s.cats||[]).filter(c=>c&&c.id);
@@ -1272,12 +1307,12 @@ function featureCards(box,feats,onChange,diaryNew){
   box.innerHTML=""; box.className="fcards";
   FEATURES.forEach(f=>{
     const soon=f.k==="grid"&&diaryNew;
-    const on=soon?false:feats[f.k]!==false;
+    const on=soon?false:(f.off?(feats[f.k]===true||(feats[f.k]===undefined&&S().mode==="grid")):feats[f.k]!==false);
     const b=document.createElement("button"); b.type="button"; b.className="fcard"+(on?" on":"")+(soon?" soon":""); b.disabled=soon;
     b.innerHTML='<span class="fe"></span><b></b><small></small><span class="fst">'+(soon?"немає сітки":on?"✓ так":"не зараз")+'</span>';
     b.querySelector(".fe").textContent=f.e; b.querySelector("b").textContent=f.n; b.querySelector("small").textContent=soon?"спершу створи сітку: ⚙️ → «Моя сітка»":f.d;
     b.setAttribute("aria-pressed",on);
-    b.onclick=()=>{ feats[f.k]=!(feats[f.k]!==false); onChange(); };
+    b.onclick=()=>{ feats[f.k]=!on; onChange(); };
     box.appendChild(b);
   });
 }
@@ -2001,7 +2036,120 @@ const rtItem=id=>(state.routine.items||[]).find(x=>x.id===id);
 function jFilled(k){ const d=new Date(k+"T00:00"); const dd=dayData(isoWeek(d),(d.getDay()+6)%7); return ["good","bad","next","grat"].filter(f=>dd[f]&&dd[f].trim().length>=2).length; }
 function t3Stat(k){ const ts=t3Tasks(k); return {n:ts.length,done:ts.filter(t=>t.done).length}; }
 const waterMl=k=>((state.routine.water||{})[k]||0);
+/* ---------- sleep (routine): record is keyed by the WAKE-UP date ---------- */
+const hm2min=t=>{const m=/^(\d{1,2}):(\d{2})$/.exec(t||"");return m?(+m[1])*60+(+m[2]):null;};
+const min2hm=m=>{m=((Math.round(m)%1440)+1440)%1440;return String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0");};
+const sleepRec=k=>((state.routine.sleep||{})[k])||{};
+const sleepCfg=()=>Object.assign({goal:420,fall:15,wake:"08:00"},state.routine.sleepCfg||{});
+function sleepMin(k){ const r=sleepRec(k), b=hm2min(r.bed), u=hm2min(r.up); if(b==null||u==null) return null; let d=u-b; if(d<=0) d+=1440; return d>960?null:d; }
+const sleepDone=k=>{const m=sleepMin(k);return m!=null&&m>=360;};
+const fmtDur=m=>Math.floor(m/60)+" г "+String(m%60).padStart(2,"0")+" хв";
+const bedOnTime=t=>{const m=hm2min(t);return m!=null&&(m<=30||m>=1080);};
+function sleepEditKey(){ const n=new Date(); if(n.getHours()>=18) n.setDate(n.getDate()+1); return dayKey(n); }
+function nowHM(){ const n=new Date(); return String(n.getHours()).padStart(2,"0")+":"+String(n.getMinutes()).padStart(2,"0"); }
+function setSleep(k,f,v){
+  state.routine.sleep=state.routine.sleep||{}; const r=state.routine.sleep[k]=state.routine.sleep[k]||{};
+  if(v) r[f]=v; else delete r[f];
+  if(!Object.keys(r).length) delete state.routine.sleep[k];
+  save(); renderRoutine();
+}
+function sleepWeek(){
+  const out=[]; for(let i=6;i>=0;i--){ const d=new Date(); d.setDate(d.getDate()-i); const k=dayKey(d); out.push({k,wd:["нд","пн","вт","ср","чт","пт","сб"][d.getDay()],m:sleepMin(k)}); }
+  return out;
+}
+function sleepStats(){
+  const wk7=sleepWeek(), have=wk7.filter(x=>x.m!=null);
+  const ups=wk7.map(x=>hm2min(sleepRec(x.k).up)).filter(x=>x!=null).sort((a,b)=>a-b);
+  const med=ups.length?ups[Math.floor(ups.length/2)]:null;
+  const beds=wk7.map(x=>sleepRec(x.k).bed).filter(Boolean);
+  const short=have.length?have.reduce((a,b)=>b.m<a.m?b:a):null;
+  return {n:have.length, avg:have.length?Math.round(have.reduce((a,x)=>a+x.m,0)/have.length):null,
+    upN:ups.length, upOk:med==null?0:ups.filter(x=>Math.abs(x-med)<=30).length, bedN:beds.length, bedOk:beds.filter(bedOnTime).length, short};
+}
+function sleepHint(P,txt){
+  if(!sleepOn()||!P||P.id!=="str") return "";
+  const st=sleepStats();
+  if(/підйом/i.test(txt)&&st.upN) return "за журналом сну: "+st.upOk+" з "+st.upN+" (7 днів)";
+  if(/відбій/i.test(txt)&&st.bedN) return "за журналом сну: "+st.bedOk+" з "+st.bedN+" (7 днів)";
+  return "";
+}
+let sleepOpen=false;
+function renderSleep(list,k){
+  const ek=sleepEditKey(), rec=sleepRec(ek), r0=sleepRec(k), m=sleepMin(k), done=sleepDone(k), st=rtStreak("sleep");
+  let sub;
+  if(ek!==k&&rec.bed) sub="ліг "+rec.bed+" (ніч на завтра)";
+  else if(m!=null) sub=fmtDur(m)+" · ліг "+r0.bed+" · встав "+r0.up;
+  else if(r0.bed&&r0.up) sub="перевір час: "+r0.bed+" → "+r0.up;
+  else if(r0.bed) sub="ліг "+r0.bed+" · ще не встав";
+  else sub="ще не записано";
+  const row=document.createElement("div"); row.className="rt-row auto sleep-row"+(done?" done":"");
+  row.innerHTML='<span class="ri">🌙</span><div class="rw"><span class="rn">Сон</span><div class="rsub"></div></div><span class="rs"></span><span class="autotag" title="Рахується автоматично">авто</span>';
+  row.querySelector(".rsub").textContent=sub;
+  row.querySelector(".rs").textContent=(st?"🔥 "+st+" ":"")+(sleepOpen?"▴":"▾");
+  row.setAttribute("role","button"); row.setAttribute("aria-expanded",sleepOpen); row.tabIndex=0;
+  row.setAttribute("aria-label","Сон: "+sub+(done?" (виконано)":""));
+  row.onclick=()=>{ sleepOpen=!sleepOpen; renderRoutine(); };
+  row.onkeydown=e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); row.onclick(); } };
+  list.appendChild(row);
+  if(!sleepOpen) return;
+  const cfg=sleepCfg(), P=document.createElement("div"); P.className="sleep-panel";
+  const head=document.createElement("div"); head.className="sp-h"; head.textContent=ek===k?"Сон сьогодні":"Ніч на завтра"; P.appendChild(head);
+  const btns=document.createElement("div"); btns.className="sp-btns";
+  [["bed","Ліг спати"],["alarm","Будильник"],["up","Встав"]].forEach(([f,lab])=>{
+    const v=rec[f], c=document.createElement(v?"div":"button");
+    c.className="sbtn"+(v?" ok":""); if(!v) c.type="button";
+    c.innerHTML='<span></span><b></b>'; c.firstChild.textContent=lab; c.querySelector("b").textContent=v||"— : —";
+    if(v){ const inp=document.createElement("input"); inp.type="time"; inp.value=v; inp.setAttribute("aria-label",lab+": змінити час"); inp.onchange=()=>setSleep(ek,f,inp.value); c.appendChild(inp); }
+    else { c.setAttribute("aria-label",lab+": записати поточний час"); c.onclick=()=>setSleep(ek,f,nowHM()); }
+    btns.appendChild(c);
+  });
+  P.appendChild(btns);
+  const em=sleepMin(ek);
+  if(em!=null){ const al=hm2min(rec.alarm), up=hm2min(rec.up); const kv=document.createElement("div"); kv.className="sp-kv";
+    kv.innerHTML='<span>Проспано</span><b></b>'+(al!=null&&up!=null?'<span>Після будильника лежав</span><i></i>':'');
+    kv.querySelector("b").textContent=fmtDur(em);
+    if(kv.querySelector("i")){ let lay=up-al; if(lay<0) lay+=1440; kv.querySelector("i").textContent=lay>300?"—":lay+" хв"; }
+    P.appendChild(kv); }
+  // calculator
+  const calc=document.createElement("div"); calc.className="sp-sec";
+  calc.innerHTML='<div class="sp-t">Коли лягати?</div><div class="sp-cfg"><label>Встати о <input type="time" class="cw"></label><label>Ціль <select class="cg"></select></label><label>Засинання <select class="cf"></select></label></div><div class="sp-opts"></div>';
+  const cw=calc.querySelector(".cw"), cg=calc.querySelector(".cg"), cf=calc.querySelector(".cf");
+  cw.value=cfg.wake; [360,390,420,450,480,510,540].forEach(v=>{const o=document.createElement("option");o.value=v;o.textContent=(v/60).toString().replace(".",",")+" год";if(v===cfg.goal)o.selected=true;cg.appendChild(o);});
+  [0,10,15,20,30].forEach(v=>{const o=document.createElement("option");o.value=v;o.textContent=v+" хв";if(v===cfg.fall)o.selected=true;cf.appendChild(o);});
+  const setCfg=()=>{ const w=hm2min(cw.value); state.routine.sleepCfg={wake:w==null?cfg.wake:cw.value,goal:+cg.value,fall:+cf.value}; save(); renderRoutine(); };
+  cw.onchange=setCfg; cg.onchange=setCfg; cf.onchange=setCfg;
+  const wm=hm2min(cfg.wake), opts=calc.querySelector(".sp-opts");
+  [cfg.goal-60,cfg.goal,cfg.goal+60].filter(g=>g>=300).forEach(g=>{
+    const o=document.createElement("div"); o.className="sp-opt"+(g===cfg.goal?" best":"");
+    o.innerHTML='<span></span><b></b>'; o.firstChild.textContent=(g/60).toString().replace(".",",")+" год сну"+(g===cfg.goal?" (ціль)":"");
+    o.querySelector("b").textContent="лягти о "+min2hm(wm-g-cfg.fall); opts.appendChild(o);
+  });
+  P.appendChild(calc);
+  // week
+  const wkd=sleepWeek(), S7=sleepStats(), wsec=document.createElement("div"); wsec.className="sp-sec";
+  wsec.innerHTML='<div class="sp-t">Сон за 7 днів <small>ціль '+(cfg.goal/60).toString().replace(".",",")+' год</small></div><div class="sp-plot"><i class="sp-line"></i></div><div class="sp-lbl"></div><div class="sp-kv2"></div>';
+  const plot=wsec.querySelector(".sp-plot"), lbl=wsec.querySelector(".sp-lbl"), H=72;
+  wsec.querySelector(".sp-line").style.bottom=Math.round(cfg.goal/540*H+16)+"px";
+  wkd.forEach(x=>{
+    const c=document.createElement("div"); c.className="sp-c";
+    const cls=x.m==null?"none":x.m>=cfg.goal?"ok":x.m<360?"low":"mid";
+    c.innerHTML='<span class="sp-v"></span><div class="sp-b '+cls+'"></div>';
+    c.querySelector(".sp-v").textContent=x.m==null?"—":(Math.round(x.m/6)/10).toString().replace(".",",");
+    c.querySelector(".sp-b").style.height=x.m==null?"3px":Math.max(4,Math.round(Math.min(x.m,540)/540*H))+"px";
+    c.setAttribute("aria-label",x.wd+": "+(x.m==null?"немає запису":fmtDur(x.m)));
+    plot.appendChild(c); const l=document.createElement("span"); l.textContent=x.wd; lbl.appendChild(l);
+  });
+  const kv2=wsec.querySelector(".sp-kv2"); const row2=(a,b)=>{const x=document.createElement("span");x.textContent=a;const y=document.createElement("b");y.textContent=b;kv2.appendChild(x);kv2.appendChild(y);};
+  row2("Середній сон",S7.avg==null?"—":fmtDur(S7.avg));
+  row2("Підйом ±30 хв від типового",S7.upN?S7.upOk+" з "+S7.upN:"—");
+  row2("Відбій до 00:30",S7.bedN?S7.bedOk+" з "+S7.bedN:"—");
+  row2("Найкоротша ніч",S7.short?S7.short.wd+" · "+fmtDur(S7.short.m):"—");
+  P.appendChild(wsec);
+  const note=document.createElement("p"); note.className="sp-note"; note.textContent="Пункт «Сон» вважається виконаним, коли записано «ліг» і «встав» і сну 6+ годин."; P.appendChild(note);
+  list.appendChild(P);
+}
 function rtDone(id,k){
+  if(id==="sleep") return sleepDone(k);
   const it=rtItem(id), ty=it&&it.type;
   if(ty==="water") return waterMl(k)>=(it.goal||2000);
   if(ty==="journal") return jFilled(k)>=2;
@@ -2030,9 +2178,11 @@ function rtStreak(id){
 function renderRoutine(){
   ensureRoutine(); renderedDay=todayStr();
   const k=todayStr(), items=state.routine.items, list=$("rtList"); list.innerHTML="";
-  const doneN=items.filter(it=>rtDone(it.id,k)).length;
-  $("rtCount").textContent=doneN+" / "+items.length;
-  $("rtBar").style.width=(items.length?doneN/items.length*100:0)+"%";
+  const sl=sleepOn(), total=items.length+(sl?1:0);
+  const doneN=items.filter(it=>rtDone(it.id,k)).length+(sl&&sleepDone(k)?1:0);
+  $("rtCount").textContent=doneN+" / "+total;
+  $("rtBar").style.width=(total?doneN/total*100:0)+"%";
+  if(sl&&!rtEditing) renderSleep(list,k);
   items.forEach((it,idx)=>{
     const r=document.createElement("div");
     if(rtEditing){
@@ -2368,10 +2518,11 @@ function renderSheet(){
     let streak=""; for(let s=5;s>=0;s--){const d=new Date(weekStart);d.setDate(d.getDate()-7*s);streak+='<i class="'+(isDone(p,i,isoWeek(d))?"on":"")+'"></i>';}
     row.innerHTML=
       '<div class="act-head"><button class="chk'+(done?" on":"")+'" aria-pressed="'+done+'" aria-label="Виконано цього тижня">'+(done?"✓":"")+'</button>'+
-      '<div class="act-text">'+(isCore(p,i)?'<span class="star" aria-label="Ядро">★ ядро</span>':'')+'<div class="t"></div>'+(P.a[i][2]?'<div class="hint"></div>':'')+'<div class="streak">'+streak+'<span>&nbsp;6 тижнів</span></div></div></div>'+
+      '<div class="act-text">'+(isCore(p,i)?'<span class="star" aria-label="Ядро">★ ядро</span>':'')+'<div class="t"></div>'+(P.a[i][2]?'<div class="hint"></div>':'')+'<div class="sleephint" hidden></div><div class="streak">'+streak+'<span>&nbsp;6 тижнів</span></div></div></div>'+
       '<div class="tools"><button data-a="note">'+(state.notes[k]?"Нотатка ✎":"Додати нотатку")+'</button><button data-a="edit">Змінити дію</button></div>';
     row.querySelector(".t").textContent=text(p,i);
     if(P.a[i][2]) row.querySelector(".hint").textContent=P.a[i][2];
+    { const sh=sleepHint(P,text(p,i)), el=row.querySelector(".sleephint"); if(sh){ el.textContent="🌙 "+sh; el.hidden=false; } else el.remove(); }
     row.querySelector(".chk").onclick=()=>{setDone(p,i,!isDone(p,i));renderSheet();};
     const tools=row.querySelector(".tools");
     let ta=null;
