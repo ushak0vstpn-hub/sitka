@@ -297,6 +297,8 @@ details.backup summary{cursor:pointer;font-family:"Unbounded","Onest",sans-serif
 .hm button.sel{outline:2px solid var(--ink);outline-offset:1px}
 .l0{background:var(--grid);box-shadow:inset 0 0 0 1px var(--line)}
 .l1{background:#9FE1CB}.l2{background:#5DCAA5}.l3{background:#1D9E75}.l4{background:#0F6E56}
+.p0{background:var(--grid);box-shadow:inset 0 0 0 1px var(--line)}
+.p1{background:#E1F5EE}.p2{background:#9FE1CB}.p3{background:#5DCAA5}.p4{background:#1D9E75}.p5{background:#0F6E56}.p6{background:#04342C}
 .hm-f{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-top:10px}
 .hm-day{font-size:13px;color:var(--muted);min-height:18px}
 .hm-day b{color:var(--ink);font-weight:600}
@@ -714,7 +716,7 @@ ul.news{margin:8px 0;padding-left:20px;font-size:15px;line-height:1.55}
     <div class="hm-h"><h2 style="margin:0">Активність</h2><span id="hmStats"></span></div>
     <div class="hm-wrap" id="hmWrap"><div class="hm" id="hm"></div></div>
     <div class="hm-f"><div class="hm-day" id="hmDay"></div>
-      <div class="hm-legend">менше <i class="l0"></i><i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i> більше</div></div>
+      <div class="hm-legend" id="hmLegend">менше <i class="l0"></i><i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i> більше</div></div>
   </section>
 
   </div><!-- /viewGrid -->
@@ -922,10 +924,12 @@ const wk=()=>isoWeek(weekStart);
 
 /* ---------- state ---------- */
 function ensureRoutine(){ if(!state.routine||!Array.isArray(state.routine.items)) state.routine={items:[],log:(state.routine&&state.routine.log)||{},water:{},v:2}; state.routine.log=state.routine.log||{}; }
-const APP_VERSION=35, APP_DATE="22.10.2026";
+const APP_VERSION=36, APP_DATE="23.10.2026";
 const SCHEMA=5;
 /* what's new: "for" = all | grid | diary */
 const CHANGELOG=[
+ {v:36,date:"23.10.2026",items:[
+   {t:"Карта активності тепер показує % плану дня: рутина + Топ-3 + швидкі задачі. 7 відтінків, у вихідні норма менша на третину. Торкнись дня, щоб побачити деталі.",for:"grid"}]},
  {v:35,date:"22.10.2026",items:[
    {t:"Сон: у «Рутині» записуй, коли ліг, будильник і коли встав. Тап по порожній кнопці ставить поточний час, а торкнувшись заповненої, час можна виправити",for:"grid"},
    {t:"Калькулятор «Коли лягати» і сон за 7 днів: середній сон, стабільність підйому й відбою",for:"grid"},
@@ -981,6 +985,11 @@ function normalize(){
   if(!state.routine.sleep||typeof state.routine.sleep!=="object") state.routine.sleep={};
   // housekeeping: drop day-keyed records older than 60 days
   const old=new Date(); old.setDate(old.getDate()-60); const lim=dayKey(old);
+  { // before old Top-3/quick lists are dropped, keep their done-counts for the activity map (dayStat is never pruned)
+    const days=new Set(); ["top3","quick"].forEach(k=>{ const o=state[k]; if(o&&typeof o==="object") Object.keys(o).forEach(d=>{ if(d<lim) days.add(d); }); });
+    const cnt=ids=>(Array.isArray(ids)?ids:[]).map(id=>state.tasks.find(t=>t.id===id)).filter(t=>t&&t.done).length;
+    days.forEach(d=>{ if(!state.dayStat||typeof state.dayStat!=="object") state.dayStat={}; if(!state.dayStat[d]) state.dayStat[d]={t3:Math.min(3,cnt(state.top3&&state.top3[d])),q:Math.min(2,cnt(state.quick&&state.quick[d]))}; });
+  }
   ["top3","quick","mplan","daily","t3offer"].forEach(k=>{ const o=state[k]; if(o&&typeof o==="object") Object.keys(o).forEach(d=>{ if(d<lim) delete o[d]; }); });
   Object.keys(state.routine.sleep).forEach(d=>{ if(d<lim) delete state.routine.sleep[d]; });
 }
@@ -1206,9 +1215,9 @@ function applyAccent(){
 }
 function seedRoutine(){
   if(!feat("routine")||!state.routine||(state.routine.items||[]).length||state.routine.seeded) return;
-  state.routine.items.push({id:"water",t:"Вода",type:"water",goal:2000,glass:250});
-  if(feat("journal")) state.routine.items.push({id:"journal",t:"Запис у журнал",type:"journal"});
-  if(feat("top3")) state.routine.items.push({id:"top3",t:"Топ-3 дня",type:"top3"});
+  state.routine.items.push({id:"water",t:"Вода",type:"water",goal:2000,glass:250,since:todayStr()});
+  if(feat("journal")) state.routine.items.push({id:"journal",t:"Запис у журнал",type:"journal",since:todayStr()});
+  if(feat("top3")) state.routine.items.push({id:"top3",t:"Топ-3 дня",type:"top3",since:todayStr()});
   state.routine.seeded=true; state.routine.v=2;
 }
 function applyFeatures(){
@@ -2222,7 +2231,7 @@ function renderRoutine(){
     const r=document.createElement("div"); r.className="rt-row";
     r.innerHTML='<input placeholder="Новий пункт, напр.: Душ зранку" aria-label="Новий пункт рутини"><button class="xbtn" style="padding:6px 12px">Додати</button>';
     const inp=r.querySelector("input");
-    const add=()=>{const v=inp.value.trim();if(!v)return;items.push({id:"r"+Date.now().toString(36),t:v});save();renderRoutine();const ni=$("rtList").querySelector("input[aria-label='Новий пункт рутини']");if(ni)ni.focus();};
+    const add=()=>{const v=inp.value.trim();if(!v)return;items.push({id:"r"+Date.now().toString(36),t:v,since:todayStr()});save();renderRoutine();const ni=$("rtList").querySelector("input[aria-label='Новий пункт рутини']");if(ni)ni.focus();};
     r.querySelector("button").onclick=add; inp.onkeydown=e=>{if(e.key==="Enter")add();};
     list.appendChild(r);
   }
@@ -2447,6 +2456,21 @@ function dayActivity(d){
   return {tasks:tasksAll,rt,grid,jn,total:tasksAll+rt+grid+jn};
 }
 const hmLevel=n=>n===0?0:n<=2?1:n<=5?2:n<=8?3:4;
+const normMode=()=>S().mode==="grid";   // the day-norm map is used only by the "Сітка" screen; the diary keeps the old sum-of-actions map
+function routineStat(k){
+  const items=(state.routine&&state.routine.items)||[], act=items.filter(it=>!it.since||it.since<=k);
+  let tot=act.length, done=act.filter(it=>rtDone(it.id,k)).length;
+  if(sleepOn()){ const from=Object.keys((state.routine&&state.routine.sleep)||{}).sort()[0]||todayStr(); if(k>=from){ tot++; if(sleepDone(k)) done++; } }
+  return {tot,done};
+}
+function dayNorm(d){
+  const k=dayKey(d), rs=routineStat(k), ds=(state.dayStat&&state.dayStat[k])||{};
+  const t3=(state.top3&&state.top3[k])?Math.min(3,t3Tasks(k).filter(t=>t.done).length):(ds.t3||0);
+  const q=(state.quick&&state.quick[k])?Math.min(2,qTasks(k).filter(t=>t.done).length):(ds.q||0);
+  const we=d.getDay()===0||d.getDay()===6; let norm=rs.tot+5; if(we) norm=norm*2/3;
+  const pct=Math.min(100,Math.round((rs.done+t3+q)/norm*100));
+  return {pct,rs,t3,q,we,lvl:pct===0?0:pct<20?1:pct<40?2:pct<60?3:pct<80?4:pct<100?5:6};
+}
 function hmStreaks(){
   const today=new Date(); today.setHours(0,0,0,0);
   let cur=0; const d=new Date(today); if(dayActivity(d).total===0) d.setDate(d.getDate()-1);
@@ -2456,6 +2480,9 @@ function hmStreaks(){
   return {cur,best};
 }
 function hmDetail(d){
+  if(normMode()){ const n=dayNorm(d);
+    $("hmDay").innerHTML=DAY_SHORT[(d.getDay()+6)%7]+", "+d.toLocaleDateString("uk-UA",{day:"numeric",month:"long"})+": <b>"+n.pct+"%</b> · рутина "+n.rs.done+"/"+n.rs.tot+" · Топ-3 "+n.t3+"/3 · швидкі "+n.q+"/2"+(n.we?" · вихідний −⅓":"");
+    return; }
   const a=dayActivity(d), parts=[];
   if(a.tasks) parts.push(a.tasks+" "+(a.tasks===1?"задача":a.tasks<5?"задачі":"задач"));
   if(a.rt) parts.push(a.rt+" рутина"); if(a.grid) parts.push(a.grid+" сітка"); if(a.jn) parts.push("журнал");
@@ -2467,7 +2494,7 @@ function renderHist(){
   const wrapW=($("hmWrap").clientWidth||340)-26; const WEEKS=Math.max(26,Math.min(53,Math.floor(wrapW/19))), start=mondayOf(today); start.setDate(start.getDate()-(WEEKS-1)*7);
   const lab=document.createElement("span"); lab.className="dl"; box.appendChild(lab);
   ["Пн","","Ср","","Пт","","Нд"].forEach(t=>{const e=document.createElement("span");e.className="dl";e.textContent=t;box.appendChild(e);});
-  let prevM=null, weekSum=0; const curW=isoWeek(today);
+  let prevM=null, weekSum=0, weekN=0; const curW=isoWeek(today), NM=normMode();
   for(let c=0;c<WEEKS;c++){
     const ws=new Date(start); ws.setDate(ws.getDate()+c*7);
     const ml=document.createElement("span"); ml.className="ml";
@@ -2479,18 +2506,26 @@ function renderHist(){
       const d=new Date(ws); d.setDate(d.getDate()+r);
       const b=document.createElement("button"); b.type="button";
       if(d>today){ b.className="fut"; b.tabIndex=-1; b.setAttribute("aria-hidden","true"); box.appendChild(b); continue; }
-      const a=dayActivity(d); if(isoWeek(d)===curW) weekSum+=a.total;
       const k=dayKey(d);
+      if(NM){
+        const n=dayNorm(d); if(isoWeek(d)===curW){ weekSum+=n.pct; weekN++; }
+        b.className="p"+n.lvl+(hmSel===k?" sel":"");
+        const lbl=d.toLocaleDateString("uk-UA",{day:"numeric",month:"short"})+": "+n.pct+"%";
+        b.setAttribute("aria-label",lbl); b.title=lbl;
+      } else {
+      const a=dayActivity(d); if(isoWeek(d)===curW) weekSum+=a.total;
       b.className="l"+hmLevel(a.total)+(hmSel===k?" sel":"");
       b.setAttribute("aria-label",d.toLocaleDateString("uk-UA",{day:"numeric",month:"long"})+": "+a.total);
       b.title=d.toLocaleDateString("uk-UA",{day:"numeric",month:"short"})+": "+a.total;
+      }
       b.onclick=()=>{hmSel=k; goToDate(new Date(d)); hmDetail(new Date(d));};
       box.appendChild(b);
     }
   }
   const cs=Math.max(12,Math.min(22,Math.floor(wrapW/WEEKS)-3)); box.style.setProperty("--cs",cs+"px");
   const st=hmStreaks();
-  $("hmStats").innerHTML="серія <b>"+st.cur+" дн.</b> · найдовша "+st.best+" · цей тиждень "+weekSum;
+  $("hmStats").innerHTML="серія <b>"+st.cur+" дн.</b> · найдовша "+st.best+" · цей тиждень "+(NM?(weekN?Math.round(weekSum/weekN):0)+"%":weekSum);
+  $("hmLegend").innerHTML=NM?'0% <i class="p0"></i><i class="p1"></i><i class="p2"></i><i class="p3"></i><i class="p4"></i><i class="p5"></i><i class="p6"></i> 100%':'менше <i class="l0"></i><i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i> більше';
   if(hmSel) hmDetail(new Date(hmSel+"T00:00")); else hmDetail(today);
   const wrap=$("hmWrap");
   if(!wrap._bound){ wrap._bound=true; wrap.addEventListener("scroll",()=>{ wrap._user=wrap.scrollLeft < wrap.scrollWidth-wrap.clientWidth-8; },{passive:true}); }
@@ -2701,6 +2736,8 @@ function buildReport(){
   if(isCurW&&state.daily){let tot=0,dn=0;for(let i=0;i<nDays;i++){const d=new Date(weekStart);d.setDate(d.getDate()+i);(state.daily[dayKey(d)]||[]).forEach(pk=>{const p=pIdx(pk.p);if(p<0)return;tot++;if(isDone(p,pk.i,w))dn++;});}
     if(tot) L.push("- Щоденні підказки з сітки: виконано "+dn+" з "+tot);}
   const st_=hmStreaks(); L.push(""); L.push("## Активність: серія "+st_.cur+" дн., найдовша "+st_.best+" дн.");
+  if(normMode()){ const ps=[]; for(let i=0;i<nDays;i++){ const d=new Date(weekStart); d.setDate(d.getDate()+i); ps.push({n:DAY_SHORT[i],p:dayNorm(d).pct}); }
+    if(ps.length) L.push("Норма дня (рутина + Топ-3 + швидкі): "+(isCurW?"цей тиждень ":"тиждень ")+Math.round(ps.reduce((a,x)=>a+x.p,0)/ps.length)+"% · "+ps.map(x=>x.n+" "+x.p+"%").join(" · ")); }
   L.push(""); L.push("## Динаміка (виконано дій з 64)");
   const hist=[]; for(let k=5;k>=0;k--){const d=new Date(weekStart);d.setDate(d.getDate()-7*k);const x=isoWeek(d);hist.push("т"+x.split("-W")[1]+": "+weekTotal(x));}
   L.push(hist.join(", "));
@@ -3001,7 +3038,7 @@ function renderSpecPreview(pv,box,replacing){
     const g=gridFromSpec(sp);
     if(replacing){ g.pillars.forEach((P,i)=>{ const old=state.grid.pillars[i]; if(old){ P.id=old.id; P.c=old.c; } }); state.grid=g; if(sp.goal) state.goal=sp.goal; syncGrid(); rebuildCats(); }
     else applyNewGrid(g,sp.goal,usePillars);
-    sp.routine.forEach(t=>{ if(!state.routine.items.some(it=>it.t.toLowerCase()===t.toLowerCase())) state.routine.items.push({id:"r"+Math.random().toString(36).slice(2,8),t}); });
+    sp.routine.forEach(t=>{ if(!state.routine.items.some(it=>it.t.toLowerCase()===t.toLowerCase())) state.routine.items.push({id:"r"+Math.random().toString(36).slice(2,8),t,since:todayStr()}); });
     if(sp.tasks.length){ $("bulkText").value=sp.tasks.join("\n"); $("bulkAdd").click(); }
     gridSpecDraft=null; gridOpenP=-1; save(); render(); renderGridSettings(box);
     showStatus(replacing?"Сітку оновлено":"Сітку створено 🎉");
