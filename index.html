@@ -276,6 +276,8 @@ textarea.tnote{margin-top:6px;min-height:60px;font-size:14px}
 .nt-row[hidden],.nmore[hidden],.npv[hidden]{display:none}
 .nmore{border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:13px;padding:10px 0 2px;text-decoration:underline;text-underline-offset:3px;display:block}
 details.backup summary{cursor:pointer;font-family:"Unbounded","Onest",sans-serif;font-weight:500;font-size:16px}
+.gcal{flex:0 0 32px;width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;text-decoration:none;font-size:15px;line-height:1;color:inherit}
+.gcal:hover{background:var(--grid)}
 .task .te{border:0;background:transparent;cursor:pointer;color:var(--muted);font-size:15px;width:32px;height:32px;border-radius:50%}
 .task .te:hover,.task .tx:hover{background:var(--grid)}
 .ed{margin-top:8px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--paper);display:grid;gap:8px}
@@ -924,10 +926,12 @@ const wk=()=>isoWeek(weekStart);
 
 /* ---------- state ---------- */
 function ensureRoutine(){ if(!state.routine||!Array.isArray(state.routine.items)) state.routine={items:[],log:(state.routine&&state.routine.log)||{},water:{},v:2}; state.routine.log=state.routine.log||{}; }
-const APP_VERSION=36, APP_DATE="23.10.2026";
+const APP_VERSION=37, APP_DATE="24.10.2026";
 const SCHEMA=5;
 /* what's new: "for" = all | grid | diary */
 const CHANGELOG=[
+ {v:37,date:"24.10.2026",items:[
+   {t:"Швидкі задачі тепер без ліміту за тривалістю: два слоти на день. Кнопка 📅 додає задачу в Google Calendar одним натисканням.",for:"all"}]},
  {v:36,date:"23.10.2026",items:[
    {t:"Карта активності тепер показує % плану дня: рутина + Топ-3 + швидкі задачі. 7 відтінків, у вихідні норма менша на третину. Торкнись дня, щоб побачити деталі.",for:"grid"}]},
  {v:35,date:"22.10.2026",items:[
@@ -1539,7 +1543,7 @@ function qTasks(k){ return qList(k).map(id=>state.tasks.find(t=>t.id===id)).filt
 const inTop3=t=>t3List().includes(t.id);
 const inQuick=t=>qList().includes(t.id);
 const inDay=t=>inTop3(t)||inQuick(t);
-const isQuickCand=t=>(t.dur?t.dur<=40:t.imp===1);
+const isQuickCand=t=>!t.done;   // v37: any open task can go to a quick slot (still max 2 per day)
 function t3Toggle(t){
   state.top3=state.top3||{}; const k=todayStr(); const L=(state.top3[k]=(state.top3[k]||[]).filter(id=>state.tasks.some(x=>x.id===id)));
   if(L.includes(t.id)){ state.top3[k]=L.filter(x=>x!==t.id); showStatus("Прибрано з Топ-3"); }
@@ -1563,6 +1567,27 @@ function t3Carry(){
   if(t3List(k).length>=3&&qList(k).length>=2) return null;
   return {prev,leftTop,leftQuick};
 }
+/* ---------- 📅 add to Google Calendar: a plain link, never changes data ---------- */
+const gcalStamp=d=>d.getFullYear()+String(d.getMonth()+1).padStart(2,"0")+String(d.getDate()).padStart(2,"0");
+const gcalTime=d=>gcalStamp(d)+"T"+String(d.getHours()).padStart(2,"0")+String(d.getMinutes()).padStart(2,"0")+"00";
+function gcalUrl(t){
+  if(!t||!t.due) return "";
+  const MAX=1500, enc=encodeURIComponent, cfgId=((window.SITKA_CONFIG||{}).GCAL_ID||"").trim();
+  let dates;
+  if(t.time&&/^\d{1,2}:\d{2}$/.test(t.time)){ const a=new Date(t.due+"T"+t.time.padStart(5,"0")); const b=new Date(a.getTime()+(t.dur>0?t.dur:30)*60000); dates=gcalTime(a)+"/"+gcalTime(b); }
+  else { const a=new Date(t.due+"T00:00"); const b=new Date(a); b.setDate(b.getDate()+1); dates=gcalStamp(a)+"/"+gcalStamp(b); }
+  let text=(t.no?tnoLabel(t)+" ":"")+"["+catOf(t.cat).name+"] "+t.t;
+  let details=[t.note||""].concat((t.links||[]).map(l=>(l.n?l.n+": ":"")+l.u)).filter(Boolean).join("\n");
+  const tail="&dates="+dates+(cfgId?"&src="+enc(cfgId):""), head="https://calendar.google.com/calendar/render?action=TEMPLATE&text=";
+  const cut=(str,room)=>{ let cp=Array.from(str); while(cp.length&&enc(cp.join("")).length>room) cp=cp.slice(0,Math.max(0,Math.floor(cp.length*room/enc(cp.join("")).length)-1)); return cp.join(""); };
+  text=cut(text,Math.max(40,MAX-head.length-tail.length-20));
+  const base=head+enc(text)+"&dates="+dates;
+  const room=MAX-base.length-(cfgId?("&src="+enc(cfgId)).length:0)-"&details=".length;
+  details=room>0?cut(details,room):"";
+  return base+(details?"&details="+enc(details):"")+(cfgId?"&src="+enc(cfgId):"");
+}
+const gcalBtn=t=>(t&&t.due&&!t.done)?'<a class="gcal" href="'+esc(gcalUrl(t))+'" target="_blank" rel="noopener noreferrer" title="Додати в календар" aria-label="Додати в календар">📅</a>':"";
+function gcalBind(root){ root.querySelectorAll(".gcal").forEach(a=>a.addEventListener("click",e=>e.stopPropagation())); }
 const pin=t=>'<button class="pin'+(inTop3(t)?" on":"")+'" aria-pressed="'+inTop3(t)+'" aria-label="'+(inTop3(t)?"Прибрати з Топ-3":"Додати в Топ-3")+'" title="'+(inTop3(t)?"Прибрати з Топ-3":"У Топ-3")+'">📌</button>';
 /* progress (tasks from 1 hour) */
 const hasProg=t=>!t.done;
@@ -1681,12 +1706,13 @@ function renderTop3(){
   const card=(t,label,isQ)=>{
     const c=document.createElement("div");
     const cat=catOf(t.cat); c.className="t3c "+(isQ?"quick ":"")+(t.done?"done":dlClass(t)); c.style.setProperty("--c",cat.c);
-    c.innerHTML='<button class="tc" aria-pressed="'+t.done+'" aria-label="Виконано">'+(t.done?"✓":"")+'</button><div class="t3b"><div class="t3n">'+label+' '+(t.done?"готово":(t.due?dueLabel(t):(isQ?"":"без дедлайну")))+'</div><div class="t3x"></div><div class="t3m"><span class="cn"></span>'+(t.dur?" · "+durLabel(t.dur):"")+'</div></div><button class="t3rm" aria-label="Прибрати">×</button>';
+    c.innerHTML='<button class="tc" aria-pressed="'+t.done+'" aria-label="Виконано">'+(t.done?"✓":"")+'</button><div class="t3b"><div class="t3n">'+label+' '+(t.done?"готово":(t.due?dueLabel(t):(isQ?"":"без дедлайну")))+'</div><div class="t3x"></div><div class="t3m"><span class="cn"></span>'+(t.dur?" · "+durLabel(t.dur):"")+'</div></div>'+gcalBtn(t)+'<button class="t3rm" aria-label="Прибрати">×</button>';
     c.querySelector(".t3x").textContent=t.t; if(t.no) c.querySelector(".t3x").prepend(tnoChip(t)); c.querySelector(".cn").textContent=catLabel(cat);
     progUI(t,c.querySelector(".t3b"),c.querySelector(".t3m")); linksUI(t,c.querySelector(".t3b"));
     c.querySelector(".t3x").onclick=()=>openTaskInList(t);
     c.querySelector(".tc").onclick=()=>setTaskDone(t,!t.done);
     c.querySelector(".t3rm").onclick=()=>isQ?qToggle(t):t3Toggle(t);
+    gcalBind(c);
     return c;
   };
   const grid=document.createElement("div"); grid.className="t3grid";
@@ -1701,14 +1727,14 @@ function renderTop3(){
   for(let s=0;s<2;s++){
     const t=quick[s];
     if(t) qg.appendChild(card(t,"⚡ Швидка",true));
-    else { const c=document.createElement("div"); c.className="t3c empty q"; c.innerHTML='<button class="t3add" type="button">⚡ + швидка задача (до 40 хв)</button>';
+    else { const c=document.createElement("div"); c.className="t3c empty q"; c.innerHTML='<button class="t3add" type="button">⚡ + швидка задача</button>';
       c.querySelector("button").onclick=()=>{t3Picking=t3Picking==="quick"?null:"quick"; renderTop3();}; qg.appendChild(c); }
   }
   box.appendChild(qg);
   if(t3Picking&&((t3Picking==="top"&&tasks.length<3)||(t3Picking==="quick"&&quick.length<2))){
     const pk=document.createElement("div"); pk.className="t3pick";
     const cand=sortedOpen().filter(t=>!inDay(t)&&(t3Picking!=="quick"||isQuickCand(t)));
-    if(!cand.length) pk.innerHTML='<div class="empty">'+(t3Picking==="quick"?"Немає відкритих задач до 40 хв чи дрібниць.":"Відкритих задач немає.")+'</div>';
+    if(!cand.length) pk.innerHTML='<div class="empty">'+"Відкритих задач немає."+'</div>';
     cand.slice(0,10).forEach(t=>{
       const b=document.createElement("button"); b.type="button"; b.className="t3opt "+dlClass(t); b.style.setProperty("--c",catOf(t.cat).c);
       b.innerHTML='<span class="t3on"></span><span class="t3om"></span>';
@@ -1803,7 +1829,7 @@ function taskRow(t){
   r.innerHTML='<button class="tc" aria-pressed="'+t.done+'" aria-label="Виконано">'+(t.done?"✓":"")+'</button>'+
     '<div class="tb"><div class="tt" title="Торкнись, щоб змінити"></div><div class="tm"><span class="cat"></span>'+
     (t.imp===3?"<span>важливо</span>":t.imp===1?"<span>дрібниця</span>":"")+'<span>'+dueLabel(t)+'</span>'+durChip(t)+repChip(t)+ideaMeta(t)+'</div></div>'+
-    (t.done?'':pin(t))+'<button class="te" aria-label="Редагувати задачу" title="Редагувати">✎</button><button class="tx" aria-label="Видалити">×</button>';
+    (t.done?'':pin(t))+gcalBtn(t)+'<button class="te" aria-label="Редагувати задачу" title="Редагувати">✎</button><button class="tx" aria-label="Видалити">×</button>';
   r.querySelector(".tt").textContent=t.t; if(t.no) r.querySelector(".tt").prepend(tnoChip(t)); r.querySelector(".cat").textContent=catLabel(c);
   if(t.tags&&t.tags.length){ const tm=r.querySelector(".tm"); t.tags.forEach(g=>{const x=document.createElement("span"); x.className="tagc"; x.textContent="#"+g; tm.appendChild(x);}); }
   r.dataset.id=t.id;
@@ -1814,6 +1840,7 @@ function taskRow(t){
   const openEd=()=>{ if(r.querySelector(".ed")){r.querySelector(".ed").remove();return;} r.querySelector(".tb").appendChild(taskEditor(t)); r.querySelector(".ed input").focus(); };
   r.querySelector(".tt").onclick=openEd; r.querySelector(".te").onclick=openEd;
   r.querySelector(".tx").onclick=()=>{if(confirm("Видалити задачу?")){state.tasks=state.tasks.filter(x=>x!==t);save();renderTasks();}};
+  gcalBind(r);
   return r;
 }
 /* ---------- task filters ---------- */
@@ -1890,7 +1917,7 @@ function renderNowTasks(open){
   if(ix>1){ const [it]=open.splice(ix,1); open.splice(1,0,it); }
   open.slice(0,12).forEach((t,i)=>{
     const c=catOf(t.cat); const r=document.createElement("div"); r.className="nt-row "+dlClass(t)+(i===0?" top":""); r.style.setProperty("--c",c.c);
-    r.innerHTML='<button class="tc" aria-label="Виконано"></button><div class="nb"><div class="nn"></div><div class="nm"><span class="cn"></span>'+(t.due?" · "+dueLabel(t):"")+repChip(t)+ideaMeta(t)+'</div></div>'+durChip(t)+pin(t);
+    r.innerHTML='<button class="tc" aria-label="Виконано"></button><div class="nb"><div class="nn"></div><div class="nm"><span class="cn"></span>'+(t.due?" · "+dueLabel(t):"")+repChip(t)+ideaMeta(t)+'</div></div>'+durChip(t)+gcalBtn(t)+pin(t);
     r.querySelector(".nn").textContent=t.t; if(t.no) r.querySelector(".nn").prepend(tnoChip(t)); r.querySelector(".cn").textContent=catLabel(c);
     if(t.prog&&hasProg(t)){ const pb=document.createElement("div"); pb.className="pg mini"; pb.innerHTML='<div class="pgbar"><i style="width:'+t.prog+'%"></i></div><span class="pgv">'+t.prog+'%</span>'; r.querySelector(".nb").appendChild(pb); }
     linksUI(t,r.querySelector(".nb"));
@@ -1898,6 +1925,7 @@ function renderNowTasks(open){
     r.querySelector(".pin").onclick=e=>{e.stopPropagation();t3Toggle(t);};
     r.querySelector(".tc").onclick=()=>{setTaskDone(t,true); if(!t.rep) showStatus("Готово: "+t.t);};
     r.querySelector(".nb").onclick=()=>t.idea?showView("ideas"):openTaskInList(t);
+    gcalBind(r);
     box.appendChild(r);
   });
   const more=document.createElement("button"); more.type="button"; more.className="nmore"; more.onclick=()=>showView("tasks");
@@ -2878,7 +2906,7 @@ async function renderInvites(box){
 const TIPS=[
  ["✍️","Пиши задачі звичайними словами: «завтра о 15:00 зідзвон з клієнтом #instagram !». Сайт сам поставить дату, час, мітку й важливість."],
  ["🏷️","Категорію обирай кнопками під полем. Мітки з # групують задачі за клієнтами чи платформами — фільтр є у вкладці «Задачі»."],
- ["🎯","Зранку обери Топ-3 — три головні справи дня. Ще два слоти ⚡ для швидких справ до 40 хв."],
+ ["🎯","Зранку обери Топ-3 — три головні справи дня. Ще два слоти ⚡ для швидких справ."],
  ["📅","Задачі розкладені за днями: прострочені, сьогодні, завтра, тиждень. Торкнись назви задачі, щоб змінити її, додати нотатку, посилання чи повтор."],
  ["⚙️","У налаштуваннях можна змінити категорії, кольори й назву, а також увімкнути журнал, рутину, ідеї та інше."],
  ["🤖","Працюєш з Claude чи ChatGPT? ⚙️ → «Інструкції для ШІ» → скопіюй промпт. ШІ оформить задачі, а ти вставиш їх у «Задачі» → «Додати кілька задач одразу»."]];
