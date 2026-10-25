@@ -45,6 +45,47 @@ body{
 button,textarea,input{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 .wrap{max-width:1040px;margin:0 auto;padding:16px 12px 48px}
+.wrap.wide{max-width:1440px;padding-left:32px;padding-right:32px}
+@media (max-width:699px){.wrap.wide{padding-left:12px;padding-right:12px}}
+:root{--pl-bg:#FFF8DC;--pl-name:#5C4700;--pl-up:#2F8A78;--pl-down:#C0413A}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--pl-bg:#2A2410;--pl-name:#FFF3C4;--pl-up:#5DCAA5;--pl-down:#E06A62}}
+:root[data-theme="dark"]{--pl-bg:#2A2410;--pl-name:#FFF3C4;--pl-up:#5DCAA5;--pl-down:#E06A62}
+.pl-top{display:grid;gap:14px;grid-template-columns:280px minmax(0,1fr) 320px;align-items:start;margin-bottom:14px}
+.pl-card{position:relative;background:var(--pl-bg);border:1.5px solid #E2B93B;border-radius:14px;padding:18px 16px;text-align:center}
+.pl-ava{position:absolute;left:12px;top:12px;width:48px;height:48px}
+.pl-ovr{font-family:"Unbounded","Onest",sans-serif;font-size:48px;line-height:1.05;color:#E2B93B;font-weight:700}
+.pl-ovl{font-size:12px;color:#C9A227;letter-spacing:.08em}
+.pl-cal{display:inline-block;margin-top:6px;background:var(--acc-soft);color:var(--acc-ink);font-size:11px;border-radius:999px;padding:2px 8px}
+.pl-name{font-size:16px;color:var(--pl-name);font-weight:600;margin-top:10px;overflow-wrap:anywhere}
+.pl-goal{font-size:12px;color:#C9A227;margin-top:2px}
+.pl-sep{height:1px;background:#5C4700;margin:12px 0}
+.pl-mini{display:grid;grid-template-columns:1fr 1fr;gap:6px 10px;text-align:left;padding:0 6px}
+.pl-mini div{color:var(--pl-name);font-size:14px}.pl-mini b{color:#E2B93B;font-weight:500;display:inline-block;min-width:26px}
+section.card.pl-rad,section.card.pl-chg,section.card.pl-dc{margin-top:0}
+.pl-rad{margin:0}.pl-rh{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}
+.pl-muted{color:var(--muted);font-size:13px}
+.seg.pl-seg button[aria-pressed="true"]{background:var(--acc-soft);color:var(--acc-ink)}
+.pl-radar{display:block;width:100%;max-width:460px;margin:0 auto}
+.pl-leg{text-align:center;font-size:12px;color:var(--muted)}
+.pl-chg{margin:0}.pl-h{margin:0 0 8px;font-size:15px}
+.pl-chr{display:flex;justify-content:space-between;padding:7px 0;border-top:1px solid var(--grid);font-size:14px}.pl-chr:first-child{border-top:0}
+.pl-chr b{font-weight:600}.pl-chr b.up{color:var(--pl-up)}.pl-chr b.down{color:var(--pl-down)}.pl-chr b.z{color:var(--muted)}
+.pl-best{margin:8px 0 0}
+.pl-det{display:grid;gap:12px;grid-template-columns:repeat(6,minmax(0,1fr))}
+.pl-dc{margin:0;padding:12px}
+.pl-dh{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}.pl-dh span{font-weight:500;font-size:14px}.pl-dh b{font-size:22px;color:#E2B93B;font-weight:600}
+.pl-sr{padding:5px 0}
+.pl-sn{display:flex;justify-content:space-between;gap:6px;width:100%;border:0;background:transparent;padding:0;cursor:pointer;font-size:13px;text-align:left;color:var(--ink)}
+.pl-sn b{font-weight:600}.pl-sn b.na{color:var(--muted);font-weight:400;font-size:12px;white-space:nowrap}
+.pl-bar{height:5px;border-radius:3px;background:var(--grid);margin-top:4px;overflow:hidden}.pl-bar i{display:block;height:100%}
+.pl-ex{font-size:12px;color:var(--muted);margin-top:4px}
+.pl-empty{text-align:center;color:var(--muted);padding:28px 16px}
+.pl-map{margin:10px 0}.pl-map>b{display:block;font-size:14px;margin-bottom:6px}
+.pl-chips{display:flex;flex-wrap:wrap;gap:6px}
+.pl-chip{border:1.5px solid var(--c);background:transparent;color:var(--ink);border-radius:999px;padding:5px 10px;font-size:13px;cursor:pointer}
+.pl-chip.on{background:color-mix(in srgb,var(--c) 22%,var(--sheet));font-weight:600}
+@media (max-width:1099px){.pl-top{grid-template-columns:280px minmax(0,1fr)}.pl-chg{grid-column:1/-1}.pl-det{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:699px){.pl-top{grid-template-columns:minmax(0,1fr)}.pl-det{grid-template-columns:minmax(0,1fr)}}
 header{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;justify-content:space-between;margin-bottom:14px}
 h1{font-family:"Unbounded","Onest",system-ui,sans-serif;font-weight:700;font-size:clamp(22px,5vw,34px);line-height:1.1;margin:0;letter-spacing:-.01em}
 .sub{color:var(--muted);font-size:14px;margin-top:4px}
@@ -668,12 +709,14 @@ ul.news{margin:8px 0;padding-left:20px;font-size:15px;line-height:1.55}
   <div class="conflict" id="conflictBar" hidden role="alert"></div>
 
   <div class="tabs" role="tablist">
+    <button role="tab" id="tabPlayer" aria-selected="false" hidden>Гравець</button>
     <button role="tab" id="tabGrid" aria-selected="true">Сітка</button>
     <button role="tab" id="tabTasks" aria-selected="false">Задачі<span class="badge" id="taskBadge" hidden></span></button>
     <button role="tab" id="tabIdeas" aria-selected="false">Ідеї<span class="badge idea" id="ideaBadge" hidden></span></button>
     <button role="tab" id="tabProjects" aria-selected="false">Проєкти</button>
   </div>
 
+  <div id="viewPlayer" hidden></div>
   <div id="viewGrid">
   <section class="tips" id="newsCard" hidden aria-label="Що нового"></section>
   <section class="tips" id="tipsCard" hidden aria-label="Підказки"></section>
@@ -936,10 +979,13 @@ const wk=()=>isoWeek(weekStart);
 
 /* ---------- state ---------- */
 function ensureRoutine(){ if(!state.routine||!Array.isArray(state.routine.items)) state.routine={items:[],log:(state.routine&&state.routine.log)||{},water:{},v:2}; state.routine.log=state.routine.log||{}; }
-const APP_VERSION=38, APP_DATE="25.10.2026";
+const APP_VERSION=39, APP_DATE="25.10.2026";
 const SCHEMA=5;
 /* what's new: "for" = all | grid | diary */
 const CHANGELOG=[
+ {v:39,date:"25.10.2026",items:[
+   {t:"Нова вкладка „Гравець“: твій рейтинг 1–99 як у FIFA — 6 показників, радар і що змінилось за тиждень і місяць. Усе рахується автоматично.",for:"grid"},
+   {t:"З'явився „Гравець“ — рейтинг 1–99 за твоїми даними. Увімкнути: ⚙️ → „Що показувати“.",for:"diary"}]},
  {v:38,date:"25.10.2026",items:[
    {t:"У журналі з'явилось поле „Час у соцмережах“: вводь час з Екранного часу iPhone і дивись, чи він менший за твоє середнє.",for:"grid"}]},
  {v:37,date:"24.10.2026",items:[
@@ -986,7 +1032,7 @@ function newUserState(){
     ideaSpaces:[{id:"gen",n:"Загальні",e:"💡"}],gridV:2,
     routine:{items:[],log:{},water:{},v:2},
     account:{type:"diary",since:todayStr()}, seenVersion:APP_VERSION,
-    settings:{mode:"diary",onboarded:false,features:{top3:true,calendar:true,journal:false,routine:false,ideas:false,projects:false,heatmap:false,report:false,grid:false},
+    settings:{mode:"diary",onboarded:false,features:{top3:true,calendar:true,journal:false,routine:false,ideas:false,projects:false,heatmap:false,report:false,grid:false,player:false},
       cats:[],accent:"yellow",fields:{time:true,dur:true,imp:true,rep:true},title:"Мій щоденник"}};
 }
 function normalize(){
@@ -1004,7 +1050,7 @@ function normalize(){
   { // before old Top-3/quick lists are dropped, keep their done-counts for the activity map (dayStat is never pruned)
     const days=new Set(); ["top3","quick"].forEach(k=>{ const o=state[k]; if(o&&typeof o==="object") Object.keys(o).forEach(d=>{ if(d<lim) days.add(d); }); });
     const cnt=ids=>(Array.isArray(ids)?ids:[]).map(id=>state.tasks.find(t=>t.id===id)).filter(t=>t&&t.done).length;
-    days.forEach(d=>{ if(!state.dayStat||typeof state.dayStat!=="object") state.dayStat={}; if(!state.dayStat[d]) state.dayStat[d]={t3:Math.min(3,cnt(state.top3&&state.top3[d])),q:Math.min(2,cnt(state.quick&&state.quick[d]))}; });
+    days.forEach(d=>{ if(!state.dayStat||typeof state.dayStat!=="object") state.dayStat={}; if(!state.dayStat[d]) state.dayStat[d]={t3:Math.min(3,cnt(state.top3&&state.top3[d])),q:Math.min(2,cnt(state.quick&&state.quick[d])),t3n:((state.top3&&state.top3[d])||[]).length,qn:((state.quick&&state.quick[d])||[]).length}; });
   }
   ["top3","quick","mplan","daily","t3offer"].forEach(k=>{ const o=state[k]; if(o&&typeof o==="object") Object.keys(o).forEach(d=>{ if(d<lim) delete o[d]; }); });
   Object.keys(state.routine.sleep).forEach(d=>{ if(d<lim) delete state.routine.sleep[d]; });
@@ -1195,6 +1241,7 @@ const FEATURES=[
  {k:"heatmap",e:"🟩",n:"Карта активності",d:"твої дні кольорами"},
  {k:"report",e:"🤖",n:"Звіт для ШІ",d:"тиждень для Claude чи ChatGPT"},
  {k:"sleep",e:"🌙",n:"Сон",d:"ліг, будильник, встав (потрібна Рутина)",off:true},
+ {k:"player",e:"🏆",n:"Гравець",d:"рейтинг 1–99 за твоїми даними",off:true},
  {k:"grid",e:"🔲",n:"Сітка 9×9",d:"цілі й звички за опорами"}
 ];
 const ACCENTS=[["yellow","Жовтий","#E2B93B"],["rose","Рожевий","#D9668F"],["lilac","Бузковий","#8E6CCF"],["mint","М'ятний","#3BA88F"],["sky","Блакитний","#4A90D9"],["red","Червоний","#D2544B"]];
@@ -1251,7 +1298,8 @@ function applyFeatures(){
   $("tabGrid").firstChild.textContent=diary?"Сьогодні":"Сітка";
   document.querySelector("header h1").textContent=S().title||"Сітка 9×9";
   const f=S().fields||{}; ["time","dur","imp","rep"].forEach(k=>{ const el=document.querySelector('[data-field="'+k+'"]'); if(el) el.hidden=f[k]===false; });
-  if((!feat("ideas")&&!$("viewIdeas").hidden)||(!feat("projects")&&!$("viewProjects").hidden)) showView("grid");
+  show("tabPlayer",playerOn());
+  if((!feat("ideas")&&!$("viewIdeas").hidden)||(!feat("projects")&&!$("viewProjects").hidden)||(!playerOn()&&!$("viewPlayer").hidden)) showView("grid");
 }
 /* quick add: natural language */
 const UA_MONTHS=["січня","лютого","березня","квітня","травня","червня","липня","серпня","вересня","жовтня","листопада","грудня"];
@@ -1424,6 +1472,7 @@ function renderSettings(){
   const t=sec("Назва"); const ti=document.createElement("input"); ti.className="setin"; ti.value=s.title||""; ti.placeholder="Сітка 9×9"; ti.oninput=()=>{ s.title=ti.value; save(); applyFeatures(); }; t.appendChild(ti);
   const f=sec("Що показувати","Вимкнене ховається з екрана. Дані не зникають."); const fb=document.createElement("div"); f.appendChild(fb);
   featureCards(fb,s.features,()=>{seedRoutine();changed(true);},!hasGrid());
+  if(playerOn()&&(!hasGrid()||(s.cats||[]).length)){ const ps=sec("Гравець","Познач, які твої категорії входять у кожен показник. Без прив'язки показник рахується лише з того, що від категорій не залежить."); const pb=document.createElement("div"); ps.appendChild(pb); renderPlayerSettings(pb); }
   if(hasGrid()){ const m=sec("Головний екран"); const seg=document.createElement("div"); seg.className="seg";
     [["grid","Сітка"],["diary","Сьогодні (задачі)"]].forEach(([k,l])=>{const b=document.createElement("button");b.type="button";b.textContent=l;b.setAttribute("aria-pressed",s.mode===k);b.onclick=()=>{s.mode=k;changed(true);};seg.appendChild(b);}); m.appendChild(seg); }
   const c=sec("Мої категорії","Торкнись емодзі чи назви, щоб змінити. Колір — кружечки праворуч."); const cb=document.createElement("div"); c.appendChild(cb);
@@ -2421,20 +2470,26 @@ const tRep=repPicker(null);
   $("tAdd").onclick=add; $("tTitle").onkeydown=e=>{if(e.key==="Enter")add();};
 })();
 function showView(v){
+  if(v==="player"&&!playerOn()) v="grid";
+  $("viewPlayer").hidden=v!=="player"; $("tabPlayer").setAttribute("aria-selected",v==="player");
+  document.querySelector(".wrap").classList.toggle("wide",v==="player");
   $("viewGrid").hidden=v!=="grid"; $("viewTasks").hidden=v!=="tasks"; $("viewIdeas").hidden=v!=="ideas"; $("viewProjects").hidden=v!=="projects";
   $("tabProjects").setAttribute("aria-selected",v==="projects"); if(v==="projects") renderProjects();
   $("tabGrid").setAttribute("aria-selected",v==="grid"); $("tabTasks").setAttribute("aria-selected",v==="tasks"); $("tabIdeas").setAttribute("aria-selected",v==="ideas");
   if(v==="ideas") renderIdeas();
+  if(v==="player"){ plCache=null; renderPlayer(); }
   try{localStorage.setItem("sitka9x9-view",v)}catch(e){}
 }
 $("tabGrid").onclick=()=>{showView("grid");renderTasks();}; $("tabTasks").onclick=()=>{showView("tasks");renderTasks();};
-try{const v0=localStorage.getItem("sitka9x9-view"); if(v0==="tasks"||v0==="ideas"||v0==="projects") setTimeout(()=>showView(v0),0);}catch(e){}
+try{const v0=localStorage.getItem("sitka9x9-view"); if(v0==="tasks"||v0==="ideas"||v0==="projects"||v0==="player") setTimeout(()=>showView(v0),0);}catch(e){}
 $("tabProjects").onclick=()=>showView("projects");
+$("tabPlayer").onclick=()=>showView("player");
 $("projAdd").onclick=()=>{ const w=$("projAddWrap"); if(w.firstChild){w.innerHTML="";return;} const f=projForm(null); w.appendChild(f); f.querySelector(".pf-n").focus(); };
 
 /* ---------- render grid ---------- */
 
 function render(){
+  plCache=null;
   syncGrid(); rebuildCats(); applyAccent(); applyFeatures(); renderNews(); renderTips();
   const ws=weekStart, we=new Date(ws);we.setDate(we.getDate()+6);
   $("weekLbl").innerHTML="<b>Тиждень "+wk().split("-W")[1]+"</b>"+fmt(ws)+" – "+fmt(we);
@@ -2482,6 +2537,7 @@ function render(){
   renderRoutine();
   if(!$("viewIdeas").hidden) renderIdeas(); else { const n=newCount(); $("ideaBadge").hidden=!n; $("ideaBadge").textContent=n; }
   if(openP!==null) renderSheet();
+  if(!$("viewPlayer").hidden) renderPlayer();
 }
 /* ---------- activity heatmap ---------- */
 let hmSel=null;
@@ -2574,6 +2630,243 @@ function renderHist(){
 function editGoal(){
   const v=prompt("Центральна ціль:",state.goal);
   if(v!==null&&v.trim()){state.goal=v.trim();save();render();}
+}
+
+/* ---------- player tab (v39): FIFA-style rating, computed from existing data only; nothing is stored ---------- */
+const playerOn=()=>{ const f=S().features||{}; return f.player===true||(f.player===undefined&&!isDiary()); };
+const PL_KEYS=["nav","kar","dis","ene","fok","bal"];
+const PL_MAIN={nav:["Навчання","НАВ"],kar:["Кар'єра","КАР"],dis:["Дисципліна","ДИС"],ene:["Енергія","ЕНЕ"],fok:["Фокус","ФОК"],bal:["Баланс","БАЛ"]};
+const PL_DEFMAP={nav:["uni"],kar:["work","fin","trk"],dis:["time"],ene:["str"],fok:["ph"],bal:["rec"]};
+// sub-metrics: [main, id, name, type P|C|L, explanation]
+const PL_SUBS=[
+ ["nav","navOnTime","Задачі в строк","P","Скільки задач закрито до дедлайну"],
+ ["nav","navEarly","Підготовка заздалегідь","P","Закрито хоча б за день до дедлайну"],
+ ["nav","navHours","Обсяг годин","C","Годин роботи порівняно з твоїми найкращими тижнями"],
+ ["nav","navCore","Ядро ★ Університет","P","Ядро опори в сітці"],
+ ["nav","navReg","Регулярність","P","Скільки днів ти працював над цим"],
+ ["nav","navProj","Прогрес курсів","P","Темп проєктів відносно плану"],
+ ["kar","karTasks","Робочі задачі","C","Скільки робочих задач закрито порівняно з твоїми найкращими тижнями"],
+ ["kar","karProj","Темп проєктів","P","Темп проєктів відносно плану"],
+ ["kar","karCoreW","Ядро ★ Робота","P","Ядро опори в сітці"],
+ ["kar","karCoreF","Ядро ★ Фінанси","P","Ядро опори в сітці"],
+ ["kar","karFin","Фінансові задачі","C","Скільки фінансових задач закрито порівняно з твоїми найкращими тижнями"],
+ ["kar","karOnTime","В строк","P","Скільки задач закрито до дедлайну"],
+ ["dis","disT3days","Дні з Топ-3","P","Днів, коли обрано всі 3 задачі Топ-3"],
+ ["dis","disT3done","Топ-3 виконано","P","Скільки обраних задач Топ-3 виконано"],
+ ["dis","disQuick","Швидкі задачі","P","Скільки задач зі швидких слотів виконано"],
+ ["dis","disNoLate","Без прострочень","P","Скільки задач з дедлайном у періоді закрито вчасно"],
+ ["dis","disPlan","Ранковий план","P","Скільки пунктів ранкового плану розібрано"],
+ ["dis","disJournal","Журнал","P","Днів, коли заповнено щонайменше 2 поля журналу"],
+ ["ene","eneSleep","Тривалість сну","P","Середній сон відносно 8 годин"],
+ ["ene","eneWake","Стабільність підйому","P","Чим стабільніше встаєш, тим вище"],
+ ["ene","eneWater","Вода","P","Днів, коли досягнуто ціль води"],
+ ["ene","eneRoutine","Рутина","P","Середній % виконання рутини за день"],
+ ["ene","eneCore","Ядро ★ Енергія","P","Ядро опори в сітці"],
+ ["ene","eneStreak","Серія рутини","P","Днів з повністю виконаною рутиною"],
+ ["fok","fokCore","Ядро ★ Фокус","P","Ядро опори в сітці"],
+ ["fok","fokDeep","Глибока робота","C","Задач від 90 хв порівняно з твоїми найкращими тижнями"],
+ ["fok","fokFinish","Завершеність","P","Задачі Топ-3, виконані в той самий день"],
+ ["fok","fokLong","Прогрес задач","C","Задач від 60 хв порівняно з твоїми найкращими тижнями"],
+ ["fok","fokSelf","Самоконтроль","L","Менше часу в соцмережах — вищий бал"],
+ ["fok","fokHold","Довгий час","P","Скільки днів поспіль ти тримався нижче свого середнього"],
+ ["bal","balCore","Ядро ★ Відпочинок","P","Ядро опори в сітці"],
+ ["bal","balTasks","Задачі «Відпочинок»","C","Задач відпочинку порівняно з твоїми найкращими тижнями"],
+ ["bal","balGrat","Вдячність","P","Днів із заповненою вдячністю"],
+ ["bal","balWeekend","Вихідні без перевантаження","P","Вихідні, де робочих задач не більше ніж на 3 години"],
+ ["bal","balSleepWe","Сон у вихідні","P","Середній сон у Сб і Нд відносно 8 годин"],
+ ["bal","balClose","Час з близькими","P","Поки немає даних"]];
+function plMap(){ const s=S(); if(s.playerMap&&typeof s.playerMap==="object") return s.playerMap; if(hasGrid()&&!(s.cats||[]).length) return PL_DEFMAP; return {}; }
+const plClamp=v=>Math.max(1,Math.min(99,Math.round(v)));
+const plP=pct=>pct==null?null:plClamp(1+0.98*pct);
+const plAddDays=(d,n)=>{ const x=new Date(d); x.setDate(x.getDate()+n); return x; };
+// facts for one ISO week (current week is cut at today); cached per compute run
+function plFacts(mon,cache){
+  const k0=dayKey(mon); if(cache[k0]) return cache[k0];
+  const today=new Date(); today.setHours(0,0,0,0);
+  const days=[]; for(let i=0;i<7;i++){ const d=plAddDays(mon,i); if(d<=today) days.push(d); }
+  const F={days:days.length,mon,active:days.some(d=>dayActivity(d).total>0)};
+  if(!days.length||!F.active){ cache[k0]=F; return F; }
+  const start=days[0].getTime(), end=plAddDays(days[days.length-1],1).getTime(), now=Date.now();
+  const M=plMap(), inC=key=>{ const a=M[key]; return Array.isArray(a)&&a.length?a:null; };
+  const tasks=state.tasks||[], doneIn=t=>t.done&&t.doneAt>=start&&t.doneAt<end;
+  const dueTs=t=>new Date(t.due+"T"+(t.time&&/^\d{1,2}:\d{2}$/.test(t.time)?t.time.padStart(5,"0")+":59":"23:59:59")).getTime();
+  const onTime=cats=>{ if(!cats) return [null,null]; const ts=tasks.filter(t=>doneIn(t)&&t.due&&cats.includes(t.cat)); if(!ts.length) return [null,null];
+    return [ts.filter(t=>t.doneAt<=dueTs(t)).length/ts.length*100, ts.filter(t=>t.doneAt<new Date(t.due+"T00:00").getTime()).length/ts.length*100]; };
+  const cnt=pred=>tasks.filter(t=>doneIn(t)&&pred(t)).length;
+  const w=isoWeek(mon);
+  const core=pid=>{ if(!hasGrid()) return null; const p=PILLARS.findIndex(P=>P.id===pid); if(p<0) return null;
+    const idx=PILLARS[p].a.map((_,i)=>i).filter(i=>isCore(p,i)); if(!idx.length) return null;
+    return idx.filter(i=>isDone(p,i,w)).length/idx.length*100; };
+  const projPace=cats=>{ if(!cats) return null; const ps=(state.projects||[]).filter(P=>cats.includes(P.cat)&&P.plan>0); if(!ps.length) return null;
+    return ps.reduce((a,P)=>a+Math.max(0,Math.min(100,(pAt(P,w)-pBefore(P,w))/P.plan*100)),0)/ps.length; };
+  const nav=inC("nav"), kar=inC("kar"), bal=inC("bal"), defMap=M===PL_DEFMAP;
+  [F.navOnTime,F.navEarly]=onTime(nav);
+  F.navHours=nav?tasks.filter(t=>doneIn(t)&&nav.includes(t.cat)).reduce((a,t)=>a+(t.dur>0?t.dur:30),0)/60:null;
+  F.navCore=core("uni");
+  F.navReg=nav?days.filter(d=>{ const a=d.getTime(), b=plAddDays(d,1).getTime(); return tasks.some(t=>t.done&&t.doneAt>=a&&t.doneAt<b&&nav.includes(t.cat)); }).length/days.length*100:null;
+  F.navProj=projPace(nav);
+  F.karTasks=kar?cnt(t=>defMap?t.cat==="work":kar.includes(t.cat)):null;
+  F.karProj=projPace(kar); F.karCoreW=core("work"); F.karCoreF=core("fin");
+  F.karFin=defMap?cnt(t=>t.cat==="fin"):null;
+  F.karOnTime=onTime(kar)[0];
+  // Top-3 / quick: live lists for the last 60 days, dayStat (t3n/qn) for older days, otherwise unknown
+  const lim=dayKey(plAddDays(today,-60)); let t3Days=0,t3Full=0,t3Sel=0,t3Done=0,qSel=0,qDone=0,finSel=0,finDone=0,known=0,qKnown=0;
+  days.forEach(d=>{ const k=dayKey(d), ds=(state.dayStat||{})[k];
+    if(k>=lim){ const ids=((state.top3||{})[k]||[]), ts=ids.map(id=>tasks.find(t=>t.id===id)).filter(Boolean);
+      known++; t3Days++; if(ids.length>=3) t3Full++; t3Sel+=ts.length; t3Done+=ts.filter(t=>t.done).length;
+      finSel+=ts.length; finDone+=ts.filter(t=>t.done&&t.doneAt&&dayKey(new Date(t.doneAt))===k).length;
+      const qs=((state.quick||{})[k]||[]).map(id=>tasks.find(t=>t.id===id)).filter(Boolean); qKnown++; qSel+=qs.length; qDone+=qs.filter(t=>t.done).length; }
+    else if(ds&&ds.t3n!=null){ known++; t3Days++; if(ds.t3n>=3) t3Full++; t3Sel+=ds.t3n; t3Done+=ds.t3||0; if(ds.qn!=null){ qKnown++; qSel+=ds.qn; qDone+=ds.q||0; } } });
+  F.disT3days=t3Days?t3Full/t3Days*100:null; F.disT3done=t3Sel?t3Done/t3Sel*100:null; F.disQuick=qSel?qDone/qSel*100:null;
+  const dueP=tasks.filter(t=>{ if(!t.due) return false; const dt=new Date(t.due+"T00:00").getTime(); return dt>=start&&dt<end&&(t.done||dueTs(t)<now); });
+  F.disNoLate=dueP.length?dueP.filter(t=>t.done&&t.doneAt<=dueTs(t)).length/dueP.length*100:null;
+  let mpN=0,mpS=0; days.forEach(d=>{ const m=(state.mplan||{})[dayKey(d)]; if(m&&m.n){ mpN+=m.n; mpS+=Math.min(m.n,Object.keys(m.s||{}).length); } });
+  F.disPlan=mpN?mpS/mpN*100:null;
+  F.disJournal=days.filter(d=>jFilled(dayKey(d))>=2).length/days.length*100;
+  const slp=dd=>{ const v=dd.map(d=>sleepMin(dayKey(d))).filter(x=>x!=null); return v.length?Math.min(100,v.reduce((a,b)=>a+b,0)/v.length/480*100):null; };
+  F.eneSleep=slp(days);
+  const ups=days.map(d=>hm2min(sleepRec(dayKey(d)).up)).filter(x=>x!=null);
+  if(ups.length>=2){ const mu=ups.reduce((a,b)=>a+b,0)/ups.length, sd=Math.sqrt(ups.reduce((a,b)=>a+(b-mu)*(b-mu),0)/ups.length); F.eneWake=Math.max(0,Math.min(100,100-1.5*sd)); } else F.eneWake=null;
+  const wItem=(state.routine.items||[]).find(it=>it.type==="water");
+  F.eneWater=wItem?days.filter(d=>waterMl(dayKey(d))>=(wItem.goal||2000)).length/days.length*100:null;
+  const rs=days.map(d=>routineStat(dayKey(d))).filter(r=>r.tot>0);
+  F.eneRoutine=rs.length?rs.reduce((a,r)=>a+r.done/r.tot,0)/rs.length*100:null;
+  F.eneStreak=rs.length?rs.filter(r=>r.done>=r.tot).length/days.length*100:null;
+  F.eneCore=core("str");
+  F.fokCore=core("ph"); F.fokDeep=cnt(t=>t.dur>=90); F.fokLong=cnt(t=>t.dur>=60);
+  F.fokFinish=finSel?finDone/finSel*100:null;
+  const sms=days.map(d=>smOn(d)).filter(v=>v>0);
+  F.smMean=sms.length?sms.reduce((a,b)=>a+b,0)/sms.length:null; F.smDays=sms.length;
+  let run=0,best=0; days.forEach(d=>{ const v=smOn(d), a=smAvg(d); if(v&&a.n>=1&&v<=a.avg){ run++; best=Math.max(best,run); } else run=0; });
+  F.fokHoldRaw=sms.length?best/sms.length*100:null;
+  F.balCore=core("rec"); F.balTasks=bal?cnt(t=>bal.includes(t.cat)):null;
+  F.balGrat=days.filter(d=>{ const g=dayData(isoWeek(d),(d.getDay()+6)%7).grat; return g&&g.trim().length>=2; }).length/days.length*100;
+  const we=days.filter(d=>d.getDay()===0||d.getDay()===6), work=(nav||[]).concat(kar||[]);
+  F.balWeekend=we.length?we.filter(d=>{ const a=d.getTime(), b=plAddDays(d,1).getTime(); return tasks.filter(t=>t.done&&t.doneAt>=a&&t.doneAt<b&&work.includes(t.cat)).reduce((s,t)=>s+(t.dur>0?t.dur:30),0)<=180; }).length/we.length*100:null;
+  F.balSleepWe=we.length?slp(we):null; F.balClose=null;
+  cache[k0]=F; return F;
+}
+// scores of one week: {subId: score|null}
+function plWeek(mon,cache){
+  const F=plFacts(mon,cache), out={}; if(!F.days||!F.active){ PL_SUBS.forEach(s=>out[s[1]]=null); return out; }
+  const hist=[]; for(let k=1;k<=8;k++){ const h=plFacts(plAddDays(mon,-7*k),cache); if(h.active) hist.push(h); }
+  // social media: at least 3 days with data in this week + 28 days before
+  let smTotal=F.smDays||0; for(let k=1;k<=28;k++){ if(smOn(plAddDays(mon,-k))) smTotal++; }
+  PL_SUBS.forEach(([m,id,,type])=>{
+    if(id==="fokSelf"){
+      if(F.smMean==null||smTotal<3){ out[id]=null; return; }
+      const hv=hist.map(h=>h.smMean).filter(v=>v!=null), base=hv.length?hv.reduce((a,b)=>a+b,0)/hv.length:F.smMean;
+      out[id]=plClamp(75-50*(F.smMean/base-1)); return; }
+    if(id==="fokHold"){ out[id]=(F.fokHoldRaw==null||smTotal<3)?null:plP(F.fokHoldRaw); return; }
+    const v=F[id]; if(v==null){ out[id]=null; return; }
+    if(type==="P"){ out[id]=plP(v); return; }
+    const raw=F.days<7?v*7/F.days:v;      // C: scale an unfinished week to 7 days
+    const hv=hist.map(h=>h[id]).filter(x=>x!=null).sort((a,b)=>a-b);
+    const ref=Math.max(1,hv.length?hv[Math.max(0,Math.ceil(0.9*hv.length)-1)]:0);
+    out[id]=plClamp(99*raw/ref);
+  });
+  return out;
+}
+function plMains(sub){
+  const mains={}; PL_KEYS.forEach(k=>{ const v=PL_SUBS.filter(s=>s[0]===k).map(s=>sub[s[1]]).filter(x=>x!=null); mains[k]=v.length>=2?Math.round(v.reduce((a,b)=>a+b,0)/v.length):null; });
+  const mv=PL_KEYS.map(k=>mains[k]).filter(x=>x!=null);
+  return {sub,mains,overall:mv.length>=3?Math.round(mv.reduce((a,b)=>a+b,0)/mv.length):null};
+}
+function plAvgWeeks(list){ const sub={}; PL_SUBS.forEach(([,id])=>{ const v=list.map(x=>x[id]).filter(x=>x!=null); sub[id]=v.length?Math.round(v.reduce((a,b)=>a+b,0)/v.length):null; }); return sub; }
+function plMonthWeeks(y,m,curMon){ const out=[]; let d=new Date(y,m,1); const sun=new Date(d); sun.setDate(sun.getDate()+((7-sun.getDay())%7));
+  for(let s=sun; s.getMonth()===m; s=plAddDays(s,7)){ const mon=plAddDays(s,-6); if(mon<=curMon) out.push(mon); } return out; }
+let plCache=null;
+function plCompute(){
+  if(plCache) return plCache;
+  const cache={}, today=new Date(); today.setHours(0,0,0,0), curMon=mondayOf(today), prevMon=plAddDays(curMon,-7);
+  const wk0=plWeek(curMon,cache), wk1=plWeek(prevMon,cache);
+  const sunCur=plAddDays(curMon,6), my=sunCur.getFullYear(), mm=sunCur.getMonth();
+  const curWeeks=plMonthWeeks(my,mm,curMon).map(m=>plWeek(m,cache));
+  const pm=new Date(my,mm-1,1), prevWeeks=plMonthWeeks(pm.getFullYear(),pm.getMonth(),curMon).map(m=>plWeek(m,cache));
+  let activeHist=0; for(let k=1;k<=8;k++){ const mon=plAddDays(curMon,-7*k); for(let i=0;i<7;i++){ if(dayActivity(plAddDays(mon,i)).total>0){ activeHist++; break; } } }
+  let anyData=activeHist>0; if(!anyData) for(let i=0;i<7;i++){ const d=plAddDays(curMon,i); if(d<=today&&dayActivity(d).total>0){ anyData=true; break; } }
+  plCache={week:{cur:plMains(wk0),prev:plMains(wk1)},month:{cur:plMains(plAvgWeeks(curWeeks)),prev:plMains(plAvgWeeks(prevWeeks))},calib:activeHist<3,anyData};
+  return plCache;
+}
+const plDiff=(a,b)=>(a==null||b==null)?null:a-b;
+const plSign=v=>v==null?"—":v>0?"+"+v:v<0?"−"+Math.abs(v):"0";
+let plPeriod="week"; try{ if(localStorage.getItem("sitka9x9-pper")==="month") plPeriod="month"; }catch(e){}
+function plRadar(cur,prev){
+  const R=130, ang=i=>(-90+i*60)*Math.PI/180, pt=(i,v)=>[Math.cos(ang(i))*R*v/99,Math.sin(ang(i))*R*v/99];
+  const poly=vals=>vals.map((v,i)=>pt(i,v==null?0:v).map(n=>n.toFixed(1)).join(",")).join(" ");
+  let s='<svg viewBox="-230 -185 460 370" class="pl-radar" role="img" aria-label="Радар показників">';
+  for(let r=1;r<=4;r++){ s+='<polygon points="'+PL_KEYS.map((_,i)=>pt(i,99*r/4).map(n=>n.toFixed(1)).join(",")).join(" ")+'" fill="none" stroke="var(--line)"/>'; }
+  PL_KEYS.forEach((_,i)=>{ const p=pt(i,99); s+='<line x1="0" y1="0" x2="'+p[0].toFixed(1)+'" y2="'+p[1].toFixed(1)+'" stroke="var(--line)"/>'; });
+  s+='<polygon points="'+poly(PL_KEYS.map(k=>prev.mains[k]))+'" fill="none" stroke="var(--muted)" stroke-width="2" stroke-dasharray="4 3"/>';
+  s+='<polygon points="'+poly(PL_KEYS.map(k=>cur.mains[k]))+'" fill="rgba(226,185,59,.18)" stroke="#E2B93B" stroke-width="2"/>';
+  PL_KEYS.forEach((k,i)=>{ const a=ang(i), x=Math.cos(a)*(R+30), y=Math.sin(a)*(R+22)+4, v=cur.mains[k];
+    s+='<text x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" text-anchor="middle" font-size="12" fill="var(--ink)">'+PL_MAIN[k][1]+" "+(v==null?"—":v)+'</text>'; });
+  return s+'</svg>';
+}
+function renderPlayer(){
+  const box=$("viewPlayer"); if(!box||box.hidden) return; box.innerHTML="";
+  const C=plCompute();
+  if(!C.anyData){ box.innerHTML='<section class="card pl-empty">Рейтинг з\'явиться після першого тижня: відмічай задачі, рутину й сітку.</section>'; return; }
+  const P=C[plPeriod], cur=P.cur, prev=P.prev, wkMode=plPeriod==="week";
+  const top=document.createElement("div"); top.className="pl-top";
+  // A) card
+  const em=(session&&session.user&&session.user.email)||"", name=(S().title||"").trim()||em.split("@")[0].toUpperCase();
+  const card=document.createElement("section"); card.className="pl-card";
+  card.innerHTML='<div class="pl-ava" aria-hidden="true"></div><div class="pl-ovr"></div><div class="pl-ovl">ЗАГАЛ</div>'+(C.calib?'<div class="pl-cal">калібрування</div>':'')+'<div class="pl-name"></div><div class="pl-goal"></div><div class="pl-sep"></div><div class="pl-mini"></div>';
+  card.querySelector(".pl-ovr").textContent=cur.overall==null?"—":cur.overall;
+  card.querySelector(".pl-name").textContent=name; card.querySelector(".pl-goal").textContent=state.goal||"";
+  if(!state.goal) card.querySelector(".pl-goal").remove();
+  const mini=card.querySelector(".pl-mini"); PL_KEYS.forEach(k=>{ const d=document.createElement("div"); d.innerHTML='<b></b> <span></span>'; d.firstChild.textContent=cur.mains[k]==null?"—":cur.mains[k]; d.lastChild.textContent=PL_MAIN[k][1]; mini.appendChild(d); });
+  top.appendChild(card);
+  // B) radar
+  const rad=document.createElement("section"); rad.className="card pl-rad";
+  rad.innerHTML='<div class="pl-rh"><span class="pl-muted">Показники</span><div class="seg pl-seg"><button type="button" data-p="week">Тиждень</button><button type="button" data-p="month">Місяць</button></div></div>'+plRadar(cur,prev)+'<div class="pl-leg">━ зараз &nbsp; ┅ '+(wkMode?"минулий тиждень":"минулий місяць")+'</div>';
+  rad.querySelectorAll(".pl-seg button").forEach(b=>{ b.setAttribute("aria-pressed",b.dataset.p===plPeriod); b.onclick=()=>{ plPeriod=b.dataset.p; try{localStorage.setItem("sitka9x9-pper",plPeriod)}catch(e){} renderPlayer(); }; });
+  top.appendChild(rad);
+  // C) changes
+  const chg=document.createElement("section"); chg.className="card pl-chg";
+  chg.innerHTML='<h3 class="pl-h">'+(wkMode?"Зміни за тиждень":"Зміни за місяць")+'</h3><div class="pl-chl"></div>';
+  const rows=PL_KEYS.map(k=>({k,d:plDiff(cur.mains[k],prev.mains[k])})).sort((a,b)=>(b.d==null?-1e9:b.d)-(a.d==null?-1e9:a.d));
+  const chl=chg.querySelector(".pl-chl");
+  rows.forEach(r=>{ const el=document.createElement("div"); el.className="pl-chr"; el.innerHTML='<span></span><b></b>'; el.firstChild.textContent=PL_MAIN[r.k][0];
+    const b=el.lastChild; if(r.d==null){ b.textContent="—"; b.className="z"; } else if(r.d>0){ b.textContent="▲ +"+r.d; b.className="up"; } else if(r.d<0){ b.textContent="▼ −"+Math.abs(r.d); b.className="down"; } else { b.textContent="0"; b.className="z"; } chl.appendChild(el); });
+  if(rows[0]&&rows[0].d>0){ const p=document.createElement("p"); p.className="pl-muted pl-best"; p.textContent="Найбільше росте: "+PL_MAIN[rows[0].k][0]; chg.appendChild(p); }
+  top.appendChild(chg); box.appendChild(top);
+  // details
+  const det=document.createElement("div"); det.className="pl-det";
+  PL_KEYS.forEach(k=>{ const c=document.createElement("section"); c.className="card pl-dc";
+    c.innerHTML='<div class="pl-dh"><span></span><b></b></div>'; c.querySelector(".pl-dh span").textContent=PL_MAIN[k][0]; c.querySelector(".pl-dh b").textContent=cur.mains[k]==null?"—":cur.mains[k];
+    PL_SUBS.filter(s=>s[0]===k).forEach(([,id,nm,,ex])=>{ const v=cur.sub[id], r=document.createElement("div"); r.className="pl-sr";
+      r.innerHTML='<button type="button" class="pl-sn"><span></span><b></b></button><div class="pl-bar"><i></i></div><div class="pl-ex" hidden></div>';
+      r.querySelector(".pl-sn span").textContent=nm; const vb=r.querySelector(".pl-sn b");
+      if(v==null){ vb.textContent="потрібні дані"; vb.className="na"; } else { vb.textContent=v; const i=r.querySelector(".pl-bar i"); i.style.width=v+"%"; i.style.background=v>=80?"#2F8A78":v>=65?"#E2B93B":"#C0413A"; }
+      r.querySelector(".pl-ex").textContent=ex;
+      r.querySelector(".pl-sn").onclick=()=>{ const e=r.querySelector(".pl-ex"); e.hidden=!e.hidden; };
+      c.appendChild(r); });
+    det.appendChild(c); });
+  box.appendChild(det);
+}
+function plReportLines(){
+  if(!playerOn()) return [];
+  const C=plCompute(), w=C.week, m=C.month, L=[];
+  L.push("## Гравець: "+(w.cur.overall==null?"—":w.cur.overall)+" (тиждень: "+plSign(plDiff(w.cur.overall,w.prev.overall))+" · місяць: "+plSign(plDiff(m.cur.overall,m.prev.overall))+")"+(C.calib?" · калібрування":""));
+  L.push(PL_KEYS.map(k=>PL_MAIN[k][1]+" "+(w.cur.mains[k]==null?"—":w.cur.mains[k])+" ("+plSign(plDiff(w.cur.mains[k],w.prev.mains[k]))+")").join(" · "));
+  const weak=PL_SUBS.map(s=>[s[2],w.cur.sub[s[1]]]).filter(x=>x[1]!=null).sort((a,b)=>a[1]-b[1]).slice(0,3);
+  if(weak.length) L.push("Найслабші під-показники: "+weak.map(x=>x[0]+" "+x[1]).join(" · "));
+  return L;
+}
+function renderPlayerSettings(box){
+  const s=state.settings, src=s.playerMap&&typeof s.playerMap==="object"?s.playerMap:{};
+  const M={}; PL_KEYS.forEach(k=>{ M[k]=Array.isArray(src[k])?src[k].slice():[]; });   // edited copy; written to settings only on a tap
+  box.innerHTML="";
+  PL_KEYS.forEach(k=>{
+    const r=document.createElement("div"); r.className="pl-map"; const h=document.createElement("b"); h.textContent=PL_MAIN[k][0]; r.appendChild(h);
+    const ch=document.createElement("div"); ch.className="pl-chips";
+    CATS.forEach(c=>{ const b=document.createElement("button"); b.type="button"; b.className="pl-chip"+(M[k].includes(c.id)?" on":""); b.style.setProperty("--c",c.c); b.textContent=catLabel(c);
+      b.setAttribute("aria-pressed",M[k].includes(c.id));
+      b.onclick=()=>{ const i=M[k].indexOf(c.id); if(i>=0) M[k].splice(i,1); else M[k].push(c.id); s.playerMap=M; save(); plCache=null; renderPlayerSettings(box); };
+      ch.appendChild(b); });
+    r.appendChild(ch); box.appendChild(r); });
 }
 
 /* ---------- pillar sheet ---------- */
@@ -2810,6 +3103,7 @@ function buildReport(){
   const st_=hmStreaks(); L.push(""); L.push("## Активність: серія "+st_.cur+" дн., найдовша "+st_.best+" дн.");
   if(normMode()){ const ps=[]; for(let i=0;i<nDays;i++){ const d=new Date(weekStart); d.setDate(d.getDate()+i); ps.push({n:DAY_SHORT[i],p:dayNorm(d).pct}); }
     if(ps.length) L.push("Норма дня (рутина + Топ-3 + швидкі): "+(isCurW?"цей тиждень ":"тиждень ")+Math.round(ps.reduce((a,x)=>a+x.p,0)/ps.length)+"% · "+ps.map(x=>x.n+" "+x.p+"%").join(" · ")); }
+  { const pl=plReportLines(); if(pl.length){ L.push(""); pl.forEach(x=>L.push(x)); } }
   L.push(""); L.push("## Динаміка (виконано дій з 64)");
   const hist=[]; for(let k=5;k>=0;k--){const d=new Date(weekStart);d.setDate(d.getDate()-7*k);const x=isoWeek(d);hist.push("т"+x.split("-W")[1]+": "+weekTotal(x));}
   L.push(hist.join(", "));
