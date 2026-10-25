@@ -77,6 +77,11 @@ h1{font-family:"Unbounded","Onest",system-ui,sans-serif;font-weight:700;font-siz
 section.card{background:var(--sheet);border:1px solid var(--line);border-radius:14px;padding:16px;margin-top:18px}
 h2{font-family:"Unbounded","Onest",sans-serif;font-weight:500;font-size:18px;margin:0 0 10px}
 label.f{display:block;font-size:14px;font-weight:600;margin:12px 0 4px}
+.smrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px}
+.smin{display:flex;align-items:center;gap:6px}
+.smin input{width:64px;color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--paper);min-height:40px;font-size:16px}
+.smu{color:var(--muted);font-size:14px;margin-right:4px}
+.smcmp{font-size:13px}.smcmp.down{color:#2F8A78}.smcmp.up{color:#C0413A}.smcmp.eq{color:var(--muted)}
 textarea{width:100%;min-height:72px;resize:vertical;border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--paper);line-height:1.45}
 .hist{display:flex;gap:6px;align-items:flex-end;height:90px;overflow-x:auto;padding-bottom:4px}
 .hist button{flex:1 0 34px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;border:0;background:transparent;cursor:pointer;gap:4px;font-size:11px;color:var(--muted)}
@@ -709,6 +714,11 @@ ul.news{margin:8px 0;padding-left:20px;font-size:15px;line-height:1.55}
     <div class="fhint">Кожна думка з нового рядка — зранку стане окремим пунктом плану</div>
     <label class="f" for="dGrat">🙏 За що дякую сьогодні</label>
     <textarea id="dGrat" class="grat" placeholder="Людина, момент, результат — навіть дрібниця"></textarea>
+    <div id="smBox" hidden>
+      <label class="f" for="smH">📱 Час у соцмережах</label>
+      <div class="smrow"><span class="smin"><input id="smH" type="number" inputmode="numeric" min="0" max="24" step="1" aria-label="Години в соцмережах"><span class="smu">год</span><input id="smM" type="number" inputmode="numeric" min="0" max="59" step="1" aria-label="Хвилини в соцмережах"><span class="smu">хв</span></span><span id="smCmp" class="smcmp" hidden></span></div>
+      <div class="fhint">Дивись iPhone → Параметри → Екранний час → Соцмережі за день</div>
+    </div>
     <details class="week-view"><summary>Переглянути весь тиждень</summary><div id="weekJournal"></div></details>
     <label class="f" for="wFocus" style="margin-top:18px">Фокус наступного тижня</label>
     <textarea id="wFocus" placeholder="1–3 дії, на які ставлю пріоритет"></textarea>
@@ -926,10 +936,12 @@ const wk=()=>isoWeek(weekStart);
 
 /* ---------- state ---------- */
 function ensureRoutine(){ if(!state.routine||!Array.isArray(state.routine.items)) state.routine={items:[],log:(state.routine&&state.routine.log)||{},water:{},v:2}; state.routine.log=state.routine.log||{}; }
-const APP_VERSION=37, APP_DATE="24.10.2026";
+const APP_VERSION=38, APP_DATE="25.10.2026";
 const SCHEMA=5;
 /* what's new: "for" = all | grid | diary */
 const CHANGELOG=[
+ {v:38,date:"25.10.2026",items:[
+   {t:"У журналі з'явилось поле „Час у соцмережах“: вводь час з Екранного часу iPhone і дивись, чи він менший за твоє середнє.",for:"grid"}]},
  {v:37,date:"24.10.2026",items:[
    {t:"Швидкі задачі тепер без ліміту за тривалістю: два слоти на день. Кнопка 📅 додає задачу в Google Calendar одним натисканням.",for:"all"}]},
  {v:36,date:"23.10.2026",items:[
@@ -2636,6 +2648,20 @@ function migrateJournal(){
 }
 const dayData=(w,i)=>((state.weekNotes[w]||{}).days||{})[i]||{};
 const dayHas=(w,i)=>{const d=dayData(w,i);return !!(d.good||d.bad||d.next||d.grat);};
+/* ---------- social media time (v38): weekNotes[w].days[i].sm, minutes; not part of dayHas/jFilled ---------- */
+const smShow=()=>!isDiary()||(S().features||{}).player===true;
+const fmtMin=m=>{ m=Math.round(m); const h=Math.floor(m/60), mm=m%60; return h&&mm?h+" год "+mm+" хв":h?h+" год":mm+" хв"; };
+const smOn=d=>{ const v=dayData(isoWeek(d),(d.getDay()+6)%7).sm; return v>0?v:0; };
+function smAvg(d){ let s=0,n=0; for(let k=1;k<=28;k++){ const x=new Date(d); x.setDate(x.getDate()-k); const v=smOn(x); if(v){s+=v;n++;} } return {avg:n?s/n:null,n}; }
+function smCmp(){
+  const el=$("smCmp"); const d=new Date(weekStart); d.setDate(d.getDate()+selDay);
+  const v=dayData(wk(),selDay).sm||0, a=smAvg(d);
+  if(!v||a.n<3){ el.hidden=true; el.textContent=""; return; }
+  const diff=Math.round(v-a.avg); el.hidden=false;
+  if(Math.abs(diff)<=5){ el.className="smcmp eq"; el.textContent="≈ як зазвичай"; }
+  else if(diff<0){ el.className="smcmp down"; el.textContent="▼ "+fmtMin(-diff)+" менше за твоє середнє"; }
+  else { el.className="smcmp up"; el.textContent="▲ "+fmtMin(diff)+" більше за твоє середнє"; }
+}
 function renderJournal(){
 
   const w=wk();
@@ -2656,16 +2682,19 @@ function renderJournal(){
   const dd=dayData(w,selDay);
   $("dGood").value=dd.good||""; $("dBad").value=dd.bad||""; $("dNext").value=dd.next||""; $("dGrat").value=dd.grat||"";
   $("wFocus").value=(state.weekNotes[w]||{}).focus||"";
+  $("smBox").hidden=!smShow();
+  if(smShow()){ const v=dd.sm>0?dd.sm:0; $("smH").value=v?Math.floor(v/60):""; $("smM").value=v?v%60:""; smCmp(); }
   renderWeekJournal();
 }
 function renderWeekJournal(){
   const w=wk(), box=$("weekJournal"); box.innerHTML=""; let any=false;
   for(let i=0;i<7;i++){
-    if(!dayHas(w,i)) continue; any=true;
-    const d=new Date(weekStart); d.setDate(d.getDate()+i); const dd=dayData(w,i);
+    const dd=dayData(w,i); if(!dayHas(w,i)&&!(dd.sm>0)) continue; any=true;
+    const d=new Date(weekStart); d.setDate(d.getDate()+i);
     const el=document.createElement("div"); el.className="wj";
     const t=document.createElement("b"); t.textContent=DAY_FULL[i]+", "+d.toLocaleDateString("uk-UA",{day:"numeric",month:"long"}); el.appendChild(t);
     JF.forEach(([k,label])=>{ if(!dd[k])return; const r=document.createElement("div"); r.textContent=label+": "; const sp=document.createElement("span"); sp.textContent=dd[k]; r.appendChild(sp); el.appendChild(r); });
+    if(dd.sm>0){ const r=document.createElement("div"); r.textContent="Соцмережі: "; const sp=document.createElement("span"); sp.textContent=fmtMin(dd.sm); r.appendChild(sp); el.appendChild(r); }
     box.appendChild(el);
   }
   if(!any) box.innerHTML='<div class="empty">Цього тижня записів ще немає.</div>';
@@ -2678,6 +2707,15 @@ function bindDay(id,f){$(id).oninput=e=>{
   renderWeekJournal();
 };}
 bindDay("dGood","good");bindDay("dBad","bad");bindDay("dNext","next");bindDay("dGrat","grat");
+function smInput(){
+  const clamp=(el,max)=>{ if(el.value==="") return 0; let n=parseInt(el.value,10); if(!isFinite(n)||n<0) n=0; if(n>max){ n=max; el.value=String(max); } return n; };
+  const h=clamp($("smH"),24), m=clamp($("smM"),59), sm=h*60+m;
+  const w=wk(); const wn=state.weekNotes[w]=state.weekNotes[w]||{}; wn.days=wn.days||{};
+  const d=wn.days[selDay]=wn.days[selDay]||{};
+  if(sm>0) d.sm=sm; else { delete d.sm; if(!Object.keys(d).length) delete wn.days[selDay]; }
+  save(); smCmp(); renderWeekJournal();
+}
+$("smH").oninput=smInput; $("smM").oninput=smInput;
 $("wFocus").oninput=e=>{const w=wk();state.weekNotes[w]=state.weekNotes[w]||{};state.weekNotes[w].focus=e.target.value;save();};
 $("prevW").onclick=()=>{weekStart.setDate(weekStart.getDate()-7);render();};
 $("nextW").onclick=()=>{weekStart.setDate(weekStart.getDate()+7);render();};
@@ -2743,11 +2781,17 @@ function buildReport(){
   const wn=state.weekNotes[w]||{};
   L.push(""); L.push("## Журнал тижня");
   let anyDay=false;
-  for(let i=0;i<7;i++){ if(!dayHas(w,i))continue; anyDay=true; const d=new Date(weekStart); d.setDate(d.getDate()+i); const dd=dayData(w,i);
+  for(let i=0;i<7;i++){ const dd=dayData(w,i); if(!dayHas(w,i)&&!(dd.sm>0))continue; anyDay=true; const d=new Date(weekStart); d.setDate(d.getDate()+i);
     L.push("### "+DAY_FULL[i]+", "+d.toLocaleDateString("uk-UA",{day:"numeric",month:"long"}));
-    JF.forEach(([k,label])=>{if(dd[k])L.push(label+": "+dd[k].replace(/\n+/g," / "));}); }
+    JF.forEach(([k,label])=>{if(dd[k])L.push(label+": "+dd[k].replace(/\n+/g," / "));});
+    if(dd.sm>0) L.push("Соцмережі: "+fmtMin(dd.sm)); }
   if(!anyDay) L.push("Щоденних записів немає.");
   L.push("Фокус наступного тижня: "+(wn.focus||"—"));
+  { const vals=off=>{ const r=[]; for(let i=0;i<7;i++){ const d=new Date(weekStart); d.setDate(d.getDate()+i-off); const v=smOn(d); if(v) r.push(v); } return r; };
+    const cur=vals(0), prev=vals(7), avg=a=>a.reduce((x,y)=>x+y,0)/a.length;
+    if(cur.length){ const ca=Math.round(avg(cur)); let line="Соцмережі: середнє "+fmtMin(ca)+" на день (днів з даними: "+cur.length+")";
+      if(prev.length){ const pa=Math.round(avg(prev)), df=ca-pa; line+=" · минулий тиждень "+fmtMin(pa)+" ("+(df<0?"−":df>0?"+":"±")+fmtMin(Math.abs(df))+")"; }
+      L.push(line); } }
   ensureRoutine();
   const isCurW=w===isoWeek(new Date()), nDays=isCurW?todayIdx()+1:7;
   L.push(""); L.push("## Щоденна рутина ("+(isCurW?"за "+nDays+" дн. цього тижня":"за тиждень")+")");
