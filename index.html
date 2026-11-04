@@ -832,6 +832,9 @@ header .hright{margin-left:auto}
   #journalCard.j2 .jgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 24px;align-items:start}
 }
 .rt-row .rs{white-space:nowrap}
+
+/* v43 */
+textarea.dump{min-height:150px;resize:vertical}
 </style>
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
@@ -927,9 +930,9 @@ header .hright{margin-left:auto}
     <textarea id="dGood" placeholder="Напр.: головну задачу дня закрито вчасно"></textarea>
     <label class="f" for="dBad">Що заважало</label>
     <textarea id="dBad" placeholder="Напр.: термінові правки, які збили план"></textarea>
-    <label class="f" for="dNext">Фокус на завтра</label>
+    <label class="f" for="dNext" id="dNextLbl">Фокус на завтра</label>
     <textarea id="dNext" placeholder="1–2 речі, з яких почну завтра"></textarea>
-    <div class="fhint">Кожна думка з нового рядка — зранку стане окремим пунктом плану</div>
+    <div class="fhint" id="dNextHint">Кожна думка з нового рядка — зранку стане окремим пунктом плану</div>
     </div>
     <div class="jcol">
     <label class="f" for="dGrat">🙏 За що дякую сьогодні</label>
@@ -1163,10 +1166,12 @@ const wk=()=>isoWeek(weekStart);
 
 /* ---------- state ---------- */
 function ensureRoutine(){ if(!state.routine||!Array.isArray(state.routine.items)) state.routine={items:[],log:(state.routine&&state.routine.log)||{},water:{},v:2}; state.routine.log=state.routine.log||{}; }
-const APP_VERSION=42, APP_DATE="29.10.2026";
+const APP_VERSION=43, APP_DATE="04.11.2026";
 const SCHEMA=5;
 /* what's new: "for" = all | grid | diary */
 const CHANGELOG=[
+ {v:43,date:"04.11.2026",items:[
+   {t:"„Фокус на завтра“ тепер „🧠 Вивантаження“: пиши ввечері все, що в голові, — зранку Claude розбере й спланує день.",for:"grid"}]},
  {v:42,date:"29.10.2026",items:[
    {t:"У журналі нове поле „Чого я навчився сьогодні“: записуй, що дізнався і який висновок зробив.",for:"grid"},
    {t:"Серія в рутині тепер показується як 🔥 N.",for:"all"}]},
@@ -1905,7 +1910,7 @@ function mpData(){
 }
 function renderMorningPlan(){
   const box=$("mplan"); if(!box) return; box.innerHTML=""; box.hidden=true;
-  if(new Date().getHours()>=12) return;
+  if(new Date().getHours()>=12||dumpOn()) return;
   const {lines,k,st}=mpData(); if(!lines.length||st.hidden) return;
   const doneN=lines.filter((_,i)=>st.s[i]).length; if(doneN>=lines.length) return;
   box.hidden=false;
@@ -3430,6 +3435,14 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&openP!==null)closeP
 const DAY_SHORT=["Пн","Вт","Ср","Чт","Пт","Сб","Нд"];
 const DAY_FULL=["Понеділок","Вівторок","Середа","Четвер","П'ятниця","Субота","Неділя"];
 const JF=[["good","Що спрацювало"],["bad","Що заважало"],["next","Фокус на завтра"],["grat","Вдячність"]];
+/* v43: у «Сітці» поле next = «🧠 Вивантаження» (той самий ключ), ранкова картка mplan не показується */
+const dumpOn=()=>!isDiary();
+const JFL=()=>JF.map(([k,l])=>[k,k==="next"&&dumpOn()?"Вивантаження":l]);
+function applyDump(){ const on=dumpOn(), ta=$("dNext");
+  $("dNextLbl").textContent=on?"🧠 Вивантаження":"Фокус на завтра";
+  ta.placeholder=on?"Пиши все підряд: справи, думки, переживання — по одній на рядок":"1–2 речі, з яких почну завтра";
+  $("dNextHint").textContent=on?"Зранку Claude розбере: сьогодні · коли буде час · не актуально":"Кожна думка з нового рядка — зранку стане окремим пунктом плану";
+  ta.classList.toggle("dump",on); if(on) ta.rows=6; else ta.removeAttribute("rows"); }
 let selDay=null, selWeek=null;
 const todayIdx=()=>{const d=new Date().getDay();return d===0?6:d-1};
 function migrateJournal(){
@@ -3484,7 +3497,7 @@ function renderJournal(){
   $("dayTitle").textContent=DAY_FULL[selDay]+", "+sd.toLocaleDateString("uk-UA",{day:"numeric",month:"long"})+(isCur&&selDay===todayIdx()?" · сьогодні":"");
   const dd=dayData(w,selDay);
   $("dGood").value=dd.good||""; $("dBad").value=dd.bad||""; $("dNext").value=dd.next||""; $("dGrat").value=dd.grat||"";
-  $("journalCard").classList.toggle("j2",learnOn()); $("learnBox").hidden=!learnOn(); $("dLearn").value=dd.learn||""; $("learnNew").hidden=todayStr()>=LEARN_NEW_UNTIL;
+  applyDump(); $("journalCard").classList.toggle("j2",learnOn()); $("learnBox").hidden=!learnOn(); $("dLearn").value=dd.learn||""; $("learnNew").hidden=todayStr()>=LEARN_NEW_UNTIL;
   $("wFocus").value=(state.weekNotes[w]||{}).focus||"";
   $("smBox").hidden=!smShow();
   if(smShow()){ const v=dd.sm>0?dd.sm:0; $("smH").value=v?Math.floor(v/60):""; $("smM").value=v?v%60:""; smCmp(); }
@@ -3497,7 +3510,7 @@ function renderWeekJournal(){
     const d=new Date(weekStart); d.setDate(d.getDate()+i);
     const el=document.createElement("div"); el.className="wj";
     const t=document.createElement("b"); t.textContent=DAY_FULL[i]+", "+d.toLocaleDateString("uk-UA",{day:"numeric",month:"long"}); el.appendChild(t);
-    JF.forEach(([k,label])=>{ if(!dd[k])return; const r=document.createElement("div"); r.textContent=label+": "; const sp=document.createElement("span"); sp.textContent=dd[k]; r.appendChild(sp); el.appendChild(r); });
+    JFL().forEach(([k,label])=>{ if(!dd[k])return; const r=document.createElement("div"); r.textContent=label+": "; const sp=document.createElement("span"); sp.textContent=dd[k]; r.appendChild(sp); el.appendChild(r); });
     if(dd.learn){ const r=document.createElement("div"); r.textContent="Навчився: "; const sp=document.createElement("span"); sp.textContent=dd.learn; r.appendChild(sp); el.appendChild(r); }
     if(dd.sm>0){ const r=document.createElement("div"); r.textContent="Соцмережі: "; const sp=document.createElement("span"); sp.textContent=fmtMin(dd.sm); r.appendChild(sp); el.appendChild(r); }
     box.appendChild(el);
@@ -3589,7 +3602,7 @@ function buildReport(){
   let anyDay=false;
   for(let i=0;i<7;i++){ const dd=dayData(w,i); if(!dayHas(w,i)&&!(dd.sm>0))continue; anyDay=true; const d=new Date(weekStart); d.setDate(d.getDate()+i);
     L.push("### "+DAY_FULL[i]+", "+d.toLocaleDateString("uk-UA",{day:"numeric",month:"long"}));
-    JF.forEach(([k,label])=>{if(dd[k])L.push(label+": "+dd[k].replace(/\n+/g," / "));});
+    JFL().forEach(([k,label])=>{if(dd[k])L.push(label+": "+dd[k].replace(/\n+/g," / "));});
     if(dd.learn) L.push("Навчився: "+dd.learn.replace(/\n+/g," / "));
     if(dd.sm>0) L.push("Соцмережі: "+fmtMin(dd.sm)); }
   if(!anyDay) L.push("Щоденних записів немає.");
