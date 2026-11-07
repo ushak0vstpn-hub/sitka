@@ -1060,6 +1060,11 @@ button.tl-ev{cursor:pointer}
   html[data-home="side"] .home.gl .t3grid.t5{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
   html[data-home="side"] .home.gl .t3grid.t5>*{grid-column:auto}
 }
+
+/* v48: таймлайн — короткі події в один рядок */
+.tl-ev.sm{flex-direction:row;align-items:center;gap:8px;padding:0 8px}
+.tl-ev.sm b{font-size:12px;flex:1;min-width:0}
+.tl-ev.sm small{flex:none}
 </style>
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
@@ -1393,10 +1398,12 @@ const wk=()=>isoWeek(weekStart);
 
 /* ---------- state ---------- */
 function ensureRoutine(){ if(!state.routine||!Array.isArray(state.routine.items)) state.routine={items:[],log:(state.routine&&state.routine.log)||{},water:{},v:2}; state.routine.log=state.routine.log||{}; }
-const APP_VERSION=47, APP_DATE="07.11.2026";
+const APP_VERSION=48, APP_DATE="07.11.2026";
 const SCHEMA=5;
 /* what's new: "for" = all | grid | diary */
 const CHANGELOG=[
+ {v:48,date:"07.11.2026",items:[
+   {t:"Таймлайн дня: короткі події читаються в один рядок, події без накладок — на всю ширину.",for:"grid"}]},
  {v:47,date:"07.11.2026",items:[
    {t:"⚙️ → „Вигляд головної“: обери, як виглядає головна — Мінімал, Таймлайн дня, Бічне меню або Командний центр.",for:"grid"}]},
  {v:46,date:"07.11.2026",items:[
@@ -5066,13 +5073,17 @@ function hlTimeline(alt){
   if(all.length){ const ch=hxEl("div","cs-all"); all.forEach(e=>{ const c=hxEl("span","cs-chip",e.title); c.style.setProperty("--c",e.color||"#378ADD"); ch.appendChild(c); }); C.appendChild(ch); }
   const H=52, h0=8, h1=23, sc=hxEl("div","tl-scale"); sc.style.height=((h1-h0)*H)+"px";
   for(let h=h0;h<=h1;h++){ const ln=hxEl("div","tl-hr"); ln.style.top=((h-h0)*H)+"px"; ln.appendChild(hxEl("span","",String(h).padStart(2,"0")+":00")); sc.appendChild(ln); }
-  const lanes=[]; items.forEach(x=>{ let l=lanes.findIndex(e=>e<=x.s); if(l<0){ l=lanes.length; lanes.push(0); } lanes[l]=x.e; x.lane=l; });
-  const nl=Math.max(1,lanes.length);
+  // v48: колонки рахуються лише в групі подій, що накладаються; решта — на всю ширину
+  let grp=[], gEnd=-1; const flush=()=>{ const cols=[]; grp.forEach(x=>{ let l=cols.findIndex(e=>e<=x.s); if(l<0){ l=cols.length; cols.push(0); } cols[l]=x.e; x.lane=l; }); grp.forEach(x=>x.nl=cols.length); grp=[]; };
+  items.forEach(x=>{ if(grp.length&&x.s>=gEnd){ flush(); gEnd=-1; } grp.push(x); gEnd=Math.max(gEnd,x.e); }); flush();
+  const short=t=>String(t).replace(/\s*\[[^\]]*\]\s*/g," ").replace(/\s+/g," ").trim();
   items.forEach(x=>{ const a=Math.max(x.s,h0*60), b=Math.min(x.e,h1*60); if(b<=a) return;
-    const el=hxEl(x.task?"button":"div","tl-ev"); if(x.task){ el.type="button"; el.onclick=()=>openTaskInList(x.task); }
-    el.style.setProperty("--c",x.color); el.style.top=((a-h0*60)/60*H)+"px"; el.style.height=Math.max(22,(b-a)/60*H-2)+"px";
-    el.style.left="calc(56px + (100% - 60px) * "+(x.lane/nl)+")"; el.style.width="calc((100% - 60px) / "+nl+" - 4px)";
-    el.appendChild(hxEl("b","",x.title)); el.appendChild(hxEl("small","",hm(x.s)+"–"+hm(x.e)+" · "+x.src)); el.title=hm(x.s)+"–"+hm(x.e)+" · "+x.title+" · "+x.src; sc.appendChild(el); });
+    const hpx=(b-a)/60*H-2, sm=hpx<44;
+    const el=hxEl(x.task?"button":"div","tl-ev"+(sm?" sm":"")); if(x.task){ el.type="button"; el.onclick=()=>openTaskInList(x.task); }
+    el.style.setProperty("--c",x.color); el.style.top=((a-h0*60)/60*H)+"px"; el.style.height=Math.max(20,hpx)+"px";
+    el.style.left="calc(56px + (100% - 60px) * "+(x.lane/x.nl)+")"; el.style.width="calc((100% - 60px) / "+x.nl+" - 4px)";
+    el.appendChild(hxEl("b","",short(x.title))); el.appendChild(hxEl("small","",hm(x.s)+"–"+hm(x.e)+(sm?"":" · "+x.src)));
+    el.title=hm(x.s)+"–"+hm(x.e)+" · "+x.title+" · "+x.src; sc.appendChild(el); });
   const now=new Date(), nm=now.getHours()*60+now.getMinutes();
   if(nm>=h0*60&&nm<=h1*60){ const n=hxEl("i","tl-now"); n.style.top=((nm-h0*60)/60*H)+"px"; sc.appendChild(n); }
   C.appendChild(sc);
