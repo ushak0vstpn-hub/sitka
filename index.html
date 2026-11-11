@@ -1083,6 +1083,36 @@ button.tl-ev{cursor:pointer}
 .mn-seg button{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 10px;border:0;border-radius:999px;background:transparent;color:var(--muted);cursor:pointer;font:inherit;font-size:13px}
 .mn-seg button.on{background:var(--acc-soft);color:var(--acc-ink)}
 .mn-sw{border:0;background:none;color:var(--muted);cursor:pointer;font:inherit;font-size:14px;padding:0 10px 0 0}
+
+/* v50: журнал — вставити з голосу */
+.jhead{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.jhead h2{margin-bottom:0}
+.vj-btn{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 14px;border:1px solid #2F8A78;border-radius:999px;background:transparent;color:#5DCAA5;font:inherit;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap}
+.vj-btn[aria-expanded="true"]{background:rgba(93,202,165,.12)}
+.vj-btn[hidden]{display:none}
+.vj-panel{display:flex;flex-direction:column;gap:10px;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:14px;margin:10px 0 4px}
+.vj-panel[hidden]{display:none}
+.vj-lbl{font-size:13px;color:var(--muted)}
+.vj-ta{width:100%;box-sizing:border-box;font-family:var(--fm);font-size:12px;line-height:1.5;resize:vertical;min-height:8em;border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--sheet);color:inherit}
+.vj-err{color:#D64545;font-size:13px}
+.vj-err[hidden]{display:none}
+.vj-pv{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:6px}
+.vj-pv:empty{display:none}
+.vj-chip{background:var(--sheet);border-radius:8px;padding:6px 10px;font-size:13px}
+.vj-chip b{color:#5DCAA5;font-weight:600}
+.vj-day{font-size:12px;color:var(--acc)}
+.vj-day:empty{display:none}
+.vj-warn{display:flex;flex-direction:column;gap:2px;font-size:12px;color:#E2B93B}
+.vj-warn:empty{display:none}
+.vj-conf{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;font-size:13px}
+.vj-conf[hidden]{display:none}
+.vj-btns{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.vj-btns .vj-add{background:var(--acc-soft);color:var(--acc-ink);border-color:transparent;font-weight:700}
+@media (max-width:600px){
+  .vj-pv{grid-template-columns:1fr 1fr}
+  .vj-btns{flex-wrap:wrap-reverse}
+  .vj-btns .vj-add{order:3}
+}
 </style>
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
@@ -1172,8 +1202,9 @@ button.tl-ev{cursor:pointer}
 
 
   <section class="card" id="journalCard">
-    <h2>Журнал тижня</h2>
+    <div class="jhead"><h2>Журнал тижня</h2><button type="button" class="vj-btn" id="voiceBtn" aria-expanded="false" aria-controls="voicePanel" hidden>🎙 Вставити з голосу</button></div>
     <div class="days" id="dayChips" role="tablist" aria-label="День тижня"></div>
+    <div class="vj-panel" id="voicePanel" hidden></div>
     <h3 class="day-title" id="dayTitle"></h3>
     <div class="jgrid" id="jGrid">
     <div class="jcol">
@@ -1417,10 +1448,12 @@ const wk=()=>isoWeek(weekStart);
 
 /* ---------- state ---------- */
 function ensureRoutine(){ if(!state.routine||!Array.isArray(state.routine.items)) state.routine={items:[],log:(state.routine&&state.routine.log)||{},water:{},v:2}; state.routine.log=state.routine.log||{}; }
-const APP_VERSION=49, APP_DATE="07.11.2026";
+const APP_VERSION=50, APP_DATE="11.11.2026";
 const SCHEMA=5;
 /* what's new: "for" = all | grid | diary */
 const CHANGELOG=[
+ {v:50,date:"11.11.2026",items:[
+   {t:"Журнал: „🎙 Вставити з голосу“ — встав блок від Gemini, і всі поля дня заповняться самі.",for:"grid"}]},
  {v:49,date:"07.11.2026",items:[
    {t:"Вигляд головної можна перемикати прямо в шапці, поруч із вкладками.",for:"grid"}]},
  {v:48,date:"07.11.2026",items:[
@@ -3882,7 +3915,7 @@ function renderJournal(){
   $("wFocus").value=(state.weekNotes[w]||{}).focus||"";
   $("smBox").hidden=!smShow();
   if(smShow()){ const v=dd.sm>0?dd.sm:0; $("smH").value=v?Math.floor(v/60):""; $("smM").value=v?v%60:""; smCmp(); }
-  renderWeekJournal();
+  renderWeekJournal(); renderVoice();
 }
 function renderWeekJournal(){
   const w=wk(), box=$("weekJournal"); box.innerHTML=""; let any=false;
@@ -5197,6 +5230,108 @@ function hlMax(alt){
   const ti=todayIdx(), tw=isoWeek(new Date()); ta.value=dayData(tw,ti).next||""; ta.oninput=()=>{ writeDayField(tw,ti,"next",ta.value); if(wk()===tw&&selDay===ti&&$("dNext")) $("dNext").value=ta.value; };
   du.appendChild(ta); du.appendChild(hxEl("div","hx-sub","Пишеться в журнал сьогодні")); alt.appendChild(du);
 }
+
+/* ---------- v50: Журнал «🎙 Вставити з голосу» (лише «Сітка»). Сирий текст ніде не зберігається. ---------- */
+const VJ_SECT=[["фокус наступного тижня","focus"],["фокус на завтра","next"],["вивантаження","next"],["що спрацювало","good"],["що заважало","bad"],
+  ["чого я навчився","learn"],["чого навчився","learn"],["що нового дізнався","learn"],["вдячність","grat"],["за що дякую","grat"],["соцмережі","sm"]];
+const VJ_LBL={good:"Що спрацювало",bad:"Що заважало",next:"🧠 Вивантаження",learn:"Чого навчився",grat:"Вдячність"};
+const VJ_EMPTY=new Set(["—","-","–","немає","нічого"]);
+const vjMd=s=>s.replace(/\r/g,"").replace(/️/g,"").trim().replace(/^#+\s*/,"").replace(/^(\*\*|__|`)+/,"").replace(/(\*\*|__|`)+$/,"").replace(/(\*\*|__)/g,"").trim();
+const vjEmoji=s=>s.replace(/^(?:[\p{Extended_Pictographic}‍⃣☀-➿]|\s)+/u,"").trim();
+const vjMarker=/^(?:[-•*–—]\s*|\d+[.)]\s+)/;
+function vjSm(v){ const s=v.toLowerCase().replace(/\./g," ").trim(); let m;
+  if((m=s.match(/^(\d{1,2}):(\d{2})$/))) return +m[1]*60+ +m[2];
+  m=s.match(/^(?:(\d{1,2})\s*(?:год|г|h)[а-яіїєґa-z]*)?\s*(?:(\d{1,3})\s*(?:хв|m)[а-яіїєґa-z]*)?$/);
+  if(m&&(m[1]||m[2])){ const r=(+(m[1]||0))*60+(+(m[2]||0)); return r>=0&&r<=1440?r:null; }
+  return null; }
+function vjParse(text){
+  const R={date:null,dateRaw:null,f:{good:[],bad:[],next:[],learn:[],grat:[]},focus:[],sm:null,smBad:null,warns:[],skipped:0,any:false,tooLong:false};
+  if(text.length>20000){ R.tooLong=true; return R; }
+  let cur=null;
+  const push=(k,v)=>{ v=v.replace(vjMarker,"").replace(/(\*\*|__)/g,"").trim(); if(!v||VJ_EMPTY.has(v.toLowerCase().replace(/[.!]+$/,""))) return;
+    if(k==="sm"){ if(R.sm!=null) return; const m=vjSm(v); if(m==null) R.smBad=v; else R.sm=m; return; }
+    if(k==="focus") R.focus.push(v); else R.f[k].push(v); };
+  text.split("\n").forEach(raw=>{
+    const l0=vjMd(raw); if(!l0||/^```/.test(l0)) return;
+    if(/^❓/.test(l0)){ R.warns.push(l0); return; }
+    const l=vjEmoji(l0); if(!l) return;
+    const hm_=l.match(/^журнал(?![а-яіїєґ])\s*[·\-—–:.]*\s*(?:(\d{1,2})\.(\d{1,2})(?:\.(\d{2,4}))?)?/i);
+    if(hm_&&!vjMarker.test(l)){ if(!R.dateRaw&&hm_[1]){ R.dateRaw=hm_[0]; let y=hm_[3]?+hm_[3]:new Date().getFullYear(); if(y<100) y+=2000;
+        const d=new Date(y,+hm_[2]-1,+hm_[1]); if(d.getFullYear()===y&&d.getMonth()===+hm_[2]-1&&d.getDate()===+hm_[1]) R.date=d; } return; }
+    if(!vjMarker.test(l)){ const low=l.toLowerCase(); const s=VJ_SECT.find(([n])=>low.startsWith(n));
+      if(s){ cur=s[1]; const ci=l.indexOf(":"); if(ci>=0){ const rest=l.slice(ci+1).trim(); if(rest) push(cur,rest); } return; } }
+    if(!cur){ R.skipped++; return; }
+    push(cur,l);
+  });
+  R.any=Object.values(R.f).some(a=>a.length)||R.focus.length>0||R.sm!=null;
+  if(R.skipped) R.warns.push("Пропущено "+R.skipped+" "+pl(R.skipped,"рядок","рядки","рядків")+" поза розділами");
+  if(R.smBad) R.warns.push("Соцмережі: не зрозумів «"+R.smBad+"» — поле не змінено");
+  return R;
+}
+function vjTarget(R){
+  const t=new Date(); t.setHours(0,0,0,0); let note="";
+  if(R.date&&R.date<=t){ const w=isoWeek(R.date), i=(R.date.getDay()+6)%7; return {w,i,d:R.date,note}; }
+  note=R.date?"Дата в майбутньому — запишу в обраний день":"Дата не знайдена — запишу в обраний день";
+  const i=selDay!=null?selDay:todayIdx(), d=new Date(weekStart); d.setDate(d.getDate()+i);
+  return {w:wk(),i,d,note};
+}
+let vjOpen=false, vjConfirm=false;
+function renderVoice(){
+  const btn=$("voiceBtn"), box=$("voicePanel"); if(!btn||!box) return;
+  const on=!isDiary(); btn.hidden=!on; if(!on){ box.hidden=true; vjOpen=false; return; }
+  btn.setAttribute("aria-expanded",vjOpen); box.hidden=!vjOpen;
+}
+function vjPreview(){
+  const box=$("voicePanel"), ta=box.querySelector("textarea"), pv=box.querySelector(".vj-pv"), dl=box.querySelector(".vj-day"), wr=box.querySelector(".vj-warn"), er=box.querySelector(".vj-err");
+  er.hidden=true; vjConfirm=false; box.querySelector(".vj-conf").hidden=true;
+  const R=vjParse(ta.value); pv.innerHTML=""; wr.innerHTML="";
+  if(R.tooLong){ dl.textContent=""; const x=document.createElement("div"); x.textContent="Задовгий текст"; wr.appendChild(x); return R; }
+  const chip=(lbl,val)=>{ const c=document.createElement("span"); c.className="vj-chip"; c.textContent=lbl+" "; const b=document.createElement("b"); b.textContent=val; c.appendChild(b); pv.appendChild(c); };
+  Object.keys(VJ_LBL).forEach(k=>{ if(R.f[k].length) chip(VJ_LBL[k],"+"+R.f[k].length); });
+  if(R.sm!=null) chip("Соцмережі",Math.floor(R.sm/60)+":"+String(R.sm%60).padStart(2,"0"));
+  if(R.focus.length) chip("Фокус тижня","+"+R.focus.length);
+  const T=vjTarget(R), sameW=T.w===wk();
+  dl.textContent=R.any||ta.value.trim()?"День: "+DAY_FULL[T.i].toLowerCase()+", "+T.d.toLocaleDateString("uk-UA",sameW?{day:"numeric",month:"long"}:{day:"numeric",month:"long",year:"numeric"})+(T.note?" · "+T.note:""):"";
+  const ex=dayData(T.w,T.i); const W=R.warns.slice();
+  if(R.sm!=null&&ex.sm>0) W.push("Соцмережі вже записано ("+fmtMin(ex.sm)+") — залишено");
+  W.forEach(t=>{ const x=document.createElement("div"); x.textContent=t; wr.appendChild(x); });
+  return R;
+}
+function vjApply(replace){
+  const box=$("voicePanel"), ta=box.querySelector("textarea"), er=box.querySelector(".vj-err");
+  const R=vjParse(ta.value);
+  if(R.tooLong){ er.hidden=false; er.textContent="Задовгий текст"; return; }
+  if(!R.any){ er.hidden=false; er.textContent="Не знайшов розділів журналу. Встав блок, що починається з „ЖУРНАЛ · дата“"; return; }
+  const T=vjTarget(R);
+  const nFields=Object.values(R.f).filter(a=>a.length).length+(R.sm!=null?1:0)+(R.focus.length?1:0);
+  if(replace&&!vjConfirm){ vjConfirm=true; const c=box.querySelector(".vj-conf"); c.hidden=false; c.querySelector("span").textContent="Замінити "+nFields+" "+pl(nFields,"поле","поля","полів")+" дня?"; return; }
+  const wn=state.weekNotes[T.w]=state.weekNotes[T.w]||{}; wn.days=wn.days||{}; const d=wn.days[T.i]=wn.days[T.i]||{};
+  let n=0;
+  const merge=(old,items)=>{ const have=new Set(String(old||"").split("\n").map(x=>x.trim()).filter(Boolean)); const add=items.filter(x=>!have.has(x.trim())&&(have.add(x.trim()),true)); n+=add.length; return add.length?(old&&old.trim()?String(old).replace(/\s+$/,"")+"\n":"")+add.join("\n"):old; };
+  Object.keys(R.f).forEach(k=>{ const it=R.f[k]; if(!it.length) return;
+    if(replace){ d[k]=it.join("\n"); n+=it.length; } else { const v=merge(d[k],it); if(v) d[k]=v; } });
+  if(R.sm!=null){ if(replace||!(d.sm>0)){ d.sm=R.sm; n++; } }
+  if(R.focus.length){ if(replace){ wn.focus=R.focus.join("\n"); n+=R.focus.length; } else { const v=merge(wn.focus,R.focus); if(v) wn.focus=v; } }
+  Object.keys(d).forEach(k=>{ if(d[k]===""||d[k]==null) delete d[k]; });
+  save();
+  weekStart=mondayOf(T.d); selWeek=T.w; selDay=T.i;
+  vjOpen=false; vjConfirm=false; ta.value=""; vjPreview();
+  render();
+  showStatus("Журнал заповнено: "+n+" "+pl(n,"пункт","пункти","пунктів"));
+}
+function vjInit(){
+  const btn=$("voiceBtn"), box=$("voicePanel"); if(!btn||!box) return;
+  box.innerHTML='<div class="vj-lbl">Встав блок „ЖУРНАЛ · дата“ з Gemini</div><textarea class="vj-ta" rows="8" spellcheck="false" aria-label="Блок журналу з Gemini" placeholder="ЖУРНАЛ · 11.11.2026&#10;✅ Що спрацювало:&#10;- …"></textarea><div class="vj-err" hidden></div><div class="vj-pv"></div><div class="vj-day"></div><div class="vj-warn"></div><div class="vj-conf" hidden><span></span><button type="button" class="xbtn vj-yes">Так</button><button type="button" class="xbtn vj-no">Ні</button></div><div class="vj-btns"><button type="button" class="xbtn vj-cancel">Скасувати</button><button type="button" class="xbtn vj-repl">Замінити поля</button><button type="button" class="xbtn vj-add">Додати</button></div>';
+  const ta=box.querySelector("textarea");
+  ta.oninput=()=>vjPreview();
+  btn.onclick=()=>{ vjOpen=!vjOpen; renderVoice(); if(vjOpen){ vjPreview(); ta.focus(); } };
+  box.querySelector(".vj-cancel").onclick=()=>{ vjOpen=false; ta.value=""; vjPreview(); renderVoice(); };
+  box.querySelector(".vj-add").onclick=()=>vjApply(false);
+  box.querySelector(".vj-repl").onclick=()=>vjApply(true);
+  box.querySelector(".vj-yes").onclick=()=>vjApply(true);
+  box.querySelector(".vj-no").onclick=()=>{ vjConfirm=false; box.querySelector(".vj-conf").hidden=true; };
+}
+vjInit();
 
 /* ---------- boot: runs only after every definition above exists ---------- */
 if(bootFresh) state=newUserState();
