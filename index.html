@@ -135,6 +135,25 @@ label.f{display:block;font-size:14px;font-weight:600;margin:12px 0 4px}
 .smin input{width:64px;color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--paper);min-height:40px;font-size:16px}
 .smu{color:var(--muted);font-size:14px;margin-right:4px}
 .smcmp{font-size:13px}.smcmp.down{color:#2F8A78}.smcmp.up{color:#C0413A}.smcmp.eq{color:var(--muted)}
+/* v51: екранний час IG / YT / загалом (лише «Сітка», клас .si на #smBox) */
+.si-only{display:none}
+#smBox.si .si-only{display:flex}
+#smBox.si .si-row,#smBox.si .smrow{display:grid;grid-template-columns:118px auto 1fr;align-items:center;gap:8px;padding:7px 0;border-top:1px solid var(--line)}
+#smBox.si .si-row:first-of-type{border-top:0}
+#smBox.si .smcmp{text-align:right;font-size:12px}
+.si-row .si-nm{display:flex}
+.si-nm{align-items:center;gap:7px;font-weight:500;font-size:14px;color:var(--ink);min-width:0}
+.si-nm small{display:block;color:var(--muted);font-weight:400;font-size:11px;line-height:1.2}
+.si-dot{width:10px;height:10px;border-radius:3px;flex:none;display:inline-block}
+.si-conv{font-size:12px;color:var(--ink);white-space:nowrap}
+.si-z{background:none;border:1px solid var(--line);color:var(--muted);border-radius:7px;padding:4px 8px;font:12px var(--fb);cursor:pointer;margin-left:2px;min-height:30px}
+.si-z.on{border-color:#2F8A78;color:#5DCAA5}
+#smBox.si .si-sum{display:block;margin-top:4px;padding-top:8px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+.si-sum b{color:var(--ink)}
+@media (max-width:480px){
+  #smBox.si .si-row,#smBox.si .smrow{grid-template-columns:1fr auto}
+  #smBox.si .smcmp{grid-column:1/-1;text-align:left;margin-top:-2px}
+}
 textarea{width:100%;min-height:72px;resize:vertical;border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--paper);line-height:1.45}
 .hist{display:flex;gap:6px;align-items:flex-end;height:90px;overflow-x:auto;padding-bottom:4px}
 .hist button{flex:1 0 34px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;border:0;background:transparent;cursor:pointer;gap:4px;font-size:11px;color:var(--muted)}
@@ -1225,9 +1244,12 @@ button.tl-ev{cursor:pointer}
       <div class="fhint">Записи збираються в „Переглянути весь тиждень“ і в звіт для Claude</div>
     </div>
     <div id="smBox" hidden>
-      <label class="f" for="smH">📱 Час у соцмережах</label>
-      <div class="smrow"><span class="smin"><input id="smH" type="number" inputmode="numeric" min="0" max="24" step="1" aria-label="Години в соцмережах"><span class="smu">год</span><input id="smM" type="number" inputmode="numeric" min="0" max="59" step="1" aria-label="Хвилини в соцмережах"><span class="smu">хв</span></span><span id="smCmp" class="smcmp" hidden></span></div>
-      <div class="fhint">Дивись iPhone → Параметри → Екранний час → Соцмережі за день</div>
+      <label class="f" for="smH" id="smLbl">📱 Час у соцмережах</label>
+      <div class="si-row si-only"><span class="si-nm"><i class="si-dot" style="background:#B46FD8"></i>Instagram</span><span class="smin"><input id="igM" type="number" inputmode="numeric" min="0" max="1440" step="1" placeholder="хв" aria-label="Instagram, хвилин"><span class="smu">хв</span><span class="si-conv" id="igConv"></span><button type="button" class="si-z" id="igZ" title="Сьогодні не заходив">0</button></span><span id="igCmp" class="smcmp" hidden></span></div>
+      <div class="si-row si-only"><span class="si-nm"><i class="si-dot" style="background:#D86A6A"></i>YouTube</span><span class="smin"><input id="ytM" type="number" inputmode="numeric" min="0" max="1440" step="1" placeholder="хв" aria-label="YouTube, хвилин"><span class="smu">хв</span><span class="si-conv" id="ytConv"></span><button type="button" class="si-z" id="ytZ" title="Сьогодні не заходив">0</button></span><span id="ytCmp" class="smcmp" hidden></span></div>
+      <div class="smrow"><span class="si-nm si-only"><i class="si-dot" style="background:var(--muted)"></i><span>Соцмережі загалом<small>категорія iPhone, з Telegram</small></span></span><span class="smin"><input id="smH" type="number" inputmode="numeric" min="0" max="24" step="1" aria-label="Години в соцмережах"><span class="smu">год</span><input id="smM" type="number" inputmode="numeric" min="0" max="59" step="1" aria-label="Хвилини в соцмережах"><span class="smu">хв</span></span><span id="smCmp" class="smcmp" hidden></span></div>
+      <div class="si-sum si-only" id="siSum"></div>
+      <div class="fhint" id="smHint">Дивись iPhone → Параметри → Екранний час → Соцмережі за день</div>
     </div>
     </div>
     </div>
@@ -1448,10 +1470,12 @@ const wk=()=>isoWeek(weekStart);
 
 /* ---------- state ---------- */
 function ensureRoutine(){ if(!state.routine||!Array.isArray(state.routine.items)) state.routine={items:[],log:(state.routine&&state.routine.log)||{},water:{},v:2}; state.routine.log=state.routine.log||{}; }
-const APP_VERSION=50, APP_DATE="11.11.2026";
+const APP_VERSION=51, APP_DATE="17.11.2026";
 const SCHEMA=5;
 /* what's new: "for" = all | grid | diary */
 const CHANGELOG=[
+ {v:51,date:"17.11.2026",items:[
+   {t:"📱 Екранний час тепер окремо: Instagram, YouTube і соцмережі загалом (з Telegram). Кнопка «0» — день без IG чи YT теж рахується. Гравець („Самоконтроль“, „Довгий час“) тепер рахує саме IG + YT і починає з нуля.",for:"grid"}]},
  {v:50,date:"11.11.2026",items:[
    {t:"Журнал: „🎙 Вставити з голосу“ — встав блок від Gemini, і всі поля дня заповняться самі.",for:"grid"}]},
  {v:49,date:"07.11.2026",items:[
@@ -3311,7 +3335,8 @@ const PL_SUBS=[
  ["bal","balSleepWe","Сон у вихідні","P","Середній сон у Сб і Нд відносно 8 годин"],
  ["bal","balClose","Час з близькими","P","Поки немає даних"]];
 const PL_T5={disT3days:["Дні з Топ-5","Днів, коли обрано щонайменше 3 задачі Топ-5"],disT3done:["Топ-5 виконано","Скільки обраних задач Топ-5 виконано"],disQuick:["Мінімум закрито","Днів, коли виконано щонайменше 3 задачі Топ-5"],fokFinish:["Завершеність","Задачі Топ-5, виконані в той самий день"]};
-const plNm=(id,nm)=>top5On()&&PL_T5[id]?PL_T5[id][0]:nm, plEx=(id,ex)=>top5On()&&PL_T5[id]?PL_T5[id][1]:ex;
+const PL_IY={fokSelf:"Менше часу в Instagram і YouTube — вищий бал",fokHold:"Скільки днів поспіль ти тримався нижче свого середнього (IG+YT)"};
+const plNm=(id,nm)=>top5On()&&PL_T5[id]?PL_T5[id][0]:nm, plEx=(id,ex)=>top5On()&&PL_T5[id]?PL_T5[id][1]:siOn()&&PL_IY[id]?PL_IY[id]:ex;
 const PL_SID={}; PL_KEYS.forEach(k=>PL_SUBS.filter(s=>s[0]===k).forEach((s,i)=>PL_SID[s[1]]=k+(i+1)));
 function plMap(){ const s=S(); if(s.playerMap&&typeof s.playerMap==="object") return s.playerMap; if(hasGrid()&&!(s.cats||[]).length) return PL_DEFMAP; return {}; }
 const plClamp=v=>Math.max(1,Math.min(99,Math.round(v)));
@@ -3377,11 +3402,13 @@ function plFacts(days){
   F.eneCore=core("str");
   F.fokCore=core("ph"); F.fokDeep=cnt(t=>t.dur>=90); F.fokLong=cnt(t=>t.dur>=60);
   F.fokFinish=finSel?finDone/finSel*100:null;
-  const sms=days.map(d=>smOn(d)).filter(v=>v>0);
-  let smTotal=sms.length; for(let k=1;k<=28;k++){ if(smOn(plAddDays(days[0],-k))) smTotal++; }
-  const smOk=sms.length&&smTotal>=3;     // social media metrics need ≥3 days of data (period + 28 days before)
+  // v51: у «Сітці» джерело — IG+YT (iy, 0 = день з даними); у «Щоденнику» з Гравцем — sm, як раніше
+  const scr=siOn()?iyOn:(d=>smOn(d)||null), scrAvg=siOn()?(d=>siAvg(d,iyOn)):smAvg;
+  const sms=days.map(d=>scr(d)).filter(v=>v!=null);
+  let smTotal=sms.length; for(let k=1;k<=28;k++){ if(scr(plAddDays(days[0],-k))!=null) smTotal++; }
+  const smOk=sms.length&&smTotal>=3;     // screen-time metrics need ≥3 days of data (period + 28 days before)
   F.fokSelf=smOk?sms.reduce((a,b)=>a+b,0)/sms.length:null;
-  let run=0,best=0; days.forEach(d=>{ const v=smOn(d), a=smAvg(d); if(v&&a.n>=1&&v<=a.avg){ run++; best=Math.max(best,run); } else run=0; });
+  let run=0,best=0; days.forEach(d=>{ const v=scr(d), a=scrAvg(d); if(v!=null&&a.n>=1&&v<=a.avg){ run++; best=Math.max(best,run); } else run=0; });
   F.fokHold=smOk?best/sms.length*100:null;
   F.balCore=core("rec"); F.balTasks=bal?cnt(t=>bal.includes(t.cat)):null;
   F.balGrat=days.filter(d=>{ const g=dayData(isoWeek(d),(d.getDay()+6)%7).grat; return g&&g.trim().length>=2; }).length/days.length*100;
@@ -3403,7 +3430,8 @@ function plScore(F,scale,prevRaws,allRaws){
   PL_SUBS.forEach(([m,id,,type])=>{ const sid=PL_SID[id]; let v=F.active?F[id]:null; if(v==null){ s[m][sid]=null; return; }
     if(type==="P"){ s[m][sid]=plP(v); return; }
     r[sid]=v;
-    const pr=(prevRaws||[]).map(h=>h&&h[sid]), al=(allRaws||[]).map(h=>h&&h[sid]).concat([type==="C"?v*scale:v]);
+    const iyF=(id==="fokSelf"||id==="fokHold")&&siOn(), rv=h=>h&&(!iyF||h.iy===1)?h[sid]:null;   // v51: еталон IG+YT — лише тижні з r.iy
+    const pr=(prevRaws||[]).map(rv), al=(allRaws||[]).map(rv).concat([type==="C"?v*scale:v]);
     if(type==="C"){ s[m][sid]=plClamp(99*v*scale/plRefs(id,pr,al)); return; }
     const base=plRefs(id,pr,al); s[m][sid]=base?plClamp(75-50*(v/base-1)):75; });
   return {s,r};
@@ -3431,6 +3459,7 @@ function closePlayerWeeks(){
     if(!P.hist[wk]){
       const keys=Object.keys(P.hist).filter(k=>k<wk).sort(), raws=keys.map(k=>P.hist[k].r||{});
       const sc=plScore(plFacts(plWeekDays(mon)),1,raws,raws), R=plRoll(sc.s);
+      if(siOn()) sc.r.iy=1;   // v51: тиждень закрито з джерелом IG+YT
       P.hist[wk]={s:R.s,r:sc.r,m:R.m,o:R.o}; changed=true;
     }
     mon=plAddDays(mon,7);
@@ -3883,6 +3912,51 @@ const smShow=()=>!isDiary()||(S().features||{}).player===true;
 const fmtMin=m=>{ m=Math.round(m); const h=Math.floor(m/60), mm=m%60; return h&&mm?h+" год "+mm+" хв":h?h+" год":mm+" хв"; };
 const smOn=d=>{ const v=dayData(isoWeek(d),(d.getDay()+6)%7).sm; return v>0?v:0; };
 function smAvg(d){ let s=0,n=0; for(let k=1;k<=28;k++){ const x=new Date(d); x.setDate(x.getDate()-k); const v=smOn(x); if(v){s+=v;n++;} } return {avg:n?s/n:null,n}; }
+/* ---------- v51: екранний час IG / YT (лише «Сітка»): weekNotes[w].days[i].ig / .yt — хвилини 0–1440, 0 = «не заходив», ключа немає = «не записав» ---------- */
+const siOn=()=>!isDiary();
+const siDay=d=>dayData(isoWeek(d),(d.getDay()+6)%7);
+const siNum=v=>typeof v==="number"&&isFinite(v)&&v>=0?v:null;
+const siGet=(dd,k)=>siNum(dd[k]);
+const iyDD=dd=>{ const a=siGet(dd,"ig"), b=siGet(dd,"yt"); return a==null&&b==null?null:(a||0)+(b||0); };
+const iyOn=d=>iyDD(siDay(d));
+const siHas=dd=>siGet(dd,"ig")!=null||siGet(dd,"yt")!=null;
+// середнє за 28 днів до дня по днях, де значення є (0 теж день з даними)
+function siAvg(d,fn){ let s=0,n=0; for(let k=1;k<=28;k++){ const x=new Date(d); x.setDate(x.getDate()-k); const v=fn(x); if(v!=null){ s+=v; n++; } } return {avg:n?s/n:null,n}; }
+function cmpSet(el,v,a){
+  if(v==null||a.n<3){ el.hidden=true; el.textContent=""; return; }
+  const diff=Math.round(v-a.avg); el.hidden=false;
+  if(Math.abs(diff)<=5){ el.className="smcmp eq"; el.textContent="≈ як зазвичай"; }
+  else if(diff<0){ el.className="smcmp down"; el.textContent="▼ "+fmtMin(-diff)+" менше за твоє середнє"; }
+  else { el.className="smcmp up"; el.textContent="▲ "+fmtMin(diff)+" більше за твоє середнє"; }
+}
+// «Екранний час: Instagram 25 хв · YouTube 40 хв · загалом 1 год 35 хв» (null, якщо ig/yt немає)
+function siLine(dd,totLbl){ if(!siOn()||!siHas(dd)) return null; const p=[], a=siGet(dd,"ig"), b=siGet(dd,"yt");
+  if(a!=null) p.push("Instagram "+fmtMin(a)); if(b!=null) p.push("YouTube "+fmtMin(b)); if(dd.sm>0) p.push(totLbl+" "+fmtMin(dd.sm));
+  return "Екранний час: "+p.join(" · "); }
+function siSelDate(){ const d=new Date(weekStart); d.setDate(d.getDate()+selDay); return d; }
+function siRefresh(){
+  if(!siOn()) return;
+  const dd=dayData(wk(),selDay), d=siSelDate();
+  ["ig","yt"].forEach(k=>{ const v=siGet(dd,k);
+    $(k+"Conv").textContent=v!=null&&v>=60?"= "+fmtMin(v):"";
+    $(k+"Z").classList.toggle("on",v===0);
+    cmpSet($(k+"Cmp"),v,siAvg(d,x=>siGet(siDay(x),k))); });
+  const iy=iyDD(dd), sum=$("siSum"); sum.innerHTML="";
+  const isT=wk()===isoWeek(new Date())&&selDay===todayIdx();
+  sum.appendChild(document.createTextNode("IG + YT "+(isT?"сьогодні":"за день")+": "));
+  if(iy==null){ sum.appendChild(document.createTextNode("ще не записано")); return; }
+  const b1=document.createElement("b"); b1.textContent=fmtMin(iy); sum.appendChild(b1);
+  if(dd.sm>0){ sum.appendChild(document.createTextNode(" · соцмережі загалом: ")); const b2=document.createElement("b"); b2.textContent=fmtMin(dd.sm); sum.appendChild(b2); }
+}
+function siInput(k){
+  const el=$(k+"M"), w=wk(), wn=state.weekNotes[w]=state.weekNotes[w]||{}; wn.days=wn.days||{};
+  const d=wn.days[selDay]=wn.days[selDay]||{};
+  if(el.value===""){ delete d[k]; }
+  else { let n=parseInt(el.value,10); if(!isFinite(n)||n<0){ n=0; el.value="0"; } if(n>1440){ n=1440; el.value="1440"; } d[k]=n; }
+  if(!Object.keys(d).length) delete wn.days[selDay];
+  save(); siRefresh(); renderWeekJournal();
+}
+function siZero(k){ const el=$(k+"M"); if(el.value==="0") return; el.value="0"; siInput(k); }
 function smCmp(){
   const el=$("smCmp"); const d=new Date(weekStart); d.setDate(d.getDate()+selDay);
   const v=dayData(wk(),selDay).sm||0, a=smAvg(d);
@@ -3915,18 +3989,24 @@ function renderJournal(){
   $("wFocus").value=(state.weekNotes[w]||{}).focus||"";
   $("smBox").hidden=!smShow();
   if(smShow()){ const v=dd.sm>0?dd.sm:0; $("smH").value=v?Math.floor(v/60):""; $("smM").value=v?v%60:""; smCmp(); }
+  { const si=siOn(); $("smBox").classList.toggle("si",si);
+    $("smLbl").textContent=si?"📱 Екранний час за день":"📱 Час у соцмережах";
+    $("smHint").textContent=si?"iPhone → Параметри → Екранний час → „Переглянути всі дії“ → застосунки за день. Кнопка «0» означає «не заходив»; порожнє поле означає «не записав».":"Дивись iPhone → Параметри → Екранний час → Соцмережі за день";
+    if(si){ ["ig","yt"].forEach(k=>{ const v=siGet(dd,k); $(k+"M").value=v==null?"":String(v); }); siRefresh(); } }
   renderWeekJournal(); renderVoice();
 }
 function renderWeekJournal(){
   const w=wk(), box=$("weekJournal"); box.innerHTML=""; let any=false;
   for(let i=0;i<7;i++){
-    const dd=dayData(w,i); if(!dayHas(w,i)&&!(dd.sm>0)) continue; any=true;
+    const dd=dayData(w,i); if(!dayHas(w,i)&&!(dd.sm>0)&&!(siOn()&&siHas(dd))) continue; any=true;
     const d=new Date(weekStart); d.setDate(d.getDate()+i);
     const el=document.createElement("div"); el.className="wj";
     const t=document.createElement("b"); t.textContent=DAY_FULL[i]+", "+d.toLocaleDateString("uk-UA",{day:"numeric",month:"long"}); el.appendChild(t);
     JFL().forEach(([k,label])=>{ if(!dd[k])return; const r=document.createElement("div"); r.textContent=label+": "; const sp=document.createElement("span"); sp.textContent=dd[k]; r.appendChild(sp); el.appendChild(r); });
     if(dd.learn){ const r=document.createElement("div"); r.textContent="Навчився: "; const sp=document.createElement("span"); sp.textContent=dd.learn; r.appendChild(sp); el.appendChild(r); }
-    if(dd.sm>0){ const r=document.createElement("div"); r.textContent="Соцмережі: "; const sp=document.createElement("span"); sp.textContent=fmtMin(dd.sm); r.appendChild(sp); el.appendChild(r); }
+    const sl=siLine(dd,"загалом");
+    if(sl){ const r=document.createElement("div"); r.textContent="Екранний час: "; const sp=document.createElement("span"); sp.textContent=sl.replace(/^Екранний час: /,""); r.appendChild(sp); el.appendChild(r); }
+    else if(dd.sm>0){ const r=document.createElement("div"); r.textContent="Соцмережі: "; const sp=document.createElement("span"); sp.textContent=fmtMin(dd.sm); r.appendChild(sp); el.appendChild(r); }
     box.appendChild(el);
   }
   if(!any) box.innerHTML='<div class="empty">Цього тижня записів ще немає.</div>';
@@ -3945,9 +4025,11 @@ function smInput(){
   const w=wk(); const wn=state.weekNotes[w]=state.weekNotes[w]||{}; wn.days=wn.days||{};
   const d=wn.days[selDay]=wn.days[selDay]||{};
   if(sm>0) d.sm=sm; else { delete d.sm; if(!Object.keys(d).length) delete wn.days[selDay]; }
-  save(); smCmp(); renderWeekJournal();
+  save(); smCmp(); siRefresh(); renderWeekJournal();
 }
 $("smH").oninput=smInput; $("smM").oninput=smInput;
+$("igM").oninput=()=>siInput("ig"); $("ytM").oninput=()=>siInput("yt");
+$("igZ").onclick=()=>siZero("ig"); $("ytZ").onclick=()=>siZero("yt");
 $("wFocus").oninput=e=>{const w=wk();state.weekNotes[w]=state.weekNotes[w]||{};state.weekNotes[w].focus=e.target.value;save();};
 $("prevW").onclick=()=>{weekStart.setDate(weekStart.getDate()-7);render();};
 $("nextW").onclick=()=>{weekStart.setDate(weekStart.getDate()+7);render();};
@@ -4014,15 +4096,27 @@ function buildReport(){
   const wn=state.weekNotes[w]||{};
   L.push(""); L.push("## Журнал тижня");
   let anyDay=false;
-  for(let i=0;i<7;i++){ const dd=dayData(w,i); if(!dayHas(w,i)&&!(dd.sm>0))continue; anyDay=true; const d=new Date(weekStart); d.setDate(d.getDate()+i);
+  for(let i=0;i<7;i++){ const dd=dayData(w,i); if(!dayHas(w,i)&&!(dd.sm>0)&&!(siOn()&&siHas(dd)))continue; anyDay=true; const d=new Date(weekStart); d.setDate(d.getDate()+i);
     L.push("### "+DAY_FULL[i]+", "+d.toLocaleDateString("uk-UA",{day:"numeric",month:"long"}));
     JFL().forEach(([k,label])=>{if(dd[k])L.push(label+": "+dd[k].replace(/\n+/g," / "));});
     if(dd.learn) L.push("Навчився: "+dd.learn.replace(/\n+/g," / "));
-    if(dd.sm>0) L.push("Соцмережі: "+fmtMin(dd.sm)); }
+    const sl=siLine(dd,"соцмережі загалом"); if(sl) L.push(sl); else if(dd.sm>0) L.push("Соцмережі: "+fmtMin(dd.sm)); }
   if(!anyDay) L.push("Щоденних записів немає.");
   if(learnOn()){ let n=0; for(let i=0;i<7;i++){ const x=dayData(w,i).learn; if(x&&x.trim()) n++; } L.push("Навчився за тиждень: "+n+" "+pl(n,"запис","записи","записів")+" з 7"); }
   L.push("Фокус наступного тижня: "+(wn.focus||"—"));
-  { const vals=off=>{ const r=[]; for(let i=0;i<7;i++){ const d=new Date(weekStart); d.setDate(d.getDate()+i-off); const v=smOn(d); if(v) r.push(v); } return r; };
+  if(siOn()){ const vals=(off,fn)=>{ const r=[]; for(let i=0;i<7;i++){ const d=new Date(weekStart); d.setDate(d.getDate()+i-off); const v=fn(d); if(v!=null) r.push(v); } return r; };
+    const avg=a=>Math.round(a.reduce((x,y)=>x+y,0)/a.length), sg=df=>(df<0?"−":df>0?"+":"±")+fmtMin(Math.abs(df));
+    const fIg=d=>siGet(siDay(d),"ig"), fYt=d=>siGet(siDay(d),"yt"), fSm=d=>smOn(d)||null;
+    const ig=vals(0,fIg), yt=vals(0,fYt), iy=vals(0,iyOn), sm=vals(0,fSm), piy=vals(7,iyOn), psm=vals(7,fSm);
+    if(iy.length||sm.length){ const P=[];
+      if(ig.length) P.push("Instagram середнє "+fmtMin(avg(ig))); if(yt.length) P.push("YouTube середнє "+fmtMin(avg(yt)));
+      if(iy.length) P.push("IG+YT середнє "+fmtMin(avg(iy))); if(sm.length) P.push("соцмережі загалом середнє "+fmtMin(avg(sm))+" (днів: "+sm.length+")");
+      const Q=[];
+      if(piy.length){ Q.push("IG+YT "+fmtMin(avg(piy))+(iy.length?" ("+sg(avg(iy)-avg(piy))+")":"")); } else if(psm.length) Q.push("IG/YT ще не розділено");
+      if(psm.length) Q.push("загалом "+fmtMin(avg(psm))+(sm.length?" ("+sg(avg(sm)-avg(psm))+")":""));
+      if(Q.length) P.push("минулий тиждень: "+Q.join(", "));
+      L.push("Екранний час"+(iy.length?" (днів з даними: "+iy.length+")":"")+": "+P.join(" · ")); } }
+  else { const vals=off=>{ const r=[]; for(let i=0;i<7;i++){ const d=new Date(weekStart); d.setDate(d.getDate()+i-off); const v=smOn(d); if(v) r.push(v); } return r; };
     const cur=vals(0), prev=vals(7), avg=a=>a.reduce((x,y)=>x+y,0)/a.length;
     if(cur.length){ const ca=Math.round(avg(cur)); let line="Соцмережі: середнє "+fmtMin(ca)+" на день (днів з даними: "+cur.length+")";
       if(prev.length){ const pa=Math.round(avg(prev)), df=ca-pa; line+=" · минулий тиждень "+fmtMin(pa)+" ("+(df<0?"−":df>0?"+":"±")+fmtMin(Math.abs(df))+")"; }
@@ -5180,9 +5274,10 @@ function hlMax(alt){
   const st=hxTile("Сон",sm==null?"—":Math.floor(sm/60)+":"+String(sm%60).padStart(2,"0"),sm==null?"ще не записано":(sm>=goal?"+":"−")+Math.abs(sm-goal)+" хв від цілі"); if(sm!=null) st.querySelector(".mx-s").classList.add(sm>=goal?"ok":"bad"); alt.appendChild(st);
   const fv=focusView(fkCurW()), fa=focusAvg(), fg=fv.items.filter(x=>x.kind==="grid").length, fo=fv.items.length-fg;
   alt.appendChild(hxTile("Фокус тижня",fa==null?"—":fa+"%",fv.items.length?fg+(fo?" + "+fo+" "+(fo===1?"своя":"свої"):""):"не обрано"));
-  const smv=smOn(now), sa=smAvg(now).avg; let ssub="немає даних";
-  if(smv&&sa!=null){ const d=Math.round(smv-sa); ssub=(d<=0?"▼ ":"▲ ")+Math.abs(d)+" хв"; } else if(smv) ssub="сьогодні";
-  const smt=hxTile("Соцмережі",smv?Math.floor(smv/60)+":"+String(smv%60).padStart(2,"0"):"—",ssub); if(smv&&sa!=null) smt.querySelector(".mx-s").classList.add(smv<=sa?"ok":"bad"); alt.appendChild(smt);
+  { const hm=v=>Math.floor(v/60)+":"+String(v%60).padStart(2,"0"), iv=iyOn(now), ia=siAvg(now,iyOn), smv=smOn(now); let ssub="немає даних";
+    const cmp=iv!=null&&ia.n>=3;
+    if(cmp){ const d=Math.round(iv-ia.avg); ssub=(d<=0?"▼ ":"▲ ")+Math.abs(d)+" хв"; } else if(iv!=null) ssub="сьогодні"; else if(smv) ssub="загалом "+hm(smv);
+    const smt=hxTile("IG + YT",iv!=null?hm(iv):"—",ssub); if(cmp) smt.querySelector(".mx-s").classList.add(iv<=ia.avg?"ok":"bad"); alt.appendChild(smt); }
   let cd=0,ct=0; const w=isoWeek(now); PILLARS.forEach((P,p)=>P.a.forEach((a,i)=>{ if(isCore(p,i)){ ct++; if(isDone(p,i,w)) cd++; } }));
   alt.appendChild(hxTile("Ядро ★",ct?cd+"/"+ct:"—","🔥 серія "+hmStreaks().cur));
   // row 2 — plan + Top-5
@@ -5244,12 +5339,17 @@ function vjSm(v){ const s=v.toLowerCase().replace(/\./g," ").trim(); let m;
   m=s.match(/^(?:(\d{1,2})\s*(?:год|г|h)[а-яіїєґa-z]*)?\s*(?:(\d{1,3})\s*(?:хв|m)[а-яіїєґa-z]*)?$/);
   if(m&&(m[1]||m[2])){ const r=(+(m[1]||0))*60+(+(m[2]||0)); return r>=0&&r<=1440?r:null; }
   return null; }
+// v51: хвилини для IG/YT/соцмереж: формати vjSm + «0», «25», «не заходив(ла)» → 0
+function vjMin(v){ const s=v.toLowerCase().replace(/[.!]+$/,"").trim(); if(/^не\s+заходи(в|ла)$/.test(s)) return 0; if(/^\d{1,4}$/.test(s)){ const n=+s; return n<=1440?n:null; } return vjSm(v); }
+const VJ_SI=/^(instagram|інстаграм|ig|youtube|ютуб|yt)(?![a-zа-яіїєґ])\s*(?::|$)/i;
+const VJ_SI_K=n=>/^(instagram|інстаграм|ig)$/i.test(n)?"ig":"yt";
 function vjParse(text){
-  const R={date:null,dateRaw:null,f:{good:[],bad:[],next:[],learn:[],grat:[]},focus:[],sm:null,smBad:null,warns:[],skipped:0,any:false,tooLong:false};
+  const R={date:null,dateRaw:null,f:{good:[],bad:[],next:[],learn:[],grat:[]},focus:[],sm:null,smBad:null,ig:null,yt:null,igBad:null,ytBad:null,siOff:false,warns:[],skipped:0,any:false,tooLong:false};
   if(text.length>20000){ R.tooLong=true; return R; }
   let cur=null;
   const push=(k,v)=>{ v=v.replace(vjMarker,"").replace(/(\*\*|__)/g,"").trim(); if(!v||VJ_EMPTY.has(v.toLowerCase().replace(/[.!]+$/,""))) return;
-    if(k==="sm"){ if(R.sm!=null) return; const m=vjSm(v); if(m==null) R.smBad=v; else R.sm=m; return; }
+    if(k==="sm"){ if(R.sm!=null) return; const m=vjMin(v); if(m==null) R.smBad=v; else if(m>0) R.sm=m; return; }
+    if(k==="ig"||k==="yt"){ if(!siOn()){ R.siOff=true; return; } if(R[k]!=null) return; const m=vjMin(v); if(m==null) R[k+"Bad"]=v; else R[k]=m; return; }
     if(k==="focus") R.focus.push(v); else R.f[k].push(v); };
   text.split("\n").forEach(raw=>{
     const l0=vjMd(raw); if(!l0||/^```/.test(l0)) return;
@@ -5258,14 +5358,18 @@ function vjParse(text){
     const hm_=l.match(/^журнал(?![а-яіїєґ])\s*[·\-—–:.]*\s*(?:(\d{1,2})\.(\d{1,2})(?:\.(\d{2,4}))?)?/i);
     if(hm_&&!vjMarker.test(l)){ if(!R.dateRaw&&hm_[1]){ R.dateRaw=hm_[0]; let y=hm_[3]?+hm_[3]:new Date().getFullYear(); if(y<100) y+=2000;
         const d=new Date(y,+hm_[2]-1,+hm_[1]); if(d.getFullYear()===y&&d.getMonth()===+hm_[2]-1&&d.getDate()===+hm_[1]) R.date=d; } return; }
+    if(!vjMarker.test(l)){ const si=l.match(VJ_SI); if(si){ cur=VJ_SI_K(si[1]); if(!siOn()) R.siOff=true; const ci=l.indexOf(":"); if(ci>=0){ const rest=l.slice(ci+1).trim(); if(rest) push(cur,rest); } return; } }
     if(!vjMarker.test(l)){ const low=l.toLowerCase(); const s=VJ_SECT.find(([n])=>low.startsWith(n));
       if(s){ cur=s[1]; const ci=l.indexOf(":"); if(ci>=0){ const rest=l.slice(ci+1).trim(); if(rest) push(cur,rest); } return; } }
     if(!cur){ R.skipped++; return; }
     push(cur,l);
   });
-  R.any=Object.values(R.f).some(a=>a.length)||R.focus.length>0||R.sm!=null;
+  R.any=Object.values(R.f).some(a=>a.length)||R.focus.length>0||R.sm!=null||R.ig!=null||R.yt!=null;
   if(R.skipped) R.warns.push("Пропущено "+R.skipped+" "+pl(R.skipped,"рядок","рядки","рядків")+" поза розділами");
   if(R.smBad) R.warns.push("Соцмережі: не зрозумів «"+R.smBad+"» — поле не змінено");
+  if(R.igBad) R.warns.push("Instagram: не зрозумів «"+R.igBad+"» — поле не змінено");
+  if(R.ytBad) R.warns.push("YouTube: не зрозумів «"+R.ytBad+"» — поле не змінено");
+  if(R.siOff) R.warns.push("Instagram/YouTube — лише в режимі „Сітка“");
   return R;
 }
 function vjTarget(R){
@@ -5288,11 +5392,15 @@ function vjPreview(){
   if(R.tooLong){ dl.textContent=""; const x=document.createElement("div"); x.textContent="Задовгий текст"; wr.appendChild(x); return R; }
   const chip=(lbl,val)=>{ const c=document.createElement("span"); c.className="vj-chip"; c.textContent=lbl+" "; const b=document.createElement("b"); b.textContent=val; c.appendChild(b); pv.appendChild(c); };
   Object.keys(VJ_LBL).forEach(k=>{ if(R.f[k].length) chip(VJ_LBL[k],"+"+R.f[k].length); });
-  if(R.sm!=null) chip("Соцмережі",Math.floor(R.sm/60)+":"+String(R.sm%60).padStart(2,"0"));
+  const hm=v=>Math.floor(v/60)+":"+String(v%60).padStart(2,"0");
+  if(R.ig!=null) chip("Instagram",hm(R.ig)); if(R.yt!=null) chip("YouTube",hm(R.yt));
+  if(R.sm!=null) chip("Соцмережі",hm(R.sm));
   if(R.focus.length) chip("Фокус тижня","+"+R.focus.length);
   const T=vjTarget(R), sameW=T.w===wk();
   dl.textContent=R.any||ta.value.trim()?"День: "+DAY_FULL[T.i].toLowerCase()+", "+T.d.toLocaleDateString("uk-UA",sameW?{day:"numeric",month:"long"}:{day:"numeric",month:"long",year:"numeric"})+(T.note?" · "+T.note:""):"";
   const ex=dayData(T.w,T.i); const W=R.warns.slice();
+  if(R.ig!=null&&siGet(ex,"ig")!=null) W.push("Instagram вже записано ("+fmtMin(ex.ig)+") — залишено");
+  if(R.yt!=null&&siGet(ex,"yt")!=null) W.push("YouTube вже записано ("+fmtMin(ex.yt)+") — залишено");
   if(R.sm!=null&&ex.sm>0) W.push("Соцмережі вже записано ("+fmtMin(ex.sm)+") — залишено");
   W.forEach(t=>{ const x=document.createElement("div"); x.textContent=t; wr.appendChild(x); });
   return R;
@@ -5303,7 +5411,7 @@ function vjApply(replace){
   if(R.tooLong){ er.hidden=false; er.textContent="Задовгий текст"; return; }
   if(!R.any){ er.hidden=false; er.textContent="Не знайшов розділів журналу. Встав блок, що починається з „ЖУРНАЛ · дата“"; return; }
   const T=vjTarget(R);
-  const nFields=Object.values(R.f).filter(a=>a.length).length+(R.sm!=null?1:0)+(R.focus.length?1:0);
+  const nFields=Object.values(R.f).filter(a=>a.length).length+(R.sm!=null?1:0)+(R.ig!=null?1:0)+(R.yt!=null?1:0)+(R.focus.length?1:0);
   if(replace&&!vjConfirm){ vjConfirm=true; const c=box.querySelector(".vj-conf"); c.hidden=false; c.querySelector("span").textContent="Замінити "+nFields+" "+pl(nFields,"поле","поля","полів")+" дня?"; return; }
   const wn=state.weekNotes[T.w]=state.weekNotes[T.w]||{}; wn.days=wn.days||{}; const d=wn.days[T.i]=wn.days[T.i]||{};
   let n=0;
@@ -5311,6 +5419,7 @@ function vjApply(replace){
   Object.keys(R.f).forEach(k=>{ const it=R.f[k]; if(!it.length) return;
     if(replace){ d[k]=it.join("\n"); n+=it.length; } else { const v=merge(d[k],it); if(v) d[k]=v; } });
   if(R.sm!=null){ if(replace||!(d.sm>0)){ d.sm=R.sm; n++; } }
+  ["ig","yt"].forEach(k=>{ if(R[k]!=null&&(replace||siGet(d,k)==null)){ d[k]=R[k]; n++; } });
   if(R.focus.length){ if(replace){ wn.focus=R.focus.join("\n"); n+=R.focus.length; } else { const v=merge(wn.focus,R.focus); if(v) wn.focus=v; } }
   Object.keys(d).forEach(k=>{ if(d[k]===""||d[k]==null) delete d[k]; });
   save();
