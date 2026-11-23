@@ -802,6 +802,31 @@ header .hright{margin-left:auto}
 .fk-banner{background:var(--fk-ban-bg);border:1px solid var(--fk-ban-bd);color:var(--fk-ban-ink);border-radius:12px;padding:10px 12px;font-size:13px;margin-bottom:10px}
 .fk-it{background:var(--sheet);border:1px solid var(--line);border-radius:12px;padding:12px 12px 12px 16px;margin-bottom:10px;box-shadow:inset 4px 0 0 var(--c);transition:outline-color .2s}
 .fk-it.flash,.fk-pick.flash,.fk-form.flash{outline:2px solid #E2B93B;outline-offset:2px}
+/* v53: Фокус → сітка, «Нотатки тижня» */
+.cell.cflash{box-shadow:0 0 0 3px #E2B93B;z-index:2;transition:box-shadow .2s}
+.fk-h100{font-size:12px;color:var(--muted);margin:-4px 0 10px}
+.hx-fkc{display:flex;flex-wrap:nowrap;align-items:center;gap:10px}
+.hx-fb{flex:1;min-width:0;display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px}
+.hx-fcb{flex:0 0 26px;height:26px;border-radius:50%;border:2px solid var(--c);background:transparent;color:#fff;font-size:13px;cursor:pointer;padding:0}
+.hx-fkc.on .hx-fcb{background:#2F8A78;border-color:#2F8A78}
+.gs-tabs{display:flex;gap:6px;margin:-4px 0 12px;border-bottom:1px solid var(--line);padding-bottom:10px}
+.gs-t{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:999px;padding:6px 12px;font:13px var(--fb);cursor:pointer;position:relative}
+.gs-t.on{background:var(--ink);color:var(--sheet);border-color:var(--ink)}
+.gs-dot{position:absolute;top:-2px;right:-2px;width:9px;height:9px;border-radius:50%;background:#C0413A;border:2px solid var(--sheet)}
+.nw-wk{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 10px}
+.nw-wk button{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:8px;padding:5px 10px;font:12px var(--fb);cursor:pointer}
+.nw-wk button.on{border-color:#E2B93B;box-shadow:inset 0 0 0 1px #E2B93B}
+.nw-ps{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}
+.nw-ps button{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:999px;padding:4px 10px;font:12px var(--fb);cursor:pointer}
+.nw-ps button i{width:9px;height:9px;border-radius:3px;background:var(--c)}
+.nw-ps button.on{background:var(--ink);color:var(--sheet);border-color:var(--ink)}
+.nw-row{border-top:1px solid var(--line);padding:10px 0}
+.nw-h{display:flex;justify-content:space-between;gap:8px;font-size:13px;font-weight:600}
+.nw-ok{color:#2F8A78;font-weight:500;white-space:nowrap}
+.nw-row textarea{width:100%;margin-top:6px;min-height:40px;height:40px;padding:8px 10px;font-size:14px;resize:vertical}
+.nw-row{padding:8px 0}
+textarea.ro{opacity:.65}
+.nw-ro{font-size:12px;color:var(--muted);margin:4px 0}
 .fk-it .chk:disabled{cursor:default;opacity:.8}
 .fk-lab{font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--muted)}
 .fk-it.own .fk-lab{color:#D4537E}
@@ -1291,13 +1316,16 @@ div.tl-b{cursor:default}
   <div class="grid-row" id="gridRow">
   <div class="mandala" id="mandala" aria-label="Сітка цілей"></div>
   <section class="card fk-b" id="focusCard" hidden aria-label="Фокус тижня">
+    <div class="gs-tabs" hidden></div>
     <div class="fk-bh"><h2 class="fk-title">Фокус тижня</h2><span class="fk-sub" id="fkSub"></span></div>
+    <div class="fk-h100" id="fkHint100" hidden>Дійшла до 100% → клітинка в сітці відмічається сама</div>
     <div id="fkList"></div>
     <button type="button" class="fk-dash" id="fkAddGrid"></button>
     <div class="fk-pick" id="fkPickBox" hidden></div>
     <button type="button" class="fk-dash" id="fkAddOwn"></button>
     <div class="fk-form" id="fkOwnForm" hidden></div>
   </section>
+  <section class="card fk-b nw-panel" id="nwPanel" hidden aria-label="Нотатки тижня"></section>
   </div>
   <p class="hint" id="gridHint">Торкнись дії, щоб відмітити її виконаною цього тижня. Торкнись назви опори, щоб відкрити нотатки та деталі. Крапка під дією означає, що там є нотатка.</p>
 
@@ -1492,6 +1520,7 @@ div.tl-b{cursor:default}
     <div id="sheetActs"></div>
     <section class="card" style="margin-top:8px">
       <h2>Нотатки опори</h2>
+      <div class="nw-ro" id="pillarNoteRO" hidden></div>
       <textarea id="pillarNote" placeholder="Ресурси, посилання, ідеї, що куди і як"></textarea>
     </section>
   </div>
@@ -1552,10 +1581,12 @@ const wk=()=>isoWeek(weekStart);
 
 /* ---------- state ---------- */
 function ensureRoutine(){ if(!state.routine||!Array.isArray(state.routine.items)) state.routine={items:[],log:(state.routine&&state.routine.log)||{},water:{},v:2}; state.routine.log=state.routine.log||{}; }
-const APP_VERSION=52, APP_DATE="24.11.2026";
+const APP_VERSION=53, APP_DATE="24.11.2026";
 const SCHEMA=5;
 /* what's new: "for" = all | grid | diary */
 const CHANGELOG=[
+ {v:53,date:"24.11.2026",items:[
+   {t:"Фокус тижня: дія, доведена до 100%, сама відмічається в сітці. Нотатки до дій і опор тепер на тиждень — з понеділка чисті, минулі можна переглянути. «Активність» рахує вихідні так само, як будні.",for:"grid"}]},
  {v:52,date:"24.11.2026",items:[
    {t:"Таймлайн: під днем — рівний ряд карток (рутина, сон, екранний час, лічильник днів). Пропущену ніч сну можна дописати тапом по стовпцю, до 14 днів назад. На iPhone — новий порядок блоків і швидкі переходи. Перемикач виглядів у шапці схований (увімкнути — ⚙️ → „Вигляд головної“).",for:"grid"}]},
  {v:51,date:"17.11.2026",items:[
@@ -1621,7 +1652,7 @@ const CHANGELOG=[
    {t:"Сайт сам підкаже, коли вийшла нова версія: достатньо натиснути «Оновити»",for:"all"},
    {t:"Захист від застарілих версій на забутих пристроях",for:"all"},
    {t:"Сітка тепер зберігається у твоїх даних, а не в коді сайту",for:"grid"}]}];
-let state={v:1,goal:"",texts:{},checks:{},notes:{},pillarNotes:{},weekNotes:{},proj:{},projHist:{},tasks:null};
+let state={v:1,goal:"",texts:{},checks:{},notes:{},pillarNotes:{},wnotes:{},wpnotes:{},weekNotes:{},proj:{},projHist:{},tasks:null};
 const LS="sitka9x9-state";
 let db=null, docRef=null, saveTimer=null, lastLocalWrite=0, pending=false;
 
@@ -1631,7 +1662,7 @@ let db=null, docRef=null, saveTimer=null, lastLocalWrite=0, pending=false;
    (3) render() never changes or saves data; (4) steps contain no personal content. */
 const KNOWN_PILLAR_IDS=["fin","uni","work","str","rec","ph","trk","time"];   // ids only, used to recognise pre-schema grid data
 function newUserState(){
-  return {v:1,schema:SCHEMA,goal:"",texts:{},checks:{},notes:{},pillarNotes:{},weekNotes:{},proj:{},projHist:{},tasks:[],ideas:[],projects:[],
+  return {v:1,schema:SCHEMA,goal:"",texts:{},checks:{},notes:{},pillarNotes:{},wnotes:{},wpnotes:{},weekNotes:{},proj:{},projHist:{},tasks:[],ideas:[],projects:[],
     ideaSpaces:[{id:"gen",n:"Загальні",e:"💡"}],gridV:2,
     routine:{items:[],log:{},water:{},v:2},
     account:{type:"diary",since:todayStr()}, seenVersion:APP_VERSION,
@@ -1641,7 +1672,7 @@ function newUserState(){
 function normalize(){
   // fills missing containers with neutral defaults; never personal content; idempotent
   if(!Array.isArray(state.tasks)) state.tasks=[];
-  ["texts","checks","notes","pillarNotes","weekNotes","proj","projHist"].forEach(k=>{ if(!state[k]||typeof state[k]!=="object") state[k]={}; });
+  ["texts","checks","notes","pillarNotes","wnotes","wpnotes","weekNotes","proj","projHist"].forEach(k=>{ if(!state[k]||typeof state[k]!=="object") state[k]={}; });
   if(!Array.isArray(state.ideas)) state.ideas=[];
   if(!Array.isArray(state.projects)) state.projects=[];
   if(!Array.isArray(state.ideaSpaces)||!state.ideaSpaces.length) state.ideaSpaces=[{id:"gen",n:"Загальні",e:"💡"}];
@@ -1688,7 +1719,7 @@ function runMigrations(keepGrid){
 }
 const esc=x=>String(x==null?"":x).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
-function merge(s){ if(s&&typeof s==="object"){ s=JSON.parse(JSON.stringify(s)); state=Object.assign({v:1,goal:"",texts:{},checks:{},notes:{},pillarNotes:{},weekNotes:{},proj:{},projHist:{},tasks:null},s);state.proj=state.proj||{};state.projHist=state.projHist||{};} }
+function merge(s){ if(s&&typeof s==="object"){ s=JSON.parse(JSON.stringify(s)); state=Object.assign({v:1,goal:"",texts:{},checks:{},notes:{},pillarNotes:{},wnotes:{},wpnotes:{},weekNotes:{},proj:{},projHist:{},tasks:null},s);state.proj=state.proj||{};state.projHist=state.projHist||{};} }
 let bootFresh=false;
 try{ const raw=localStorage.getItem(LS); if(raw) merge(JSON.parse(raw)); else bootFresh=true; }catch(e){ bootFresh=true; }
 
@@ -1712,7 +1743,17 @@ function logGrid(w,k,v){
   if(v){(state.gridLog[d]=state.gridLog[d]||{})[id]=true;}
   else Object.keys(state.gridLog).forEach(x=>{if(state.gridLog[x][id]){delete state.gridLog[x][id]; if(!Object.keys(state.gridLog[x]).length) delete state.gridLog[x];}});
 }
-function setDone(p,i,v){const w=wk();state.checks[w]=state.checks[w]||{};if(v)state.checks[w][key(PILLARS[p].id,i)]=true;else delete state.checks[w][key(PILLARS[p].id,i)];logGrid(w,key(PILLARS[p].id,i),v);save();}
+function setDone(p,i,v){const w=wk();state.checks[w]=state.checks[w]||{};if(v)state.checks[w][key(PILLARS[p].id,i)]=true;else delete state.checks[w][key(PILLARS[p].id,i)];logGrid(w,key(PILLARS[p].id,i),v);fkFromGrid(PILLARS[p].id,i,w,v);save();}
+/* v53: нотатки до дій і опор по тижнях (лише «Сітка»): state.wnotes[тиждень][key], state.wpnotes[тиждень][pillarId].
+   Старі state.notes/pillarNotes лишаються в даних і працюють у «Щоденнику». */
+const nwOn=()=>!isDiary();
+const nwRO=w=>nwOn()&&w<isoWeek(new Date());
+function nwPut(root,w,k,v){ state[root]=state[root]&&typeof state[root]==="object"?state[root]:{}; const o=state[root][w]=state[root][w]||{}; if(v) o[k]=v; else delete o[k]; if(!Object.keys(o).length) delete state[root][w]; }
+function noteGet(k,w){ return nwOn()?(((state.wnotes||{})[w||wk()]||{})[k]||""):(state.notes[k]||""); }
+function noteSet(k,v,w){ if(!nwOn()){ state.notes[k]=v; if(!v) delete state.notes[k]; return; } w=w||wk(); if(nwRO(w)) return; nwPut("wnotes",w,k,v); }
+function pnoteGet(id,w){ return nwOn()?(((state.wpnotes||{})[w||wk()]||{})[id]||""):(state.pillarNotes[id]||""); }
+function pnoteSet(id,v,w){ if(!nwOn()){ state.pillarNotes[id]=v; return; } w=w||wk(); if(nwRO(w)) return; nwPut("wpnotes",w,id,v); }
+function noteCount(w){ return Object.values(nwOn()?((state.wnotes||{})[w||wk()]||{}):state.notes).filter(Boolean).length; }
 const pillarCount=(p,w)=>PILLARS[p].a.reduce((n,_,i)=>n+(isDone(p,i,w)?1:0),0);
 const weekTotal=w=>(state.legacyTotals&&state.legacyTotals[w]!=null)?state.legacyTotals[w]:(state.checks[w]?Object.keys(state.checks[w]).length:0);
 const coreTotal=w=>PILLARS.reduce((n,P,p)=>n+coreCount(p,w),0);
@@ -3104,7 +3145,7 @@ function ensureDaily(){
   }
   return state.daily[k];
 }
-function setDoneCur(p,i,v){const w=isoWeek(new Date());state.checks[w]=state.checks[w]||{};const key_=key(PILLARS[p].id,i);if(v)state.checks[w][key_]=true;else delete state.checks[w][key_];logGrid(w,key_,v);save();}
+function setDoneCur(p,i,v){const w=isoWeek(new Date());state.checks[w]=state.checks[w]||{};const key_=key(PILLARS[p].id,i);if(v)state.checks[w][key_]=true;else delete state.checks[w][key_];logGrid(w,key_,v);fkFromGrid(PILLARS[p].id,i,w,v);save();}
 function renderDaily(){
   const picks=ensureDaily(), w=isoWeek(new Date()), list=$("sgList"); list.innerHTML="";
   let doneN=0;
@@ -3246,8 +3287,8 @@ function render(){
   const ct=hasGrid()?coreTotal(wk()):0;
   $("progTxt").innerHTML="Ядро ★ <b>"+ct+" з "+CORE_TOTAL+"</b> · усього "+tot+" з 64";
   $("progBar").style.width=(CORE_TOTAL?ct/CORE_TOTAL*100:0)+"%";
-  const nNotes=Object.values(state.notes).filter(Boolean).length;
-  $("noteTxt").textContent=nNotes?("Нотаток: "+nNotes):"";
+  const nNotes=noteCount(wk());
+  $("noteTxt").textContent=nNotes?(nwOn()?(wk()===isoWeek(new Date())?"Нотаток цього тижня: ":"Нотаток за тиждень "+wk().split("-W")[1]+": ")+nNotes:"Нотаток: "+nNotes):"";
 
   renderFocus();
   const m=$("mandala"); m.innerHTML="";
@@ -3269,10 +3310,10 @@ function render(){
         else{
           const i=ai++; const done=isDone(p,i);
           if(isEmptyAct(PILLARS[p].a[i])){ el.className="cell act empty"; el.textContent="+"; el.title="Порожня дія — додай у ⚙️ → «Моя сітка»"; el.setAttribute("aria-label","Порожня дія"); el.onclick=()=>{ gridOpenP=p; openSettings(); }; blk.appendChild(el); continue; }
-          el.className="cell act"+(done?" done":"")+(isCore(p,i)?" core":"")+(state.notes[key(PILLARS[p].id,i)]?" has-note":"")+(focusOn()&&fkHas(p,i)?" foc":"");
+          el.className="cell act"+(done?" done":"")+(isCore(p,i)?" core":"")+(noteGet(key(PILLARS[p].id,i))?" has-note":"")+(focusOn()&&fkHas(p,i)?" foc":""); el.dataset.k=key(PILLARS[p].id,i);
           el.textContent=short(p,i); el.title=text(p,i);
           el.setAttribute("aria-pressed",done); el.setAttribute("aria-label",text(p,i));
-          el.onclick=()=>{setDone(p,i,!isDone(p,i));render();};
+          el.onclick=()=>{nwP=PILLARS[p].id; setDone(p,i,!isDone(p,i));render();};
         }
         blk.appendChild(el);
       }
@@ -3313,7 +3354,7 @@ function dayNorm(d){
   const live=(state.top3&&state.top3[k])||(top5On()&&state.quick&&state.quick[k]);
   const t3=live?Math.min(top5On()?5:3,t3Tasks(k).filter(t=>t.done).length):(ds.t3||0);
   const q=(state.quick&&state.quick[k])?Math.min(2,qTasks(k).filter(t=>t.done).length):(ds.q||0);
-  const we=d.getDay()===0||d.getDay()===6; let norm=rs.tot+5; if(we) norm=norm*2/3;
+  const we=d.getDay()===0||d.getDay()===6, norm=rs.tot+5;   // v53: вихідні рахуються так само, як будні
   const pct=Math.min(100,Math.round((rs.done+t3+q)/norm*100));
   return {pct,rs,t3,q,we,lvl:pct===0?0:pct<20?1:pct<40?2:pct<60?3:pct<80?4:pct<100?5:6};
 }
@@ -3327,7 +3368,7 @@ function hmStreaks(){
 }
 function hmDetail(d){
   if(normMode()){ const n=dayNorm(d);
-    $("hmDay").innerHTML=DAY_SHORT[(d.getDay()+6)%7]+", "+d.toLocaleDateString("uk-UA",{day:"numeric",month:"long"})+": <b>"+n.pct+"%</b> · рутина "+n.rs.done+"/"+n.rs.tot+(top5On()?" · Топ-5 "+(n.t3+n.q)+"/5":" · Топ-3 "+n.t3+"/3 · швидкі "+n.q+"/2")+(n.we?" · вихідний −⅓":"");
+    $("hmDay").innerHTML=DAY_SHORT[(d.getDay()+6)%7]+", "+d.toLocaleDateString("uk-UA",{day:"numeric",month:"long"})+": <b>"+n.pct+"%</b> · рутина "+n.rs.done+"/"+n.rs.tot+(top5On()?" · Топ-5 "+(n.t3+n.q)+"/5":" · Топ-3 "+n.t3+"/3 · швидкі "+n.q+"/2")+"";
     return; }
   const a=dayActivity(d), parts=[];
   if(a.tasks) parts.push(a.tasks+" "+(a.tasks===1?"задача":a.tasks<5?"задачі":"задач"));
@@ -3774,7 +3815,25 @@ function fkAddGrid(p,i){
 }
 function fkRemove(id){ const F=state.focus; if(!F) return; F.items=F.items.filter(it=>it.id!==id); save(); }
 function fkRemoveGrid(p,i){ const F=state.focus; if(!F) return; F.items=F.items.filter(it=>!(it.kind==="grid"&&it.pillar===PILLARS[p].id&&it.action===i)); save(); }
-function fkSetP(it,v){ v=Math.max(0,Math.min(100,v)); if(v>=100&&(it.p||0)<100) it.pb=it.p||0; it.p=v; it.done=v>=100; if(v<100) delete it.pb; save(); renderFocus(); }
+function fkSetP(it,v){ v=Math.max(0,Math.min(100,v)); const old=it.p||0; if(v>=100&&old<100) it.pb=old; it.p=v; it.done=v>=100; if(v<100) delete it.pb;
+  const ck=fkGridSync(it,old); save(); if(ck||(old>=100)!==(v>=100)) render(); else renderFocus(); if(ck&&v>=100) cellFlash(ck); }
+// v53: Фокус → сітка. 100% ставить відмітку в тижні F.week (gc:1 = поставив фокус); нижче 100% знімає лише свою відмітку
+function fkGridSync(it,old){
+  if(!focusOn()||it.kind!=="grid") return null; const F=state.focus; if(!F||!Array.isArray(F.items)||!F.items.includes(it)) return null;
+  const x=fkPI(it); if(!x) return null; const w=F.week, k=key(x.P.id,x.i), p=it.p||0;
+  if(p>=100&&old<100){ state.checks[w]=state.checks[w]||{}; if(!state.checks[w][k]){ state.checks[w][k]=true; logGrid(w,k,true); it.gc=1; return k; } return null; }
+  if(p<100&&old>=100&&it.gc===1){ if(state.checks[w]) delete state.checks[w][k]; logGrid(w,k,false); delete it.gc; return k; }
+  if(p<100) delete it.gc; return null;
+}
+// v53: сітка → Фокус. Ручна відмітка клітинки з фокусу цього тижня ставить 100%, зняття повертає попереднє значення
+function fkFromGrid(pid,i,w,v){
+  if(!focusOn()) return; const F=state.focus; if(!F||F.week!==w||!Array.isArray(F.items)) return;
+  const it=F.items.find(x=>x.kind==="grid"&&x.pillar===pid&&x.action===i); if(!it) return;
+  if(v){ if((it.p||0)<100){ it.pb=it.p||0; it.p=100; it.done=true; } }
+  else if((it.p||0)>=100){ it.p=it.pb!=null?it.pb:95; delete it.pb; it.done=false; }
+  delete it.gc;
+}
+function cellFlash(k){ const el=$("mandala")&&$("mandala").querySelector('.cell[data-k="'+k+'"]'); if(!el) return; el.classList.remove("cflash"); void el.offsetWidth; el.classList.add("cflash"); setTimeout(()=>el.classList.remove("cflash"),1200); }
 // weeks in focus (this one included) and growth this week, from history
 function fkMatch(a,b){ return a.kind===b.kind&&(a.kind==="grid"?(a.pillar===b.pillar&&a.action===b.action):a.id===b.id); }
 function fkStats(it,w){
@@ -3784,13 +3843,15 @@ function fkStats(it,w){
 }
 function fkStreak(x){ let s=""; for(let k=5;k>=0;k--){ const d=new Date(weekStart); d.setDate(d.getDate()-7*k); s+='<i class="'+(isDone(x.p,x.i,isoWeek(d))?"on":"")+'"></i>'; } return s; }
 function fkFlash(id){
+  if(gsOn()&&gsTab!=="focus"&&focusOn()){ gsTab="focus"; renderFocus(); }
   const card=$("focusCard"); if(!card||card.hidden) return;
   card.scrollIntoView({behavior:"smooth",block:"start"});
   const el=card.querySelector('[data-fk="'+id+'"]'); if(el){ el.classList.add("flash"); setTimeout(()=>el.classList.remove("flash"),1000); }
 }
 function renderFocus(){
   const A=$("focusHome"), B=$("focusCard"); if(!A||!B) return;
-  const on=focusOn(); A.hidden=!on; B.hidden=!on; $("homeTop").classList.toggle("nofocus",!on);
+  const on=focusOn(); A.hidden=!on; B.hidden=!on||(gsOn()&&gsTab!=="focus"); $("homeTop").classList.toggle("nofocus",!on);
+  renderGridSide();
   if(!on) return;
   const w=wk(), v=focusView(w), G=fkGridOf(v.items), O=fkOwnOf(v.items);
   /* A: home card */
@@ -3813,6 +3874,7 @@ function renderFocus(){
   if(!v.ro&&O.length<FK_OWN){ const b=document.createElement("button"); b.type="button"; b.className="fk-dash"; b.textContent="+ Своя задача на тиждень";
     b.onclick=()=>{ fkOwnForm={}; renderFocus(); fkFlash("ownform"); }; o.appendChild(b); }
   /* B: card next to the grid */
+  { const h=$("fkHint100"); if(h) h.hidden=!(G.length&&!v.ro); }
   $("fkSub").textContent=fkRange(w)+(v.future?"":" · "+G.length+" з сітки"+(O.length?" + "+O.length+" "+(O.length===1?"своя":"свої"):""))+(v.ro&&v.past?" · архів":"");
   const box=$("fkList"); box.innerHTML="";
   const unres=v.ro?0:G.filter(it=>it.carried).length;
@@ -3883,9 +3945,9 @@ function fkItemCard(it,ro,w){
   }
   if(grid){
     if(x){ const k=key(x.P.id,x.i); let ta=null;
-      const nb=btn(state.notes[k]?"Нотатка ✎":"Додати нотатку",()=>{ if(ta){ ta.focus(); return; }
-        ta=document.createElement("textarea"); ta.placeholder="Що, де і як: посилання, цифри, деталі"; ta.value=state.notes[k]||"";
-        ta.oninput=()=>{ state.notes[k]=ta.value; if(!ta.value) delete state.notes[k]; save(); };
+      const nb=btn(noteGet(k)?"Нотатка ✎":"Додати нотатку",()=>{ if(ta){ ta.focus(); return; }
+        ta=document.createElement("textarea"); ta.placeholder="Що, де і як: посилання, цифри, деталі"; ta.value=noteGet(k); ta.readOnly=nwRO(wk());
+        ta.oninput=()=>{ noteSet(k,ta.value); save(); nwRefreshDots(); };
         row.appendChild(ta); ta.focus(); nb.textContent="Нотатка ✎"; }); }
     btn("Змінити дію",()=>{ fkPick={mode:"change",id:it.id}; renderFocus(); fkFlash("pick"); });
     btn("Прибрати з фокусу",()=>{ fkRemove(it.id); render(); },"fk-del");
@@ -3913,6 +3975,51 @@ function focusReportLines(w){
   return L;
 }
 
+/* ---------- v53: «Нотатки тижня» праворуч від сітки (лише «Таймлайн») + перемикач «Нотатки | Фокус» ---------- */
+let gsTab="notes", nwW=null, nwBase=null, nwP=null;
+const gsOn=()=>nwOn()&&hasGrid()&&homeMode()==="timeline";
+function gsTabs(box){
+  if(!box) return; box.hidden=!gsOn()||!focusOn(); box.innerHTML=""; if(box.hidden) return;
+  const unres=fkLive().filter(it=>it.kind==="grid"&&it.carried).length;
+  [["notes","Нотатки тижня"],["focus","Фокус тижня"]].forEach(([k,t])=>{ const b=document.createElement("button"); b.type="button"; b.className="gs-t"+(gsTab===k?" on":""); b.setAttribute("aria-pressed",gsTab===k); b.textContent=t;
+    if(k==="focus"&&unres){ const d=document.createElement("i"); d.className="gs-dot"; d.title="Є перенесені дії — треба вирішити"; b.appendChild(d); }
+    b.onclick=()=>{ if(gsTab===k) return; gsTab=k; renderFocus(); }; box.appendChild(b); });
+}
+function nwRefreshDots(){
+  const m=$("mandala"); if(m) m.querySelectorAll(".cell.act[data-k]").forEach(el=>el.classList.toggle("has-note",!!noteGet(el.dataset.k)));
+  const n=noteCount(wk()); $("noteTxt").textContent=n?(wk()===isoWeek(new Date())?"Нотаток цього тижня: ":"Нотаток за тиждень "+wk().split("-W")[1]+": ")+n:"";
+}
+function renderGridSide(){
+  const box=$("nwPanel"); if(!box) return; const on=gsOn();
+  gsTabs($("focusCard")&&$("focusCard").querySelector(".gs-tabs"));
+  box.hidden=!on||(focusOn()&&gsTab!=="notes"); if(box.hidden){ box.innerHTML=""; return; }
+  const ae=document.activeElement; if(ae&&box.contains(ae)&&ae.tagName==="TEXTAREA") return;   // не перебудовувати, поки пишеш
+  if(nwBase!==wk()){ nwBase=wk(); nwW=wk(); }
+  if(!PILLARS.some(P=>P.id===nwP)) nwP=PILLARS[0]&&PILLARS[0].id;
+  const w=nwW||wk(), ro=nwRO(w), cur=isoWeek(new Date()), num=x=>x.split("-W")[1];
+  box.innerHTML=""; const tb=document.createElement("div"); tb.className="gs-tabs"; box.appendChild(tb); gsTabs(tb);
+  const h=document.createElement("div"); h.className="fk-bh"; h.innerHTML='<h2 class="fk-title">Нотатки тижня</h2><span class="fk-sub"></span>';
+  h.querySelector(".fk-sub").textContent="тиждень "+num(w)+(ro?" · лише перегляд":" · з понеділка — порожні"); box.appendChild(h);
+  const wr=document.createElement("div"); wr.className="nw-wk";
+  [fkPrevW(fkPrevW(wk())),fkPrevW(wk()),wk()].forEach(x=>{ const b=document.createElement("button"); b.type="button"; b.className=x===w?"on":""; b.setAttribute("aria-pressed",x===w);
+    b.textContent=x===cur?"Цей ("+num(x)+")":"Тиждень "+num(x); b.onclick=()=>{ nwW=x; renderGridSide(); }; wr.appendChild(b); });
+  box.appendChild(wr);
+  const ps=document.createElement("div"); ps.className="nw-ps";
+  PILLARS.forEach(P=>{ const b=document.createElement("button"); b.type="button"; b.className=P.id===nwP?"on":""; b.setAttribute("aria-pressed",P.id===nwP); b.style.setProperty("--c",P.c);
+    b.innerHTML='<i></i><span></span>'; b.lastChild.textContent=P.name; b.onclick=()=>{ nwP=P.id; renderGridSide(); }; ps.appendChild(b); });
+  box.appendChild(ps);
+  const p=pIdx(nwP); if(p<0) return; const P=PILLARS[p];
+  const mk=(title,right,val,ph,onIn)=>{ const r=document.createElement("div"); r.className="nw-row"; const hh=document.createElement("div"); hh.className="nw-h";
+    hh.appendChild(document.createElement("span")).textContent=title; const rs=document.createElement("span"); rs.className="nw-ok"; rs.textContent=right||""; hh.appendChild(rs); r.appendChild(hh);
+    const ta=document.createElement("textarea"); ta.value=val; ta.placeholder=ph; ta.rows=1; if(ro){ ta.readOnly=true; ta.classList.add("ro"); } else ta.oninput=()=>onIn(ta.value);
+    r.appendChild(ta); box.appendChild(r); };
+  let shown=0;
+  const pv=pnoteGet(P.id,w); if(!ro||pv){ shown++; mk("Нотатки опори","",pv,"Ресурси, посилання, ідеї на цей тиждень",v=>{ pnoteSet(P.id,v,w); save(); }); }
+  P.a.forEach((a,i)=>{ if(isEmptyAct(a)) return; const k=key(P.id,i), v=noteGet(k,w); if(ro&&!v) return; shown++;
+    mk(text(p,i)+(isCore(p,i)?" ★":""),isDone(p,i,w)?"✓ виконано":"",v,"Додати нотатку на цей тиждень",x=>{ noteSet(k,x,w); save(); if(w===wk()) nwRefreshDots(); }); });
+  if(!shown){ const e=document.createElement("div"); e.className="fk-empty"; e.textContent="У цьому тижні нотаток для опори немає."; box.appendChild(e); }
+}
+
 /* ---------- pillar sheet ---------- */
 let openP=null;
 function openPillar(p){openP=p;renderSheet();$("sheet").classList.add("open");document.body.style.overflow="hidden";$("sheet").scrollTop=0;$("sheetBack").focus();}
@@ -3931,7 +4038,7 @@ function renderSheet(){
     row.innerHTML=
       '<div class="act-head"><button class="chk'+(done?" on":"")+'" aria-pressed="'+done+'" aria-label="Виконано цього тижня">'+(done?"✓":"")+'</button>'+
       '<div class="act-text">'+(isCore(p,i)?'<span class="star" aria-label="Ядро">★ ядро</span>':'')+'<div class="t"></div>'+(P.a[i][2]?'<div class="hint"></div>':'')+'<div class="sleephint" hidden></div><div class="streak">'+streak+'<span>&nbsp;6 тижнів</span></div></div></div>'+
-      '<div class="tools"><button data-a="note">'+(state.notes[k]?"Нотатка ✎":"Додати нотатку")+'</button><button data-a="edit">Змінити дію</button>'+(focusOn()?'<button data-a="focus"></button><span class="fk-hint" hidden>Фокус уже має 4 дії</span>':'')+'</div>';
+      '<div class="tools"><button data-a="note"'+(nwRO(wk())&&!noteGet(k)?" hidden":"")+'>'+(noteGet(k)?"Нотатка ✎":"Додати нотатку")+'</button><button data-a="edit">Змінити дію</button>'+(focusOn()?'<button data-a="focus"></button><span class="fk-hint" hidden>Фокус уже має 4 дії</span>':'')+'</div>';
     row.querySelector(".t").textContent=text(p,i);
     if(P.a[i][2]) row.querySelector(".hint").textContent=P.a[i][2];
     { const sh=sleepHint(P,text(p,i)), el=row.querySelector(".sleephint"); if(sh){ el.textContent="🌙 "+sh; el.hidden=false; } else el.remove(); }
@@ -3940,11 +4047,12 @@ function renderSheet(){
     let ta=null;
     const openNote=()=>{
       if(ta){ta.focus();return;}
-      ta=document.createElement("textarea"); ta.placeholder="Що, де і як: посилання, цифри, деталі"; ta.value=state.notes[k]||"";
-      ta.oninput=()=>{state.notes[k]=ta.value;if(!ta.value)delete state.notes[k];save();};
-      row.appendChild(ta); ta.focus();
+      ta=document.createElement("textarea"); ta.placeholder="Що, де і як: посилання, цифри, деталі"; ta.value=noteGet(k);
+      if(nwRO(wk())){ ta.readOnly=true; ta.classList.add("ro"); const l=document.createElement("div"); l.className="nw-ro"; l.textContent="тиждень "+wk().split("-W")[1]+" · лише перегляд"; row.appendChild(l); }
+      ta.oninput=()=>{noteSet(k,ta.value);save();};
+      row.appendChild(ta); if(!ta.readOnly) ta.focus();
     };
-    if(state.notes[k]) openNote();
+    if(noteGet(k)) openNote();
     tools.querySelector('[data-a="note"]').onclick=openNote;
     tools.querySelector('[data-a="edit"]').onclick=()=>{
       const t=row.querySelector(".t"); if(t.querySelector("input"))return;
@@ -3959,9 +4067,10 @@ function renderSheet(){
         fb.onclick=()=>{ if(inF) fkRemoveGrid(p,i); else if(!fkAddGrid(p,i)) return; renderSheet(); render(); }; } }
     box.appendChild(row);
   });
-  const pn=$("pillarNote"); pn.value=state.pillarNotes[P.id]||"";
+  const pn=$("pillarNote"), ro=nwRO(wk()); pn.value=pnoteGet(P.id); pn.readOnly=ro; pn.classList.toggle("ro",ro);
+  const pl=$("pillarNoteRO"); if(pl){ pl.hidden=!ro; pl.textContent=ro?"тиждень "+wk().split("-W")[1]+" · лише перегляд":""; }
 }
-$("pillarNote").oninput=e=>{if(openP===null)return;state.pillarNotes[PILLARS[openP].id]=e.target.value;save();};
+$("pillarNote").oninput=e=>{if(openP===null)return;pnoteSet(PILLARS[openP].id,e.target.value);save();};
 $("sheetBack").onclick=closePillar;
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&openP!==null)closePillar();});
 
@@ -4167,9 +4276,9 @@ function buildReport(){
     L.push("### "+P.name+": ★"+coreCount(p,w)+"/2 · "+pillarCount(p,w)+"/8");
     P.a.forEach((_,i)=>{
       L.push((isDone(p,i,w)?"- [x] ":"- [ ] ")+(isCore(p,i)?"★ ":"")+text(p,i));
-      const n=state.notes[key(P.id,i)]; if(n) L.push("  Нотатка: "+n.replace(/\n+/g," / "));
+      const n=noteGet(key(P.id,i),w); if(n) L.push("  Нотатка: "+n.replace(/\n+/g," / "));
     });
-    const pn=state.pillarNotes[P.id]; if(pn) L.push("Нотатки опори: "+pn.replace(/\n+/g," / "));
+    const pn=pnoteGet(P.id,w); if(pn) L.push("Нотатки опори: "+pn.replace(/\n+/g," / "));
   });
   if(feat("grid")&&!isDiary()){ const fl=focusReportLines(w); if(fl.length){ L.push(""); fl.forEach(x=>L.push(x)); } }
   ensureProjects();
@@ -5224,10 +5333,13 @@ function hxNext(box,n){
 }
 function hxFocusRows(box){
   const v=focusView(fkCurW()); if(!v.items.length){ box.appendChild(hxEl("div","empty","Фокус тижня не обрано.")); return null; }
+  if(fkGridOf(v.items).length) box.appendChild(hxEl("div","hx-sub fk-h100","Дійшла до 100% → клітинка в сітці відмічається сама"));
   let sum=0; v.items.forEach(it=>{ const x=it.kind==="grid"?fkPI(it):null, p=it.p||0; sum+=p;
-    const r=hxEl("button","hx-fk"); r.type="button"; r.style.setProperty("--c",it.kind==="grid"?(x?x.P.c:"var(--muted)"):FK_OWN_C);
-    r.appendChild(hxEl("span","hx-fl",it.kind==="grid"?(x?x.P.name:"дію видалено"):"Своя"));
-    r.appendChild(hxEl("span","hx-fn",fkTitle(it))); const bar=hxEl("i","hx-bar"); const fill=hxEl("b"); fill.style.width=p+"%"; bar.appendChild(fill); r.appendChild(bar); r.appendChild(hxEl("em","",p+"%"));
+    const r=hxEl("div","hx-fk hx-fkc"+(p>=100?" on":"")); r.style.setProperty("--c",it.kind==="grid"?(x?x.P.c:"var(--muted)"):FK_OWN_C);
+    const cb=hxEl("button","hx-fcb",p>=100?"✓":""); cb.type="button"; cb.setAttribute("aria-pressed",p>=100); cb.setAttribute("aria-label","Готово: "+fkTitle(it));
+    cb.onclick=e=>{ e.stopPropagation(); fkSetP(it,p>=100?(it.pb!=null?it.pb:95):100); }; r.appendChild(cb);
+    const bx=hxEl("div","hx-fb"); bx.appendChild(hxEl("span","hx-fl",it.kind==="grid"?(x?x.P.name:"дію видалено"):"Своя"));
+    bx.appendChild(hxEl("span","hx-fn",fkTitle(it))); const bar=hxEl("i","hx-bar"); const fill=hxEl("b"); fill.style.width=p+"%"; bar.appendChild(fill); bx.appendChild(bar); bx.appendChild(hxEl("em","",p+"%")); r.appendChild(bx);
     r.onclick=()=>fkFlash(it.id); box.appendChild(r); });
   return Math.round(sum/v.items.length);
 }
